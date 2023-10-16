@@ -1,6 +1,7 @@
-import qualified ParserSpec
+import qualified MarkdownParserSpec
 import Test.Hspec
 
 main :: IO ()
 main = hspec $ do
-  ParserSpec.parserSpec
+  MarkdownParserSpec.markdownAstSpec
+  return ()

@@ -3,7 +3,7 @@ version:             0.1.0.0
 github:              "githubuser/ants"
 license:             BSD3
 author:              "Author name here"
-maintainer:          "example@example.com"
+maintainer:          "isrothy@icloud.com"
 copyright:           "2023 Author name here"
 
 extra-source-files:
@@ -21,6 +21,9 @@ description:         Please see the README on GitHub at <https://github.com/gith
 
 dependencies:
 - base >= 4.7 && < 5
+- text
+- commonmark
+- commonmark-extensions
 
 ghc-options:
 - -Wall

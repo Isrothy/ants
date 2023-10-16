@@ -1,6 +1,6 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.35.2.
+-- This file has been generated from package.yaml by hpack version 0.36.0.
 --
 -- see: https://github.com/sol/hpack
 
@@ -10,7 +10,7 @@ description:    Please see the README on GitHub at <https://github.com/githubuse
 homepage:       https://github.com/githubuser/ants#readme
 bug-reports:    https://github.com/githubuser/ants/issues
 author:         Author name here
-maintainer:     example@example.com
+maintainer:     isrothy@icloud.com
 copyright:      2023 Author name here
 license:        BSD3
 license-file:   LICENSE
@@ -26,9 +26,7 @@ source-repository head
 library
   exposed-modules:
       Lib
-      Parser.Main
-      Parser.MarkdownParser
-      Parser.MarkdownSyntax
+      Parser.MarkdownAst
   other-modules:
       Paths_ants
   hs-source-dirs:
@@ -36,6 +34,9 @@ library
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
       base >=4.7 && <5
+    , commonmark
+    , commonmark-extensions
+    , text
   default-language: Haskell2010
 
 executable ants-exe
@@ -48,13 +49,16 @@ executable ants-exe
   build-depends:
       ants
     , base >=4.7 && <5
+    , commonmark
+    , commonmark-extensions
+    , text
   default-language: Haskell2010
 
 test-suite ants-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      ParserSpec
+      MarkdownParserSpec
       Paths_ants
   hs-source-dirs:
       test
@@ -62,5 +66,8 @@ test-suite ants-test
   build-depends:
       ants
     , base >=4.7 && <5
+    , commonmark
+    , commonmark-extensions
     , hspec
+    , text
   default-language: Haskell2010

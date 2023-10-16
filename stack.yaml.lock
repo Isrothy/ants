@@ -3,11 +3,24 @@
 # For more information, please see the documentation at:
 #   https://docs.haskellstack.org/en/stable/lock_files
 
-packages: []
+packages:
+- completed:
+    hackage: commonmark-0.2.3@sha256:2625f385af127881b35687d16e1d8f7bce5debbae9bfde9162ecb38037441fb7,3454
+    pantry-tree:
+      sha256: f2dd306293bda372e923d6f2767bc5593dc1f18b43b80169eb604b36376b7fd7
+      size: 1348
+  original:
+    hackage: commonmark-0.2.3
+- completed:
+    hackage: commonmark-extensions-0.2.3@sha256:2c9553dc5d8497c755fde39d05075f262692532313902da13a8883f818c1378d,3484
+    pantry-tree:
+      sha256: 186712d91bcb964ac09ab04598f9348ab009f6182794657f078241e1f850c1b2
+      size: 3315
+  original:
+    hackage: commonmark-extensions-0.2.3
 snapshots:
 - completed:
-    sha256: 64d66303f927e87ffe6b8ccf736229bf608731e80d7afdf62bdd63c59f857740
-    size: 640037
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/21/11.yaml
-  original:
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/21/11.yaml
+    sha256: 60e54c1ba3c1e7163acf6dafa9d56b2d3b23f88a31ad53a1c9d888f32561f8da
+    size: 639819
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/21/14.yaml
+  original: lts-21.14
