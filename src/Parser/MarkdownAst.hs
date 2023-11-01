@@ -6,15 +6,46 @@ module Parser.MarkdownAst
     markdownAst,
     markdownAstWith,
     MarkdownElement (..),
+    allSpecExtions,
   )
 where
 
 import Commonmark
 import Commonmark.Extensions
-import Data.Text
+import Data.Foldable
+import Data.Text (Text, pack)
 
 markdownAst :: String -> Text -> Either ParseError (Maybe MarkdownAst)
 markdownAst = commonmark
+
+allSpecExtions :: SyntaxSpec (Either ParseError) (Maybe MarkdownAst) (Maybe MarkdownAst)
+allSpecExtions =
+  fold
+    [ autolinkSpec,
+      pipeTableSpec,
+      hardLineBreaksSpec,
+      strikethroughSpec,
+      superscriptSpec,
+      subscriptSpec,
+      smartPunctuationSpec,
+      mathSpec,
+      emojiSpec,
+      footnoteSpec,
+      definitionListSpec,
+      fancyListSpec,
+      taskListSpec,
+      attributesSpec,
+      rawAttributeSpec,
+      bracketedSpanSpec,
+      fencedDivSpec,
+      autoIdentifiersSpec,
+      autoIdentifiersAsciiSpec,
+      implicitHeadingReferencesSpec,
+      wikilinksSpec TitleBeforePipe,
+      wikilinksSpec TitleAfterPipe,
+      rebaseRelativePathsSpec,
+      gfmExtensions
+    ]
 
 markdownAstWith ::
   (Monad m) =>
@@ -25,7 +56,7 @@ markdownAstWith ::
 markdownAstWith = commonmarkWith
 
 data MarkdownAst = MarkdownAst
-  { markdownElenment :: MarkdownElement,
+  { markdownElement :: MarkdownElement,
     sourceRange :: Maybe SourceRange,
     attributes :: Attributes
   }
@@ -54,6 +85,8 @@ data MarkdownElement
   | Emoji Text Text
   | InlineMath Text
   | DisplayMath Text
+  | SingleQuoted (Maybe MarkdownAst)
+  | DoubleQuoted (Maybe MarkdownAst)
   | Subscript MarkdownAst
   | Superscript MarkdownAst
   | Paragraph MarkdownAst
@@ -146,3 +179,61 @@ instance HasFootnote (Maybe MarkdownAst) (Maybe MarkdownAst) where
   footnote num label bl = justRawNode $ Footnote num label bl
   footnoteList items = justRawNode $ FootnoteList items
   footnoteRef num label = fmap $ rawNode . FootnoteRef num label
+
+instance HasQuoted (Maybe MarkdownAst) where
+  singleQuoted = justRawNode . SingleQuoted
+  doubleQuoted = justRawNode . DoubleQuoted
+
+instance HasSpan (Maybe MarkdownAst) where
+  spanWith _ Nothing = Nothing
+  spanWith attrs1 (Just (MarkdownAst item sr attrs2)) = Just (MarkdownAst item sr (attrs1 ++ attrs2))
+
+instance HasDiv (Maybe MarkdownAst) where
+  div_ = id
+
+toPlainText1 :: MarkdownAst -> Text
+toPlainText1 (MarkdownAst ele _ _) = case ele of
+  Text t -> t
+  Entity t -> t
+  LineBreak -> pack "\n"
+  SoftBreak -> pack " "
+  EscapedChar c -> pack [c]
+  Code t -> t
+  Emphasis ast -> toPlainText1 ast
+  Strong ast -> toPlainText1 ast
+  Link _ _ ast -> toPlainText ast
+  Image _ _ ast -> toPlainText ast
+  Strikethrough ast -> toPlainText1 ast
+  Highlight ast -> toPlainText1 ast
+  RawInline _ t -> t
+  Emoji _ t -> t
+  InlineMath t -> t
+  DisplayMath t -> t
+  SingleQuoted ast -> toPlainText ast
+  DoubleQuoted ast -> toPlainText ast
+  Subscript ast -> toPlainText1 ast
+  Superscript ast -> toPlainText1 ast
+  Paragraph ast -> toPlainText1 ast
+  Plain ast -> toPlainText1 ast
+  Header _ ast -> toPlainText ast
+  List _ _ asts -> mconcat $ map toPlainText asts
+  Blockquote ast -> toPlainText1 ast
+  CodeBlock _ t -> t
+  RawBlock _ t -> t
+  HorizontalRule -> pack "\n"
+  PipeTable _ title rows -> helper (title : rows)
+    where
+      helper [] = pack ""
+      helper (x : xs) = mconcat (map (\y -> toPlainText y <> pack " ") x) <> pack "\n" <> helper xs
+  ReferenceLinkDefination label (dest, title) -> pack "[" <> label <> pack "] " <> dest <> pack " " <> title
+  DefinitionList _ asts -> mconcat $ map toPlainText (map fst asts ++ concatMap snd asts)
+  TaskList _ _ items -> mconcat $ map (toPlainText . snd) items
+  WikiLink txt ast -> txt <> toPlainText1 ast
+  Footnote num txt ast -> pack "[" <> pack (show num) <> pack "] " <> txt <> toPlainText ast
+  FootnoteList items -> mconcat $ map toPlainText items
+  FootnoteRef num label ast -> pack "[" <> pack (show num) <> pack "] " <> label <> toPlainText1 ast
+  Span asts -> mconcat $ map toPlainText1 asts
+
+instance ToPlainText (Maybe MarkdownAst) where
+  toPlainText Nothing = pack ""
+  toPlainText (Just ast) = toPlainText1 ast
