@@ -1,19 +1,24 @@
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
 module Parser.MarkdownAst
   ( MarkdownAst (..),
+    MarkdownElement (..),
     markdownAst,
     markdownAstWith,
-    MarkdownElement (..),
     allSpecExtions,
+    children,
+    findPlaceholders,
   )
 where
 
 import Commonmark
 import Commonmark.Extensions
 import Data.Foldable
+import Data.Maybe
 import Data.Text (Text, pack)
+import Parser.Placeholder
 
 markdownAst :: String -> Text -> Either ParseError (Maybe MarkdownAst)
 markdownAst = commonmark
@@ -65,47 +70,60 @@ data MarkdownAst = MarkdownAst
 rawNode :: MarkdownElement -> MarkdownAst
 rawNode x = MarkdownAst x Nothing []
 
-justRawNode :: MarkdownElement -> Maybe MarkdownAst
-justRawNode = Just . rawNode
-
-data MarkdownElement
-  = Text Text
-  | Entity Text
-  | LineBreak
-  | SoftBreak
-  | EscapedChar Char
-  | Code Text
-  | Emphasis MarkdownAst
-  | Strong MarkdownAst
-  | Link Text Text (Maybe MarkdownAst)
-  | Image Text Text (Maybe MarkdownAst)
-  | Strikethrough MarkdownAst
-  | Highlight MarkdownAst
-  | RawInline Format Text
-  | Emoji Text Text
-  | InlineMath Text
-  | DisplayMath Text
-  | SingleQuoted (Maybe MarkdownAst)
-  | DoubleQuoted (Maybe MarkdownAst)
-  | Subscript MarkdownAst
-  | Superscript MarkdownAst
-  | Paragraph MarkdownAst
-  | Plain MarkdownAst
-  | Header Int (Maybe MarkdownAst)
-  | List ListType ListSpacing [Maybe MarkdownAst]
-  | Blockquote MarkdownAst
-  | CodeBlock Text Text
-  | RawBlock Format Text
-  | HorizontalRule
-  | PipeTable [ColAlignment] [Maybe MarkdownAst] [[Maybe MarkdownAst]]
-  | ReferenceLinkDefination Text (Text, Text)
-  | DefinitionList ListSpacing [(Maybe MarkdownAst, [Maybe MarkdownAst])]
-  | TaskList ListType ListSpacing [(Bool, Maybe MarkdownAst)]
-  | WikiLink Text MarkdownAst
-  | Footnote Int Text (Maybe MarkdownAst)
-  | FootnoteList [Maybe MarkdownAst]
-  | FootnoteRef Text Text MarkdownAst
-  | Span [MarkdownAst]
+data MarkdownElement where
+  Text :: Text -> MarkdownElement
+  Entity :: Text -> MarkdownElement
+  LineBreak :: MarkdownElement
+  SoftBreak :: MarkdownElement
+  EscapedChar :: Char -> MarkdownElement
+  Code :: Text -> MarkdownElement
+  Emphasis :: MarkdownAst -> MarkdownElement
+  Strong :: MarkdownAst -> MarkdownElement
+  Link :: Text -> Text -> (Maybe MarkdownAst) -> MarkdownElement
+  Image :: Text -> Text -> (Maybe MarkdownAst) -> MarkdownElement
+  Strikethrough :: MarkdownAst -> MarkdownElement
+  Highlight :: MarkdownAst -> MarkdownElement
+  RawInline :: Format -> Text -> MarkdownElement
+  Emoji :: Text -> Text -> MarkdownElement
+  InlineMath :: Text -> MarkdownElement
+  DisplayMath :: Text -> MarkdownElement
+  SingleQuoted :: (Maybe MarkdownAst) -> MarkdownElement
+  DoubleQuoted :: (Maybe MarkdownAst) -> MarkdownElement
+  Subscript :: MarkdownAst -> MarkdownElement
+  Superscript :: MarkdownAst -> MarkdownElement
+  Paragraph :: MarkdownAst -> MarkdownElement
+  Plain :: MarkdownAst -> MarkdownElement
+  Header :: Int -> (Maybe MarkdownAst) -> MarkdownElement
+  List ::
+    ListType ->
+    ListSpacing ->
+    [Maybe MarkdownAst] ->
+    MarkdownElement
+  Blockquote :: MarkdownAst -> MarkdownElement
+  CodeBlock :: Text -> Text -> MarkdownElement
+  RawBlock :: Format -> Text -> MarkdownElement
+  HorizontalRule :: MarkdownElement
+  PipeTable ::
+    [ColAlignment] ->
+    [Maybe MarkdownAst] ->
+    [[Maybe MarkdownAst]] ->
+    MarkdownElement
+  ReferenceLinkDefination :: Text -> (Text, Text) -> MarkdownElement
+  DefinitionList ::
+    ListSpacing ->
+    [(Maybe MarkdownAst, [Maybe MarkdownAst])] ->
+    MarkdownElement
+  TaskList ::
+    ListType ->
+    ListSpacing ->
+    [(Bool, Maybe MarkdownAst)] ->
+    MarkdownElement
+  WikiLink :: Text -> MarkdownAst -> MarkdownElement
+  Footnote :: Int -> Text -> (Maybe MarkdownAst) -> MarkdownElement
+  FootnoteList :: [Maybe MarkdownAst] -> MarkdownElement
+  FootnoteRef :: Text -> Text -> MarkdownAst -> MarkdownElement
+  Placeholder :: Text -> MarkdownElement
+  Span :: [MarkdownAst] -> MarkdownElement
   deriving (Show, Eq)
 
 instance Semigroup MarkdownAst where
@@ -124,35 +142,35 @@ instance Rangeable (Maybe MarkdownAst) where
   ranged sr (Just (MarkdownAst item _ attrs)) = Just (MarkdownAst item (Just sr) attrs)
 
 instance IsInline (Maybe MarkdownAst) where
-  lineBreak = justRawNode LineBreak
-  softBreak = justRawNode SoftBreak
-  entity = justRawNode . Entity
+  lineBreak = Just $ rawNode LineBreak
+  softBreak = Just $ rawNode SoftBreak
+  entity = Just . rawNode . Entity
   emph = fmap $ rawNode . Emphasis
   strong = fmap $ rawNode . Strong
-  link target title inline = justRawNode $ Link target title inline
-  image source title inline = justRawNode $ Image source title inline
-  code x = justRawNode $ Code x
-  rawInline format x = justRawNode $ RawInline format x
-  str = justRawNode . Text
-  escapedChar = justRawNode . EscapedChar
+  link target title inline = Just $ rawNode $ Link target title inline
+  image source title inline = Just $ rawNode $ Image source title inline
+  code x = Just $ rawNode $ Code x
+  rawInline format x = Just $ rawNode $ RawInline format x
+  str = Just . rawNode . Text
+  escapedChar = Just . rawNode . EscapedChar
 
 instance IsBlock (Maybe MarkdownAst) (Maybe MarkdownAst) where
   paragraph = fmap $ rawNode . Paragraph
   plain = fmap $ rawNode . Plain
-  thematicBreak = justRawNode HorizontalRule
+  thematicBreak = Just $ rawNode HorizontalRule
   blockQuote = fmap $ rawNode . Blockquote
-  codeBlock info t = justRawNode $ CodeBlock info t
-  heading level il = justRawNode $ Header level il
-  rawBlock format t = justRawNode $ RawBlock format t
-  list listtype spacing items = justRawNode $ List listtype spacing items
-  referenceLinkDefinition label (dest, title) = justRawNode (ReferenceLinkDefination label (dest, title))
+  codeBlock info t = Just $ rawNode $ CodeBlock info t
+  heading level il = Just $ rawNode $ Header level il
+  rawBlock format t = Just $ rawNode $ RawBlock format t
+  list listtype spacing items = Just $ rawNode $ List listtype spacing items
+  referenceLinkDefinition label (dest, title) = Just $ rawNode (ReferenceLinkDefination label (dest, title))
 
 instance HasMath (Maybe MarkdownAst) where
-  inlineMath x = justRawNode $ InlineMath x
-  displayMath x = justRawNode $ DisplayMath x
+  inlineMath x = Just $ rawNode $ InlineMath x
+  displayMath x = Just $ rawNode $ DisplayMath x
 
 instance HasEmoji (Maybe MarkdownAst) where
-  emoji x y = justRawNode $ Emoji x y
+  emoji x y = Just $ rawNode $ Emoji x y
 
 instance HasSubscript (Maybe MarkdownAst) where
   subscript = fmap $ rawNode . Subscript
@@ -164,25 +182,25 @@ instance HasStrikethrough (Maybe MarkdownAst) where
   strikethrough = fmap $ rawNode . Strikethrough
 
 instance HasPipeTable (Maybe MarkdownAst) (Maybe MarkdownAst) where
-  pipeTable align header rows = justRawNode $ PipeTable align header rows
+  pipeTable align header rows = Just $ rawNode $ PipeTable align header rows
 
 instance HasDefinitionList (Maybe MarkdownAst) (Maybe MarkdownAst) where
-  definitionList spacing xs = justRawNode $ DefinitionList spacing xs
+  definitionList spacing xs = Just $ rawNode $ DefinitionList spacing xs
 
 instance HasTaskList (Maybe MarkdownAst) (Maybe MarkdownAst) where
-  taskList listtype spacing items = justRawNode (TaskList listtype spacing items)
+  taskList listtype spacing items = Just $ rawNode (TaskList listtype spacing items)
 
 instance HasWikilinks (Maybe MarkdownAst) where
   wikilink target = fmap $ rawNode . WikiLink target
 
 instance HasFootnote (Maybe MarkdownAst) (Maybe MarkdownAst) where
-  footnote num label bl = justRawNode $ Footnote num label bl
-  footnoteList items = justRawNode $ FootnoteList items
+  footnote num label bl = Just $ rawNode $ Footnote num label bl
+  footnoteList items = Just $ rawNode $ FootnoteList items
   footnoteRef num label = fmap $ rawNode . FootnoteRef num label
 
 instance HasQuoted (Maybe MarkdownAst) where
-  singleQuoted = justRawNode . SingleQuoted
-  doubleQuoted = justRawNode . DoubleQuoted
+  singleQuoted = Just . rawNode . SingleQuoted
+  doubleQuoted = Just . rawNode . DoubleQuoted
 
 instance HasSpan (Maybe MarkdownAst) where
   spanWith _ Nothing = Nothing
@@ -232,8 +250,40 @@ toPlainText1 (MarkdownAst ele _ _) = case ele of
   Footnote num txt ast -> pack "[" <> pack (show num) <> pack "] " <> txt <> toPlainText ast
   FootnoteList items -> mconcat $ map toPlainText items
   FootnoteRef num label ast -> pack "[" <> pack (show num) <> pack "] " <> label <> toPlainText1 ast
+  Placeholder t -> t
   Span asts -> mconcat $ map toPlainText1 asts
 
 instance ToPlainText (Maybe MarkdownAst) where
   toPlainText Nothing = pack ""
   toPlainText (Just ast) = toPlainText1 ast
+
+instance HasPlaceholder (Maybe MarkdownAst) where
+  placeholder = Just . rawNode . Placeholder
+
+children :: MarkdownElement -> [MarkdownAst]
+children (Emphasis ast) = [ast]
+children (Strong ast) = [ast]
+children (Strikethrough ast) = [ast]
+children (Superscript ast) = [ast]
+children (Subscript ast) = [ast]
+children (Link _ _ ast) = maybeToList ast
+children (Image _ _ ast) = maybeToList ast
+children (Span asts) = asts
+children (Paragraph ast) = [ast]
+children (Plain ast) = [ast]
+children (Header _ ast) = maybeToList ast
+children (List _ _ asts) = catMaybes asts
+children (Blockquote ast) = [ast]
+children (PipeTable _ title rows) = catMaybes (concat (title : rows))
+children (DefinitionList _ asts) = mapMaybe fst asts ++ concatMap (catMaybes . snd) asts
+children (TaskList _ _ items) = mapMaybe snd items
+children (WikiLink _ ast) = [ast]
+children (Footnote _ _ ast) = maybeToList ast
+children (FootnoteList items) = catMaybes items
+children (FootnoteRef _ _ ast) = [ast]
+children _ = []
+
+findPlaceholders :: MarkdownAst -> [(Text, SourceRange)]
+findPlaceholders (MarkdownAst (Placeholder txt) (Just srange) _) = [(txt, srange)]
+findPlaceholders (MarkdownAst (Placeholder _) _ _) = []
+findPlaceholders (MarkdownAst ele _ _) = concatMap findPlaceholders (children ele)

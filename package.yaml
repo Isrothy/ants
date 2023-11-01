@@ -24,6 +24,7 @@ dependencies:
 - text
 - commonmark
 - commonmark-extensions
+- parsec
 
 ghc-options:
 - -Wall
