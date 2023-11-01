@@ -1,8 +1,9 @@
-module PlaceholderParserSpec where
+module PlaceholderParserSpec
+  ( placeholderParserSpec,
+  )
+where
 
 import Commonmark
-import Data.Either
-import Data.Maybe
 import qualified Data.Text as T
 import Parser.MarkdownAst
 import Parser.Placeholder
@@ -17,42 +18,55 @@ markdownAstWithPlaceholder = markdownAstWith (placeholderSpec <> allSpecExtions 
 placeholderParserSpec :: Spec
 placeholderParserSpec = describe "placeholder" $ do
   it "parses placeholder correctly" $ do
-    let input = "This is a {placeholder}."
-    let result = markdownAstWithPlaceholder "a" (T.pack input)
-    result `shouldSatisfy` isRight
+    let input = T.pack "## This is a {placeholder}."
+    case markdownAstWithPlaceholder "a" input of
+      Left parseError -> expectationFailure $ "Parsing failed: " ++ show parseError
+      Right (Left parseError) -> expectationFailure $ "Parsing failed: " ++ show parseError
+      Right (Right Nothing) -> expectationFailure "Parsing resulted in no AST"
+      Right (Right (Just ast)) -> do
+        show (findPlaceholders ast) `shouldBe` "[(\"placeholder\",a@1:14-1:27)]"
 
--- it "parses text without placeholder correctly" $ do
---   let input = "This is a regular text."
---   let result = markdownAstWithPlaceholder input
---   result `shouldSatisfy` isRight
---   let (Right (Just ast)) = result
---   ast `shouldBe` MarkdownAst [PlainText "This is a regular text."]
+  it "parses text without placeholder correctly" $ do
+    let input = T.pack "This is a regular text. \\{ not a placeholder \\}"
+    case markdownAstWithPlaceholder "filename" input of
+      Left parseError -> expectationFailure $ "Parsing failed: " ++ show parseError
+      Right (Left parseError) -> expectationFailure $ "Parsing failed: " ++ show parseError
+      Right (Right Nothing) -> expectationFailure "Parsing resulted in no AST"
+      Right (Right (Just ast)) -> do
+        findPlaceholders ast `shouldBe` []
 
--- it "handles placeholder at the beginning of the text" $ do
---   let input = "{placeholder} at the beginning."
--- ... similarly as above
+  it "parses placeholder with escaped char correctly" $ do
+    let input = T.pack "## This is a {placeholder \\} with escaped char }"
+    case markdownAstWithPlaceholder "a" input of
+      Left parseError -> expectationFailure $ "Parsing failed: " ++ show parseError
+      Right (Left parseError) -> expectationFailure $ "Parsing failed: " ++ show parseError
+      Right (Right Nothing) -> expectationFailure "Parsing resulted in no AST"
+      Right (Right (Just ast)) -> do
+        show (findPlaceholders ast) `shouldBe` "[(\"placeholder \\\\} with escaped char \",a@1:14-1:49)]"
 
--- it "handles placeholder at the end of the text" $ do
---   let input = "Placeholder at the end {placeholder}."
--- ... similarly as above
+  it "parses multiple placeholders correctly" $ do
+    let input = T.pack "## {a placeholder} \n **{another placeholder}** "
+    case markdownAstWithPlaceholder "a" input of
+      Left parseError -> expectationFailure $ "Parsing failed: " ++ show parseError
+      Right (Left parseError) -> expectationFailure $ "Parsing failed: " ++ show parseError
+      Right (Right Nothing) -> expectationFailure "Parsing resulted in no AST"
+      Right (Right (Just ast)) -> do
+        show (findPlaceholders ast) `shouldBe` "[(\"a placeholder\",a@1:4-1:19),(\"another placeholder\",a@2:4-2:25)]"
 
--- it "handles adjacent placeholders" $ do
---   let input = "Adjacent {placeholder}{placeholder}."
--- ... similarly as above
+  it "parses adjacent placeholders correctly" $ do
+    let input = T.pack "- {a placeholder}{another placeholder}"
+    case markdownAstWithPlaceholder "a" input of
+      Left parseError -> expectationFailure $ "Parsing failed: " ++ show parseError
+      Right (Left parseError) -> expectationFailure $ "Parsing failed: " ++ show parseError
+      Right (Right Nothing) -> expectationFailure "Parsing resulted in no AST"
+      Right (Right (Just ast)) -> do
+        show (findPlaceholders ast) `shouldBe` "[(\"a placeholder\",a@1:3-1:18),(\"another placeholder\",a@1:18-1:39)]"
 
--- it "handles escaped placeholders" $ do
--- let input = "This is not a \\{placeholder}."
--- ... similarly as above
-
--- it "returns an error for unclosed placeholders" $ do
---   let input = "This is an {unclosed placeholder."
---   let result = markdownAstWithPlaceholder input
---   result `shouldSatisfy` isLeft
-
-expectedAst :: MarkdownAst
-expectedAst =
-  MarkdownAst
-    [ PlainText "This is a ",
-      Placeholder "placeholder",
-      PlainText "."
-    ]
+  it "do not parse unclosed placeholder" $ do
+    let input = T.pack "This is an {unclosed placeholder."
+    case markdownAstWithPlaceholder "filename" input of
+      Left parseError -> expectationFailure $ "Parsing failed: " ++ show parseError
+      Right (Left parseError) -> expectationFailure $ "Parsing failed: " ++ show parseError
+      Right (Right Nothing) -> expectationFailure "Parsing resulted in no AST"
+      Right (Right (Just ast)) -> do
+        findPlaceholders ast `shouldBe` []
