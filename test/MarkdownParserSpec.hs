@@ -18,7 +18,6 @@ markdownAstSpec = describe "commonmark" $ do
     let result = markdownAst "test2" (T.pack "# Header 1")
     case result of
       Right (Just (MarkdownAst (Header 1 _) _ [])) -> True `shouldBe` True
-      -- Right (MarkdownAstNode (Span [MarkdownAstNode (Header 1 (MarkdownAstNode (Span [MarkdownAstNode (Text (T.pack "Header")) (Just _) [], MarkdownAstNode (Text (pack " ")) (Just _) [], MarkdownAstNode (Text (pack "1")) (Just _) []]) Nothing [])) (Just _) [], MarkdownAstNode (Paragraph Null) (Just _) []]) Nothing []) -> True `shouldBe` True
       _ -> False `shouldBe` True
 
 -- case result of

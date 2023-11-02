@@ -70,3 +70,12 @@ placeholderParserSpec = describe "placeholder" $ do
       Right (Right Nothing) -> expectationFailure "Parsing resulted in no AST"
       Right (Right (Just ast)) -> do
         findPlaceholders ast `shouldBe` []
+
+  it "do not placeholder on different lines" $ do
+    let input = T.pack "This is an {unclosed \n placeholder}."
+    case markdownAstWithPlaceholder "filename" input of
+      Left parseError -> expectationFailure $ "Parsing failed: " ++ show parseError
+      Right (Left parseError) -> expectationFailure $ "Parsing failed: " ++ show parseError
+      Right (Right Nothing) -> expectationFailure "Parsing resulted in no AST"
+      Right (Right (Just ast)) -> do
+        findPlaceholders ast `shouldBe` []

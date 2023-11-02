@@ -10,6 +10,7 @@ where
 import Commonmark
 import Commonmark.Inlines
 import Commonmark.TokParsers
+import Control.Monad (MonadPlus (mzero))
 import Data.Text hiding (concatMap)
 import Text.Parsec
 
@@ -35,6 +36,7 @@ parsePlaceholder = try $ do
         Symbol '\\' -> do
           tk' <- anyTok
           (tk :) . (tk' :) <$> tockens
+        LineEnd -> mzero
         _ -> (tk :) <$> tockens
 
 class HasPlaceholder a where

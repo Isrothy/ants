@@ -28,6 +28,7 @@ library
       Lib
       Parser.MarkdownAst
       Parser.Placeholder
+      TemplateGen
   other-modules:
       Paths_ants
   hs-source-dirs:
@@ -63,6 +64,7 @@ test-suite ants-test
   other-modules:
       MarkdownParserSpec
       PlaceholderParserSpec
+      TemplateGenSpec
       Paths_ants
   hs-source-dirs:
       test
