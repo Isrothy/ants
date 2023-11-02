@@ -7,14 +7,12 @@ where
 
 import Commonmark
 import Control.Monad
-import Data.List
+import Data.List (sortBy)
 import Data.Maybe
 import qualified Data.Text as T
+import qualified Data.Text.Lazy as TL
 import Parser.MarkdownAst
 import Parser.Placeholder
-import Text.Parsec.Pos
-
-data Placeholder = Str String | DateTime String
 
 type LookupTable = [(T.Text, T.Text)]
 
@@ -35,18 +33,19 @@ replacePlaceholders filename text lookupTable = case markdownAstWithPlaceholder 
 posReverse :: (T.Text, SourceRange) -> (T.Text, SourceRange) -> Ordering
 posReverse (_, SourceRange ((pos1, _) : _)) (_, SourceRange ((pos2, _) : _)) =
   pos2 `compare` pos1
+posReverse _ _ = error "posReverse: empty source range"
 
 splitLines :: T.Text -> [T.Text]
-splitLines txt = splitLines' txt T.empty
+splitLines txt = map (T.reverse . TL.toStrict) $ splitLines' (TL.fromStrict txt) TL.empty
 
-splitLines' :: T.Text -> T.Text -> [T.Text]
-splitLines' txt line = case T.uncons txt of
+splitLines' :: TL.Text -> TL.Text -> [TL.Text]
+splitLines' txt line = case TL.uncons txt of
   Nothing -> [line]
-  Just ('\r', rest) -> case T.uncons rest of
-    Just ('\n', rest') -> line `T.append` T.pack "\r\n" : splitLines' rest' T.empty
-    _ -> line `T.append` T.pack "\r" : splitLines' rest T.empty
-  Just ('\n', rest) -> line `T.append` T.pack "\n" : splitLines' rest T.empty
-  Just (c, rest) -> splitLines' rest (line `T.append` T.singleton c)
+  Just ('\r', rest) -> case TL.uncons rest of
+    Just ('\n', rest') -> ('\n' `TL.cons` '\r' `TL.cons` line) : splitLines' rest' TL.empty
+    _ -> ('\r' `TL.cons` line) : splitLines' rest TL.empty
+  Just ('\n', rest) -> ('\n' `TL.cons` line) : splitLines' rest TL.empty
+  Just (c, rest) -> splitLines' rest (c `TL.cons` line)
 
 findPosition :: Int -> Int -> T.Text -> Maybe Int
 findPosition lineNumber columnNumber text = do
@@ -80,6 +79,3 @@ replacePlaceholders' origin ((placeholder, range) : rest) lookupTable =
         (replace origin (head $ unSourceRange range) replacement)
         rest
         lookupTable
-
--- replacePlaceholders' origin [] lookupTable = origin
--- replacePlaceholders' origin ((placeholder, range) : rest) lookupTable = replacePlaceholders' (replacePlaceholder origin placeholder range lookupTable) rest lookupTable
