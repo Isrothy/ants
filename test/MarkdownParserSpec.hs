@@ -1,5 +1,5 @@
 module MarkdownParserSpec
-  ( markdownAstSpec,
+  ( spec,
   )
 where
 
@@ -8,8 +8,8 @@ import qualified Data.Text as T
 import Parser.MarkdownAst (MarkdownAst (..), MarkdownElement (..), markdownAst)
 import Test.Hspec
 
-markdownAstSpec :: Spec
-markdownAstSpec = describe "commonmark" $ do
+spec :: Spec
+spec = describe "commonmark" $ do
   it "parses valid markdown correctly" $ do
     let result = markdownAst "test1" (T.pack "# Hello, world!")
     result `shouldSatisfy` (not . isLeft)

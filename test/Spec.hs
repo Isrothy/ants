@@ -5,7 +5,7 @@ import Test.Hspec
 
 main :: IO ()
 main = hspec $ do
-  MarkdownParserSpec.markdownAstSpec
-  PlaceholderParserSpec.placeholderParserSpec
-  TemplateGenSpec.templateGenSpec
+  MarkdownParserSpec.spec
+  PlaceholderParserSpec.spec
+  TemplateGenSpec.spec
   return ()

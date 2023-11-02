@@ -1,5 +1,5 @@
 module PlaceholderParserSpec
-  ( placeholderParserSpec,
+  ( spec,
   )
 where
 
@@ -15,8 +15,8 @@ markdownAstWithPlaceholder ::
   Either ParseError (Either ParseError (Maybe MarkdownAst))
 markdownAstWithPlaceholder = markdownAstWith (placeholderSpec <> allSpecExtions <> defaultSyntaxSpec)
 
-placeholderParserSpec :: Spec
-placeholderParserSpec = describe "placeholder" $ do
+spec :: Spec
+spec = describe "placeholder" $ do
   it "parses placeholder correctly" $ do
     let input = T.pack "## This is a {placeholder}."
     case markdownAstWithPlaceholder "a" input of
