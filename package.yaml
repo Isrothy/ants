@@ -25,6 +25,7 @@ dependencies:
 - commonmark
 - commonmark-extensions
 - parsec
+- aeson
 
 ghc-options:
 - -Wall

@@ -25,6 +25,7 @@ source-repository head
 
 library
   exposed-modules:
+      Config
       Lib
       Parser.MarkdownAst
       Parser.Placeholder
@@ -35,7 +36,8 @@ library
       src
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
-      base >=4.7 && <5
+      aeson
+    , base >=4.7 && <5
     , commonmark
     , commonmark-extensions
     , parsec
@@ -50,7 +52,8 @@ executable ants-exe
       app
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      ants
+      aeson
+    , ants
     , base >=4.7 && <5
     , commonmark
     , commonmark-extensions
@@ -70,7 +73,8 @@ test-suite ants-test
       test
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
   build-depends:
-      ants
+      aeson
+    , ants
     , base >=4.7 && <5
     , commonmark
     , commonmark-extensions

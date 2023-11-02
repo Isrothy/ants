@@ -1,6 +1,8 @@
+{-# LANGUAGE ExtendedDefaultRules #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Parser.MarkdownAst
   ( MarkdownAst (..),
@@ -213,8 +215,8 @@ toPlainText1 :: MarkdownAst -> Text
 toPlainText1 (MarkdownAst ele _ _) = case ele of
   Text t -> t
   Entity t -> t
-  LineBreak -> pack "\n"
-  SoftBreak -> pack " "
+  LineBreak -> "\n"
+  SoftBreak -> " "
   EscapedChar c -> pack [c]
   Code t -> t
   Emphasis ast -> toPlainText1 ast
@@ -238,23 +240,23 @@ toPlainText1 (MarkdownAst ele _ _) = case ele of
   Blockquote ast -> toPlainText1 ast
   CodeBlock _ t -> t
   RawBlock _ t -> t
-  HorizontalRule -> pack "\n"
+  HorizontalRule -> "\n"
   PipeTable _ title rows -> helper (title : rows)
     where
-      helper [] = pack ""
-      helper (x : xs) = mconcat (map (\y -> toPlainText y <> pack " ") x) <> pack "\n" <> helper xs
-  ReferenceLinkDefination label (dest, title) -> pack "[" <> label <> pack "] " <> dest <> pack " " <> title
+      helper [] = ""
+      helper (x : xs) = mconcat (map (\y -> toPlainText y <> " ") x) <> "\n" <> helper xs
+  ReferenceLinkDefination label (dest, title) -> "[" <> label <> "] " <> dest <> " " <> title
   DefinitionList _ asts -> mconcat $ map toPlainText (map fst asts ++ concatMap snd asts)
   TaskList _ _ items -> mconcat $ map (toPlainText . snd) items
   WikiLink txt ast -> txt <> toPlainText1 ast
-  Footnote num txt ast -> pack "[" <> pack (show num) <> pack "] " <> txt <> toPlainText ast
+  Footnote num txt ast -> "[" <> pack (show num) <> "] " <> txt <> toPlainText ast
   FootnoteList items -> mconcat $ map toPlainText items
-  FootnoteRef num label ast -> pack "[" <> pack (show num) <> pack "] " <> label <> toPlainText1 ast
+  FootnoteRef num label ast -> "[" <> pack (show num) <> "] " <> label <> toPlainText1 ast
   Placeholder t -> t
   Span asts -> mconcat $ map toPlainText1 asts
 
 instance ToPlainText (Maybe MarkdownAst) where
-  toPlainText Nothing = pack ""
+  toPlainText Nothing = ""
   toPlainText (Just ast) = toPlainText1 ast
 
 instance HasPlaceholder (Maybe MarkdownAst) where
