@@ -160,7 +160,7 @@ configToLookupTableSpec = describe "fromConfig" $ do
               Config.dateFormat = Nothing,
               Config.timeFormat = Nothing,
               Config.dateTimeFormat = Nothing,
-              Config.variables = Nothing
+              Config.variables = []
             }
     let config = Config.Config {Config.template = Just template}
     fromConfig config
@@ -179,7 +179,7 @@ configToLookupTableSpec = describe "fromConfig" $ do
               Config.dateFormat = Just "MM-DD-YYYY",
               Config.timeFormat = Just "HH:mm:ss",
               Config.dateTimeFormat = Just "MM-DD-YYYY HH:mm:ss",
-              Config.variables = Just [("var1", "value1"), ("var2", "value2")]
+              Config.variables = [("var1", "value1"), ("var2", "value2")]
             }
     let config = Config.Config {Config.template = Just template}
     fromConfig config
@@ -200,7 +200,7 @@ configToLookupTableSpec = describe "fromConfig" $ do
               Config.dateFormat = Nothing,
               Config.timeFormat = Nothing,
               Config.dateTimeFormat = Nothing,
-              Config.variables = Nothing
+              Config.variables = []
             }
     let config = Config.Config {Config.template = Just template}
     fromConfig config

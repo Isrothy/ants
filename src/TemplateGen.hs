@@ -102,4 +102,4 @@ fromConfig = maybe [] fromTemplate . Config.template
         <> [("date", fromMaybe "YYYY-DD-MM" $ Config.dateFormat template)]
         <> [("time", fromMaybe "HH:MM:SS" $ Config.timeFormat template)]
         <> [("dateTime", fromMaybe "YYYY-DD-MM HH:MM:SS" $ Config.dateTimeFormat template)]
-        <> fromMaybe [] (Config.variables template)
+        <> Config.variables template

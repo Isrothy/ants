@@ -38,10 +38,14 @@ library
   build-depends:
       aeson
     , base >=4.7 && <5
+    , bytestring
     , commonmark
     , commonmark-extensions
     , parsec
+    , raw-strings-qq
     , text
+    , unordered-containers
+    , vector
   default-language: Haskell2010
 
 executable ants-exe
@@ -55,16 +59,21 @@ executable ants-exe
       aeson
     , ants
     , base >=4.7 && <5
+    , bytestring
     , commonmark
     , commonmark-extensions
     , parsec
+    , raw-strings-qq
     , text
+    , unordered-containers
+    , vector
   default-language: Haskell2010
 
 test-suite ants-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
+      ConfigSpec
       MarkdownParserSpec
       PlaceholderParserSpec
       TemplateGenSpec
@@ -76,9 +85,13 @@ test-suite ants-test
       aeson
     , ants
     , base >=4.7 && <5
+    , bytestring
     , commonmark
     , commonmark-extensions
     , hspec
     , parsec
+    , raw-strings-qq
     , text
+    , unordered-containers
+    , vector
   default-language: Haskell2010

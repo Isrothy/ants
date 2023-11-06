@@ -26,6 +26,10 @@ dependencies:
 - commonmark-extensions
 - parsec
 - aeson
+- bytestring
+- unordered-containers
+- vector
+- raw-strings-qq
 
 ghc-options:
 - -Wall

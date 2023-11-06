@@ -1,3 +1,4 @@
+import qualified ConfigSpec
 import qualified MarkdownParserSpec
 import qualified PlaceholderParserSpec
 import qualified TemplateGenSpec
@@ -8,4 +9,5 @@ main = hspec $ do
   MarkdownParserSpec.spec
   PlaceholderParserSpec.spec
   TemplateGenSpec.spec
+  ConfigSpec.spec
   return ()
