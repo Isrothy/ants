@@ -25,16 +25,16 @@ import Parser.Placeholder
 type LookupTable = [(T.Text, T.Text)]
 
 markdownAstWithPlaceholder ::
+  SyntaxSpec Maybe (Maybe MarkdownAst) (Maybe MarkdownAst) ->
   String ->
   T.Text ->
   Maybe MarkdownAst
-markdownAstWithPlaceholder filename text = case markdownAstWith (placeholderSpec <> allSpecExtions <> defaultSyntaxSpec) filename text of
-  Left _ -> Nothing
-  Right (Left _) -> Nothing
-  Right (Right ast) -> ast
+markdownAstWithPlaceholder extensions filename text = case markdownAstWith (placeholderSpec <> extensions <> defaultSyntaxSpec) filename text of
+  Just (Right ast) -> ast
+  _ -> Nothing
 
-replacePlaceholders :: String -> T.Text -> LookupTable -> T.Text
-replacePlaceholders filename text lookupTable = case markdownAstWithPlaceholder filename text of
+replacePlaceholders :: SyntaxSpec Maybe (Maybe MarkdownAst) (Maybe MarkdownAst) -> String -> T.Text -> [(T.Text, T.Text)] -> T.Text
+replacePlaceholders extensions filename text lookupTable = case markdownAstWithPlaceholder extensions filename text of
   Nothing -> text
   Just ast ->
     replacePlaceholders'

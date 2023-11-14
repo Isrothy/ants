@@ -59,91 +59,91 @@ templateGenSpec = describe "tempalteGen" $ do
   it "replace single placeholders correctly" $ do
     let input = "Hello, world! This is a {placeholder}.\n"
     let lookupTable = [("placeholder", "replacement")]
-    let output = replacePlaceholders "filename" input lookupTable
+    let output = replacePlaceholders mempty "filename" input lookupTable
     output `shouldBe` "Hello, world! This is a replacement.\n"
 
   it "replace multiple placeholders correctly" $ do
     let input = "Hello, {user}!\nWelcome to {platform}.\nEnjoy your stay!\n"
     let lookupTable = [("user", "John Doe"), ("platform", "StackOverflow")]
-    let output = replacePlaceholders "filename" input lookupTable
+    let output = replacePlaceholders mempty "filename" input lookupTable
     output `shouldBe` "Hello, John Doe!\nWelcome to StackOverflow.\nEnjoy your stay!\n"
 
   it "handles placeholders at the start and end correctly" $ do
     let input = "{greeting} world! This is a test {placeholder}.\n"
     let lookupTable = [("greeting", "Hello,"), ("placeholder", "example")]
-    let output = replacePlaceholders "filename" input lookupTable
+    let output = replacePlaceholders mempty "filename" input lookupTable
     output `shouldBe` "Hello, world! This is a test example.\n"
 
   it "does not replace non-existent placeholders" $ do
     let input = "This text has a {nonexistent} placeholder.\n"
     let lookupTable = [("placeholder", "replacement")]
-    let output = replacePlaceholders "filename" input lookupTable
+    let output = replacePlaceholders mempty "filename" input lookupTable
     output `shouldBe` input
 
   it "handles consecutive placeholders" $ do
     let input = "Consecutive placeholders: {one}{two}{three}\n"
     let lookupTable = [("one", "1"), ("two", "2"), ("three", "3")]
-    let output = replacePlaceholders "filename" input lookupTable
+    let output = replacePlaceholders mempty "filename" input lookupTable
     output `shouldBe` "Consecutive placeholders: 123\n"
 
   it "ignores escaped placeholders" $ do
     let input = "This is an escaped \\{placeholder}.\n"
     let lookupTable = [("placeholder", "should not be replaced")]
-    let output = replacePlaceholders "filename" input lookupTable
+    let output = replacePlaceholders mempty "filename" input lookupTable
     output `shouldBe` input
 
   it "handles placeholders with special characters" $ do
     let input = "Special characters: {placeholder_123}!\n"
     let lookupTable = [("placeholder_123", "replaced")]
-    let output = replacePlaceholders "filename" input lookupTable
+    let output = replacePlaceholders mempty "filename" input lookupTable
     output `shouldBe` "Special characters: replaced!\n"
 
   it "handles line breaks correctly" $ do
     let input = "This is a test with a\n{placeholder}\nacross lines.\n"
     let lookupTable = [("placeholder", "replacement")]
-    let output = replacePlaceholders "filename" input lookupTable
+    let output = replacePlaceholders mempty "filename" input lookupTable
     output `shouldBe` "This is a test with a\nreplacement\nacross lines.\n"
 
   it "handles placeholders within strong text" $ do
     let input = "This is **strong {placeholder} text**.\n"
     let lookupTable = [("placeholder", "and bold")]
-    let output = replacePlaceholders "filename" input lookupTable
+    let output = replacePlaceholders mempty "filename" input lookupTable
     output `shouldBe` "This is **strong and bold text**.\n"
 
   it "handles placeholders within emphasized text" $ do
     let input = "This is *emphasized {placeholder} text*.\n"
     let lookupTable = [("placeholder", "and italic")]
-    let output = replacePlaceholders "filename" input lookupTable
+    let output = replacePlaceholders mempty "filename" input lookupTable
     output `shouldBe` "This is *emphasized and italic text*.\n"
 
   it "handles placeholders within headers" $ do
     let input = "# Heading with {placeholder}\n"
     let lookupTable = [("placeholder", "Placeholder")]
-    let output = replacePlaceholders "filename" input lookupTable
+    let output = replacePlaceholders mempty "filename" input lookupTable
     output `shouldBe` "# Heading with Placeholder\n"
 
   it "handles placeholders within links" $ do
     let input = "[This is a link with a {placeholder}](http://example.com)\n"
     let lookupTable = [("placeholder", "placeholder")]
-    let output = replacePlaceholders "filename" input lookupTable
+    let output = replacePlaceholders mempty "filename" input lookupTable
     output `shouldBe` "[This is a link with a placeholder](http://example.com)\n"
 
   it "handles placeholders within images" $ do
     let input = "![This is an image with a {placeholder}](http://example.com/image.png)\n"
     let lookupTable = [("placeholder", "placeholder")]
-    let output = replacePlaceholders "filename" input lookupTable
+    let output = replacePlaceholders mempty "filename" input lookupTable
     output `shouldBe` "![This is an image with a placeholder](http://example.com/image.png)\n"
 
   it "handles placeholders within lists" $ do
     let input = "- List item with {placeholder}\n- Another list item\n"
     let lookupTable = [("placeholder", "a placeholder")]
-    let output = replacePlaceholders "filename" input lookupTable
+    let output = replacePlaceholders mempty "filename" input lookupTable
     output `shouldBe` "- List item with a placeholder\n- Another list item\n"
 
   it "handles case insensitive placeholders" $ do
     let input = "This is a {PlAcEhOlDeR} with mixed case letters.\n"
     let lookupTable = [("placeholder", "replacement")]
-    let output = replacePlaceholders "filename" input lookupTable
+    let output = replacePlaceholders mempty "filename" input lookupTable
     output `shouldBe` "This is a replacement with mixed case letters.\n"
 
 configToLookupTableSpec :: Spec
