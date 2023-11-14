@@ -148,10 +148,6 @@ templateGenSpec = describe "tempalteGen" $ do
 
 configToLookupTableSpec :: Spec
 configToLookupTableSpec = describe "fromConfig" $ do
-  it "returns an empty lookup table when template is Nothing" $ do
-    let config = Config.Config {Config.template = Nothing}
-    fromConfig config `shouldBe` []
-
   it "uses default formats when specific formats are not provided" $ do
     let template =
           Config.Template
@@ -162,7 +158,7 @@ configToLookupTableSpec = describe "fromConfig" $ do
               Config.dateTimeFormat = Nothing,
               Config.variables = []
             }
-    let config = Config.Config {Config.template = Just template}
+    let config = Config.Config {Config.template = template, Config.extensions = []}
     fromConfig config
       `shouldBe` [ ("name", "John"),
                    ("email", "john@example.com"),
@@ -181,7 +177,7 @@ configToLookupTableSpec = describe "fromConfig" $ do
               Config.dateTimeFormat = Just "MM-DD-YYYY HH:mm:ss",
               Config.variables = [("var1", "value1"), ("var2", "value2")]
             }
-    let config = Config.Config {Config.template = Just template}
+    let config = Config.Config {Config.template = template, Config.extensions = []}
     fromConfig config
       `shouldBe` [ ("name", "Joshua"),
                    ("email", "Joshua@example.com"),
@@ -202,7 +198,11 @@ configToLookupTableSpec = describe "fromConfig" $ do
               Config.dateTimeFormat = Nothing,
               Config.variables = []
             }
-    let config = Config.Config {Config.template = Just template}
+    let config =
+          Config.Config
+            { Config.template = template,
+              Config.extensions = []
+            }
     fromConfig config
       `shouldBe` [ ("date", "YYYY-DD-MM"),
                    ("time", "HH:MM:SS"),

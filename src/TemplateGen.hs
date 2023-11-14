@@ -93,7 +93,7 @@ replacePlaceholders' origin ((placeholder, range) : rest) lookupTable =
         lookupTable
 
 fromConfig :: Config.Config -> LookupTable
-fromConfig = maybe [] fromTemplate . Config.template
+fromConfig = fromTemplate . Config.template
   where
     fromTemplate :: Config.Template -> LookupTable
     fromTemplate template =

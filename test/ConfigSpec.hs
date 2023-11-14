@@ -20,47 +20,37 @@ decodeConfig = decode
 spec :: Spec
 spec = describe "parse config File" $ do
   it "parses an empty object as a Config with Nothing for template" $ do
-    let input = "{}"
-    decodeConfig input `shouldBe` Just (Config Nothing)
+    let input = [r|{}|]
+    decodeConfig input `shouldBe` Just (Config def [])
 
   it "parses a Config with an empty Template" $ do
-    let input = "{\"template\": {}}"
+    let input = [r|{"template": {}}|]
     decodeConfig input
       `shouldBe` Just
-        ( Config
-            ( Just
-                ( Template
-                    Nothing
-                    Nothing
-                    Nothing
-                    Nothing
-                    Nothing
-                    []
-                )
-            )
-        )
+        Config
+          { template = def,
+            extensions = []
+          }
 
   it "parses a Config with full Template details" $ do
     let input =
-          [r|
-      {
-        "template":{
-          "name": "John",
-          "email": "john@example.com",
-          "dateFormat": "MM-DD-YYYY",
-          "timeFormat": "HH:mm:ss",
-          "dateTimeFormat": "MM-DD-YYYY HH:mm:ss",
-          "variables": {
-            "var1": "value1",
-            "var2": "value2"
-          }
-        }
-      }
-    |]
+          [r|{
+              "template":{
+                "name": "John",
+                "email": "john@example.com",
+                "dateFormat": "MM-DD-YYYY",
+                "timeFormat": "HH:mm:ss",
+                "dateTimeFormat": "MM-DD-YYYY HH:mm:ss",
+                "variables": {
+                  "var1": "value1",
+                  "var2": "value2"
+                }
+              }
+            }|]
     decodeConfig input
       `shouldBe` Just
         ( Config
-            ( Just
+            { template =
                 ( Template
                     (Just "John")
                     (Just "john@example.com")
@@ -68,54 +58,93 @@ spec = describe "parse config File" $ do
                     (Just "HH:mm:ss")
                     (Just "MM-DD-YYYY HH:mm:ss")
                     [("var1", "value1"), ("var2", "value2")]
-                )
-            )
+                ),
+              extensions = []
+            }
         )
 
   it "parses a Config with some Template fields missing" $ do
-    let input = "{\"template\": {\"name\": \"John\"}}"
+    let input = [r|{"template": {"name": "John"}}|]
     decodeConfig input
       `shouldBe` Just
-        ( Config
-            ( Just
-                ( Template
-                    (Just "John")
-                    Nothing
-                    Nothing
-                    Nothing
-                    Nothing
-                    []
-                )
-            )
-        )
+        Config
+          { template = (def {name = Just "John"}),
+            extensions = []
+          }
 
   it "handles incorrect types within the Template object" $ do
-    let input = "{\"template\": {\"name\": null, \"email\": 123}}"
-    decodeConfig input `shouldBe` Nothing
-
-  it "handles an unexpected structure" $ do
-    let input = "{\"unexpected\": \"structure\"}"
-    decodeConfig input `shouldBe` Just (Config {template = Nothing})
-
-  it "handles sytanx error" $ do
-    let input = "Not a Json file"
-    decodeConfig input `shouldBe` Nothing
-
-  it "handles partially incorrect types within a list of variables" $ do
-    let input = "{\"template\": {\"variables\": {\"var1\": 123, \"var2\": \"value2\"}}}"
+    let input = [r|{"template": {"name": null, "email": 123}}|]
     decodeConfig input
       `shouldBe` Just
         ( Config
-            { template =
-                Just
-                  ( Template
-                      { name = Nothing,
-                        email = Nothing,
-                        dateFormat = Nothing,
-                        timeFormat = Nothing,
-                        dateTimeFormat = Nothing,
-                        variables = [("var2", "value2")]
-                      }
-                  )
+            { template = def,
+              extensions = []
+            }
+        )
+
+  it "handles an unexpected structure" $ do
+    let input = [r|{"unexpected": "structure"}|]
+    decodeConfig input `shouldBe` Just (Config {template = def, extensions = []})
+
+  it "handles syntax error" $ do
+    let input = [r|Not a Json file|]
+    decodeConfig input `shouldBe` Nothing
+
+  it "handles partially incorrect types within template" $ do
+    let input = [r|{"template": { "name" : 1234 }}|]
+    decodeConfig input
+      `shouldBe` Just
+        ( Config
+            { template = def,
+              extensions = []
+            }
+        )
+
+  it "handles partially incorrect types within a list of variables" $ do
+    let input = [r|{"template": {"variables": {"var1": 123, "var2": "value2"}}}|]
+    decodeConfig input
+      `shouldBe` Just
+        ( Config
+            { template = (def {variables = [("var2", "value2")]}),
+              extensions = []
+            }
+        )
+
+  it "parses a Config with extensions as a list of Text" $ do
+    let input =
+          [r|{
+            "template": {"name": "John"},
+            "extensions": ["ext1", "ext2"]
+          }|]
+    decodeConfig input
+      `shouldBe` Just
+        Config
+          { template = (def {name = Just "John"}),
+            extensions = ["ext1", "ext2"]
+          }
+
+  it "handles empty extensions array" $ do
+    let input =
+          [r|{
+            "template": {"name": "John"},
+            "extensions": []
+          }|]
+    decodeConfig input
+      `shouldBe` Just
+        Config
+          { template = (def {name = Just "John"}),
+            extensions = []
+          }
+
+  it "handles non-string types in extensions array" $ do
+    let input =
+          [r|{
+              "extensions": ["valid", 123, "also valid"]
+          }|]
+    decodeConfig input
+      `shouldBe` Just
+        ( Config
+            { template = def,
+              extensions = ["valid", "also valid"]
             }
         )
