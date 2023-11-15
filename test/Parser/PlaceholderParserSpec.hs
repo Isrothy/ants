@@ -1,4 +1,4 @@
-module PlaceholderParserSpec
+module Parser.PlaceholderParserSpec
   ( spec,
   )
 where

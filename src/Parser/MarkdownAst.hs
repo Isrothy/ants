@@ -18,10 +18,10 @@ where
 
 import Commonmark
 import Commonmark.Extensions
+import Data.Data
 import Data.Maybe
 import Data.Text (Text, pack)
 import Parser.Placeholder
-import Data.Data
 
 markdownAst :: String -> Text -> Either ParseError (Maybe MarkdownAst)
 markdownAst = commonmark

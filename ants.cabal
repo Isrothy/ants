@@ -27,7 +27,9 @@ library
   exposed-modules:
       Config
       Lib
+      Metadata
       Parser.MarkdownAst
+      Parser.Metadata
       Parser.Placeholder
       TemplateGen
   other-modules:
@@ -74,8 +76,9 @@ test-suite ants-test
   main-is: Spec.hs
   other-modules:
       ConfigSpec
-      MarkdownParserSpec
-      PlaceholderParserSpec
+      Parser.MarkdownParserSpec
+      Parser.MetadataSpec
+      Parser.PlaceholderParserSpec
       TemplateGenSpec
       Paths_ants
   hs-source-dirs:
