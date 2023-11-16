@@ -33,6 +33,7 @@ library
       Parser.MarkdownAst
       Parser.Metadata
       Parser.Placeholder
+      Parser.YamlMarked
       TemplateGen
   other-modules:
       Paths_ants
@@ -84,6 +85,7 @@ test-suite ants-test
       Parser.MarkdownParserSpec
       Parser.MetadataSpec
       Parser.PlaceholderParserSpec
+      Parser.YamlMarkd
       TemplateGenSpec
       Paths_ants
   hs-source-dirs:

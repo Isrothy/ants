@@ -10,9 +10,6 @@ module MetadataSpec
 where
 
 import Common.Default
-import Data.Aeson
-import Data.ByteString.Lazy.Internal
-import Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Data.Yaml as Y
