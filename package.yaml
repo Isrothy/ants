@@ -30,6 +30,7 @@ dependencies:
 - unordered-containers
 - vector
 - raw-strings-qq
+- yaml 
 
 ghc-options:
 - -Wall

@@ -25,6 +25,8 @@ source-repository head
 
 library
   exposed-modules:
+      Common.Default
+      Common.ExAeson
       Config
       Lib
       Metadata
@@ -48,6 +50,7 @@ library
     , text
     , unordered-containers
     , vector
+    , yaml
   default-language: Haskell2010
 
 executable ants-exe
@@ -69,6 +72,7 @@ executable ants-exe
     , text
     , unordered-containers
     , vector
+    , yaml
   default-language: Haskell2010
 
 test-suite ants-test
@@ -76,6 +80,7 @@ test-suite ants-test
   main-is: Spec.hs
   other-modules:
       ConfigSpec
+      MetadataSpec
       Parser.MarkdownParserSpec
       Parser.MetadataSpec
       Parser.PlaceholderParserSpec
@@ -97,4 +102,5 @@ test-suite ants-test
     , text
     , unordered-containers
     , vector
+    , yaml
   default-language: Haskell2010

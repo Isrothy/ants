@@ -1,4 +1,5 @@
 import qualified ConfigSpec
+import qualified MetadataSpec
 import qualified Parser.MarkdownParserSpec
 import qualified Parser.MetadataSpec
 import qualified Parser.PlaceholderParserSpec
@@ -12,4 +13,5 @@ main = hspec $ do
   Parser.MetadataSpec.spec
   TemplateGenSpec.spec
   ConfigSpec.spec
+  MetadataSpec.spec
   return ()

@@ -8,6 +8,7 @@ module ConfigSpec
   )
 where
 
+import Common.Default
 import Config
 import Data.Aeson
 import Data.ByteString.Lazy.Internal

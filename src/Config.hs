@@ -9,47 +9,18 @@
 module Config
   ( Config (..),
     Template (..),
-    Default (..),
   )
 where
 
-import Control.Applicative
+import Common.Default
+import Common.ExAeson
 import Data.Aeson
 import Data.Aeson.Key (fromString, fromText, toText)
-import qualified Data.Aeson.KeyMap as KeyMap
-import Data.Aeson.Types (Parser)
-import Data.Bifunctor (second)
 import Data.Functor
 import Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Vector as Vector
 import GHC.Generics
-
-(.:??) :: (FromJSON a) => Object -> String -> Parser (Maybe a)
-(.:??) o k = o .:? fromString k .!= Nothing <|> pure Nothing
-
-parseMap :: (Value -> Maybe a) -> Maybe Value -> Parser [(T.Text, a)]
-parseMap f (Just (Object obj)) = pure [(toText k, v) | (k, Just v) <- map (second f) (KeyMap.toList obj)]
-parseMap _ _ = pure []
-
-parseList :: (Value -> Maybe a) -> Maybe Value -> Parser [a]
-parseList f (Just (Array arr)) = pure (mapMaybe f (Vector.toList arr))
-parseList _ _ = pure []
-
-class Default a where
-  def :: a
-
-instance Default Int where
-  def = 0
-
-instance Default [a] where
-  def = []
-
-instance Default (Maybe a) where
-  def = Nothing
-
-instance Default Bool where
-  def = False
 
 data Config where
   Config ::
