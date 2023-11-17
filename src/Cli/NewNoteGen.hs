@@ -62,11 +62,11 @@ splitLines' txt line = case TL.uncons txt of
 findPosition :: Int -> Int -> T.Text -> Maybe Int
 findPosition lineNumber columnNumber text = do
   guard $ lineNumber >= 1 && columnNumber >= 1
-  let lines = splitLines text
-  guard $ lineNumber <= length lines
-  let line = lines !! (lineNumber - 1)
+  let lines' = splitLines text
+  guard $ lineNumber <= length lines'
+  let line = lines' !! (lineNumber - 1)
   guard $ columnNumber <= T.length line
-  let linesBefore = take (lineNumber - 1) lines
+  let linesBefore = take (lineNumber - 1) lines'
   let charsInLinesBefore = sum $ map T.length linesBefore
   return $ charsInLinesBefore + columnNumber - 1
 
@@ -83,8 +83,8 @@ replace origin (start, end) replacement =
 
 replacePlaceholders' :: T.Text -> [(T.Text, SourceRange)] -> LookupTable -> T.Text
 replacePlaceholders' origin [] _ = origin
-replacePlaceholders' origin ((placeholder, range) : rest) lookupTable =
-  case lookup (T.toCaseFold placeholder) lookupTable of
+replacePlaceholders' origin ((ph, range) : rest) lookupTable =
+  case lookup (T.toCaseFold ph) lookupTable of
     Nothing -> replacePlaceholders' origin rest lookupTable
     Just replacement ->
       replacePlaceholders'
