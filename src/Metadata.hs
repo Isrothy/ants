@@ -2,7 +2,6 @@
 {-# LANGUAGE ExtendedDefaultRules #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Metadata
@@ -12,13 +11,17 @@ where
 
 import Common.Default
 import Common.ExAeson
+import Control.Applicative ((<|>))
 import Data.Aeson
+import Data.Maybe
 import qualified Data.Text as T
+import Data.Time
+import Data.Time.Format.ISO8601
 
 data Metadata = Metadata
   { title :: !(Maybe T.Text),
     author :: !(Maybe T.Text),
-    date :: !(Maybe T.Text),
+    dateTime :: !(Maybe UTCTime),
     tags :: ![T.Text],
     description :: !T.Text
   }
@@ -30,11 +33,8 @@ instance Default Metadata where
 instance FromJSON Metadata where
   parseJSON = withObject "metadata" $ \o ->
     Metadata
-      <$> (o .:?? "title")
-      <*> (o .:?? "author")
-      <*> (o .:?? "date")
-      <*> ( o .:?? "tags" >>= parseList \case
-              String v -> Just v
-              _ -> Nothing
-          )
-      <*> (o .:?? "description" .!= "")
+      <$> (o .:? "title" <|> pure Nothing)
+      <*> (o .:? "author" <|> pure Nothing)
+      <*> ((>>= iso8601ParseM) <$> o .:? "dateTime" <|> pure Nothing)
+      <*> ((parseList . fromMaybe Null <$> (o .:? "tags")) <|> pure [])
+      <*> (o .:? "description" .!= "" <|> pure "")

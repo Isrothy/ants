@@ -12,6 +12,7 @@ where
 import Common.Default
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
+import Data.Time.Format.ISO8601
 import qualified Data.Yaml as Y
 import Metadata
 import Test.Hspec
@@ -29,13 +30,13 @@ spec = describe "parse metadata File" $ do
           [r|
 title: Example Title
 author: Joshua
-date: 2023-03-01
+dateTime: 2023-03-01T11:22:33Z
 tags:
   - Haskell
   - Parsing
 description: Description of the document
 |]
-    let expectedResult = Metadata (Just "Example Title") (Just "Joshua") (Just "2023-03-01") ["Haskell", "Parsing"] "Description of the document"
+    let expectedResult = Metadata (Just "Example Title") (Just "Joshua") (iso8601ParseM "2023-03-01T11:22:33Z") ["Haskell", "Parsing"] "Description of the document"
     decodeMaybeMetadata input `shouldBe` Just expectedResult
 
   it "handles missing optional fields" $ do
@@ -61,7 +62,7 @@ description: ""
           [r|
 title: 12345
 author: ["Jane", "Doe"]
-date: true
+dateTime: true
 tags:
   - true
   - 123
@@ -74,12 +75,12 @@ description: 1000
           [r|
 title: Example Title
 author: Joshua
-date: 2023-03-01
+dateTime: 2023-03-01T11:22:33Z
 tags:
   - Haskell
   - 123
   - Parsing
 description: A document
 |]
-    let expectedResult = Metadata (Just "Example Title") (Just "Joshua") (Just "2023-03-01") ["Haskell", "Parsing"] "A document"
+    let expectedResult = Metadata (Just "Example Title") (Just "Joshua") (iso8601ParseM "2023-03-01T11:22:33Z") ["Haskell", "Parsing"] "A document"
     decodeMaybeMetadata input `shouldBe` Just expectedResult

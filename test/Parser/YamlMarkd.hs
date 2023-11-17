@@ -13,6 +13,7 @@ import Commonmark
 import Data.Either (isRight)
 import Data.Maybe (isJust)
 import qualified Data.Text as T
+import Data.Time.Format.ISO8601
 import Metadata
 import Parser.MarkdownAst
 import Parser.YamlMarked
@@ -28,7 +29,7 @@ spec = describe "markdownWithYamlParser" $ do
           [r|---
 title: Test Document
 author: Joshua
-date: 2023-01-01
+dateTime: 2023-01-01
 tags:
   - Haskell
   - Parsing
@@ -43,7 +44,7 @@ This is a Markdown document with a YAML header.
             Metadata
               { title = Just "Test Document",
                 author = Just "Joshua",
-                date = Just "2023-01-01",
+                dateTime = iso8601ParseM "2023-01-01",
                 tags = ["Haskell", "Parsing"],
                 description = "A sample document"
               }

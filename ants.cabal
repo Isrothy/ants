@@ -49,6 +49,7 @@ library
     , parsec
     , raw-strings-qq
     , text
+    , time
     , unordered-containers
     , vector
     , yaml
@@ -71,6 +72,7 @@ executable ants-exe
     , parsec
     , raw-strings-qq
     , text
+    , time
     , unordered-containers
     , vector
     , yaml
@@ -102,6 +104,7 @@ test-suite ants-test
     , parsec
     , raw-strings-qq
     , text
+    , time
     , unordered-containers
     , vector
     , yaml

@@ -3,8 +3,10 @@
 {-# LANGUAGE ExtendedDefaultRules #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Redundant bracket" #-}
 
 module Config
   ( Config (..),
@@ -14,9 +16,9 @@ where
 
 import Common.Default
 import Common.ExAeson
+import Control.Applicative ((<|>))
 import Data.Aeson
-import Data.Aeson.Key (fromString, fromText, toText)
-import Data.Functor
+import Data.Aeson.Key (fromString, fromText)
 import Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Vector as Vector
@@ -33,11 +35,8 @@ data Config where
 instance FromJSON Config where
   parseJSON = withObject "config" $ \o ->
     Config
-      <$> ((o .:?? "template") <&> fromMaybe def)
-      <*> ( o .:?? "extensions" >>= parseList \case
-              String v -> Just v
-              _ -> Nothing
-          )
+      <$> (o .:? "template" .!= def <|> pure def)
+      <*> (parseList . fromMaybe Null <$> (o .:? "extensions") <|> pure [])
 
 instance ToJSON Config
 
@@ -62,15 +61,12 @@ instance Default Template where
 instance FromJSON Template where
   parseJSON = withObject "template" $ \o ->
     Template
-      <$> o .:?? "name"
-      <*> o .:?? "email"
-      <*> o .:?? "dateFormat"
-      <*> o .:?? "timeFormat"
-      <*> o .:?? "dateTimeFormat"
-      <*> ( o .:?? "variables" >>= parseMap \case
-              String v -> Just v
-              _ -> Nothing
-          )
+      <$> (o .:? "name" <|> pure Nothing)
+      <*> (o .:? "email" <|> pure Nothing)
+      <*> (o .:? "dateFormat" <|> pure Nothing)
+      <*> (o .:? "timeFormat" <|> pure Nothing)
+      <*> (o .:? "dateTimeFormat" <|> pure Nothing)
+      <*> ((parseMap parseString) . fromMaybe Null <$> (o .:? "variables") <|> pure [])
 
 variablesToJson :: [(T.Text, T.Text)] -> Value
 variablesToJson vars = Array . Vector.fromList $ map (\(k, v) -> object [fromText k .= v]) vars

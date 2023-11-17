@@ -28,6 +28,7 @@ dependencies:
 - aeson
 - bytestring
 - unordered-containers
+- time
 - vector
 - raw-strings-qq
 - yaml 
