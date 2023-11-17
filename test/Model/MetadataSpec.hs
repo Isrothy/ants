@@ -4,19 +4,19 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 
-module MetadataSpec
+module Model.MetadataSpec
   ( spec,
   )
 where
 
-import Common.Default
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time.Format.ISO8601
 import qualified Data.Yaml as Y
-import Metadata
+import Model.Metadata
 import Test.Hspec
 import Text.RawString.QQ
+import Util.Default
 
 decodeMaybeMetadata :: String -> Maybe Metadata
 decodeMaybeMetadata str = case Y.decodeEither' (TE.encodeUtf8 $ T.pack str) of

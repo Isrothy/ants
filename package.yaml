@@ -1,14 +1,14 @@
-name:                ants
-version:             0.1.0.0
-github:              "githubuser/ants"
-license:             BSD3
-author:              "Author name here"
-maintainer:          "isrothy@icloud.com"
-copyright:           "2023 Author name here"
+name: ants
+version: 0.1.0.0
+github: "githubuser/ants"
+license: BSD3
+author: "Author name here"
+maintainer: "isrothy@icloud.com"
+copyright: "2023 Author name here"
 
 extra-source-files:
-- README.md
-- CHANGELOG.md
+  - README.md
+  - CHANGELOG.md
 
 # Metadata used when publishing your package
 # synopsis:            Short description of your package
@@ -17,55 +17,55 @@ extra-source-files:
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:         Please see the README on GitHub at <https://github.com/githubuser/ants#readme>
+description: Please see the README on GitHub at <https://github.com/githubuser/ants#readme>
 
 dependencies:
-- base >= 4.7 && < 5
-- text
-- commonmark
-- commonmark-extensions
-- parsec
-- aeson
-- bytestring
-- unordered-containers
-- time
-- vector
-- raw-strings-qq
-- yaml 
+  - base >= 4.7 && < 5
+  - text
+  - commonmark
+  - commonmark-extensions
+  - parsec
+  - aeson
+  - bytestring
+  - unordered-containers
+  - time
+  - vector
+  - raw-strings-qq
+  - yaml
 
 ghc-options:
-- -Wall
-- -Wcompat
-- -Widentities
-- -Wincomplete-record-updates
-- -Wincomplete-uni-patterns
-- -Wmissing-export-lists
-- -Wmissing-home-modules
-- -Wpartial-fields
-- -Wredundant-constraints
+  - -Wall
+  - -Wcompat
+  - -Widentities
+  - -Wincomplete-record-updates
+  - -Wincomplete-uni-patterns
+  - -Wmissing-export-lists
+  - -Wmissing-home-modules
+  - -Wpartial-fields
+  - -Wredundant-constraints
 
 library:
   source-dirs: src
 
 executables:
   ants-exe:
-    main:                Main.hs
-    source-dirs:         app
+    main: Main.hs
+    source-dirs: app
     ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
+      - -threaded
+      - -rtsopts
+      - -with-rtsopts=-N
     dependencies:
-    - ants
+      - ants
 
 tests:
   ants-test:
-    main:                Spec.hs
-    source-dirs:         test
+    main: Spec.hs
+    source-dirs: test
     ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
+      - -threaded
+      - -rtsopts
+      - -with-rtsopts=-N
     dependencies:
-    - hspec
-    - ants
+      - hspec
+      - ants

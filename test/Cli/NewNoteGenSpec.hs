@@ -2,13 +2,13 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module TemplateGenSpec
+module Cli.NewNoteGenSpec
   ( spec,
   )
 where
 
-import qualified Config
-import TemplateGen
+import qualified Model.Config as Config
+import Cli.NewNoteGen
 import Test.Hspec
 
 splitLinesSpec :: Spec

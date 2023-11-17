@@ -1,4 +1,4 @@
-module Common.ExAeson
+module Util.ExAeson
   ( parseMap,
     parseList,
     parseString,

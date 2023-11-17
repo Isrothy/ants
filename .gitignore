@@ -1,2 +1,15 @@
 .stack-work/
+dist-newstyle/
+*.o
+*.hi
+*.exe
+*.bin
+*.dll
+*.so
+.DS_Store
+cabal.project.local
+cabal.project.freeze
+*.swp
 *~
+/log/
+/dist/

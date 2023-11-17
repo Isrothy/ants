@@ -2,18 +2,21 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
-module ConfigSpec
+{-# HLINT ignore "Redundant bracket" #-}
+
+module Model.ConfigSpec
   ( spec,
   )
 where
 
-import Common.Default
-import Config
 import Data.Aeson
 import Data.ByteString.Lazy.Internal
+import Model.Config
 import Test.Hspec
 import Text.RawString.QQ
+import Util.Default
 
 decodeConfig :: ByteString -> Maybe Config
 decodeConfig = decode

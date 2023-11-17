@@ -25,16 +25,17 @@ source-repository head
 
 library
   exposed-modules:
-      Common.Default
-      Common.ExAeson
-      Config
+      Cli.NewNoteGen
       Lib
-      Metadata
-      Parser.MarkdownAst
+      Model.Config
+      Model.MarkdownAst
+      Model.Metadata
+      Parser.Markdown
       Parser.Metadata
       Parser.Placeholder
       Parser.YamlMarked
-      TemplateGen
+      Util.Default
+      Util.ExAeson
   other-modules:
       Paths_ants
   hs-source-dirs:
@@ -82,13 +83,13 @@ test-suite ants-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      ConfigSpec
-      MetadataSpec
-      Parser.MarkdownParserSpec
+      Cli.NewNoteGenSpec
+      Model.ConfigSpec
+      Model.MetadataSpec
+      Parser.MarkdownSpec
       Parser.MetadataSpec
-      Parser.PlaceholderParserSpec
-      Parser.YamlMarkd
-      TemplateGenSpec
+      Parser.PlaceholderSpec
+      Parser.YamlMarkdSpec
       Paths_ants
   hs-source-dirs:
       test

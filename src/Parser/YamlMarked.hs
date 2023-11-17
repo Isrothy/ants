@@ -7,8 +7,9 @@ import Commonmark
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Data.Yaml as Y
-import Metadata
-import Parser.MarkdownAst
+import Model.MarkdownAst
+import Model.Metadata
+import Parser.Markdown
 import Parser.Metadata
 import Text.Parsec
 import Text.Parsec.Text

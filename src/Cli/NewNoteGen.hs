@@ -3,7 +3,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TupleSections #-}
 
-module TemplateGen
+module Cli.NewNoteGen
   ( splitLines,
     replacePlaceholders,
     fromConfig,
@@ -12,14 +12,14 @@ module TemplateGen
 where
 
 import Commonmark
-import qualified Config
 import Control.Monad
 import qualified Data.Bifunctor
 import Data.List (sortBy)
 import Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
-import Parser.MarkdownAst
+import qualified Model.Config as Config
+import Model.MarkdownAst
 import Parser.Placeholder
 
 type LookupTable = [(T.Text, T.Text)]

@@ -4,13 +4,13 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Metadata
+module Model.Metadata
   ( Metadata (..),
   )
 where
 
-import Common.Default
-import Common.ExAeson
+import Util.Default
+import Util.ExAeson
 import Control.Applicative ((<|>))
 import Data.Aeson
 import Data.Maybe

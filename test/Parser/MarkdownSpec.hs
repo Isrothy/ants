@@ -1,11 +1,12 @@
-module Parser.MarkdownParserSpec
+module Parser.MarkdownSpec
   ( spec,
   )
 where
 
 import Data.Either
 import qualified Data.Text as T
-import Parser.MarkdownAst (MarkdownAst (..), MarkdownElement (..), markdownAst)
+import Model.MarkdownAst
+import Parser.Markdown
 import Test.Hspec
 
 spec :: Spec

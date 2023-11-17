@@ -1,4 +1,4 @@
-module Common.Default
+module Util.Default
   ( Default (..),
   )
 where

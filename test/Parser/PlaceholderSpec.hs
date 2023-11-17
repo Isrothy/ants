@@ -1,11 +1,12 @@
-module Parser.PlaceholderParserSpec
+module Parser.PlaceholderSpec
   ( spec,
   )
 where
 
 import Commonmark
 import qualified Data.Text as T
-import Parser.MarkdownAst
+import Model.MarkdownAst
+import Parser.Markdown
 import Parser.Placeholder
 import Test.Hspec
 

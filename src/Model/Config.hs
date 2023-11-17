@@ -6,16 +6,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
-{-# HLINT ignore "Redundant bracket" #-}
-
-module Config
+module Model.Config
   ( Config (..),
     Template (..),
   )
 where
 
-import Common.Default
-import Common.ExAeson
 import Control.Applicative ((<|>))
 import Data.Aeson
 import Data.Aeson.Key (fromString, fromText)
@@ -23,6 +19,8 @@ import Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Vector as Vector
 import GHC.Generics
+import Util.Default
+import Util.ExAeson
 
 data Config where
   Config ::
@@ -66,7 +64,7 @@ instance FromJSON Template where
       <*> (o .:? "dateFormat" <|> pure Nothing)
       <*> (o .:? "timeFormat" <|> pure Nothing)
       <*> (o .:? "dateTimeFormat" <|> pure Nothing)
-      <*> ((parseMap parseString) . fromMaybe Null <$> (o .:? "variables") <|> pure [])
+      <*> (parseMap parseString . fromMaybe Null <$> (o .:? "variables") <|> pure [])
 
 variablesToJson :: [(T.Text, T.Text)] -> Value
 variablesToJson vars = Array . Vector.fromList $ map (\(k, v) -> object [fromText k .= v]) vars
