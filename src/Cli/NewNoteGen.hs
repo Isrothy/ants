@@ -20,6 +20,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Lazy as TL
 import qualified Model.Config as Config
 import Model.MarkdownAst
+import Parser.Markdown
 import Parser.Placeholder
 
 type LookupTable = [(T.Text, T.Text)]

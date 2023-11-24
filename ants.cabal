@@ -28,6 +28,7 @@ library
       Cli.NewNoteGen
       Lib
       Model.Config
+      Model.DocFilter
       Model.MarkdownAst
       Model.Metadata
       Parser.Markdown
@@ -47,6 +48,7 @@ library
     , bytestring
     , commonmark
     , commonmark-extensions
+    , fuzzy
     , parsec
     , raw-strings-qq
     , text
@@ -70,6 +72,7 @@ executable ants-exe
     , bytestring
     , commonmark
     , commonmark-extensions
+    , fuzzy
     , parsec
     , raw-strings-qq
     , text
@@ -101,6 +104,7 @@ test-suite ants-test
     , bytestring
     , commonmark
     , commonmark-extensions
+    , fuzzy
     , hspec
     , parsec
     , raw-strings-qq

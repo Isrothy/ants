@@ -7,7 +7,6 @@
 module Model.MarkdownAst
   ( MarkdownAst (..),
     MarkdownElement (..),
-    markdownAstWith,
     children,
     findPlaceholders,
   )
@@ -18,15 +17,6 @@ import Commonmark.Extensions
 import Data.Maybe
 import Data.Text (Text, pack)
 import Parser.Placeholder
-
-
-markdownAstWith ::
-  (Monad m) =>
-  SyntaxSpec m (Maybe MarkdownAst) (Maybe MarkdownAst) ->
-  String ->
-  Text ->
-  m (Either ParseError (Maybe MarkdownAst))
-markdownAstWith = commonmarkWith
 
 data MarkdownAst = MarkdownAst
   { markdownElement :: MarkdownElement,
@@ -199,26 +189,27 @@ toPlainText1 (MarkdownAst ele _ _) = case ele of
   DoubleQuoted ast -> toPlainText ast
   Subscript ast -> toPlainText1 ast
   Superscript ast -> toPlainText1 ast
-  Paragraph ast -> toPlainText1 ast
+  Paragraph ast -> toPlainText1 ast <> "\n"
   Plain ast -> toPlainText1 ast
-  Header _ ast -> toPlainText ast
-  List _ _ asts -> mconcat $ map toPlainText asts
-  Blockquote ast -> toPlainText1 ast
-  CodeBlock _ t -> t
-  RawBlock _ t -> t
-  HorizontalRule -> "\n"
-  PipeTable _ title rows -> helper (title : rows)
+  Header _ ast -> toPlainText ast <> "\n"
+  List _ _ asts -> mconcat $ map (\ast -> toPlainText ast <> "\n") asts
+  Blockquote ast -> toPlainText1 ast <> "\n"
+  CodeBlock _ t -> t <> "\n"
+  RawBlock _ t -> t <> "\n"
+  HorizontalRule -> "\n\n"
+  PipeTable _ title rows -> tableHelper (title : rows) <> "\n"
     where
-      helper [] = ""
-      helper (x : xs) = mconcat (map (\y -> toPlainText y <> " ") x) <> "\n" <> helper xs
+      tableHelper :: [[Maybe MarkdownAst]] -> Text
+      tableHelper [] = ""
+      tableHelper (x : xs) = mconcat (map (\y -> toPlainText y <> " ") x) <> "\n" <> tableHelper xs
   ReferenceLinkDefination label (dest, title) -> "[" <> label <> "] " <> dest <> " " <> title
-  DefinitionList _ asts -> mconcat $ map toPlainText (map fst asts ++ concatMap snd asts)
-  TaskList _ _ items -> mconcat $ map (toPlainText . snd) items
+  DefinitionList _ asts -> mconcat (map (\(term, defs) -> toPlainText term <> "\n" <> mconcat (map (\def -> toPlainText def <> "\n") defs)) asts)
+  TaskList _ _ items -> mconcat $ map (\(_, ast) -> toPlainText ast <> "\n") items
   WikiLink txt ast -> txt <> toPlainText1 ast
   Footnote num txt ast -> "[" <> pack (show num) <> "] " <> txt <> toPlainText ast
-  FootnoteList items -> mconcat $ map toPlainText items
+  FootnoteList items -> mconcat $ map (\item -> toPlainText item <> "\n") items
   FootnoteRef num label ast -> "[" <> pack (show num) <> "] " <> label <> toPlainText1 ast
-  Placeholder t -> t
+  Placeholder _ -> ""
   Span asts -> mconcat $ map toPlainText1 asts
 
 instance ToPlainText (Maybe MarkdownAst) where

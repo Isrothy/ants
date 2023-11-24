@@ -2,6 +2,7 @@ module Parser.Markdown
   ( markdownAst,
     extensionLookup,
     allSpecExtions,
+    markdownAstWith,
   )
 where
 
@@ -64,3 +65,12 @@ extensionLookup =
 
 allSpecExtions :: SyntaxSpec (Either ParseError) (Maybe MarkdownAst) (Maybe MarkdownAst)
 allSpecExtions = foldMap snd extensionLookup
+
+
+markdownAstWith ::
+  (Monad m) =>
+  SyntaxSpec m (Maybe MarkdownAst) (Maybe MarkdownAst) ->
+  String ->
+  T.Text ->
+  m (Either ParseError (Maybe MarkdownAst))
+markdownAstWith = commonmarkWith

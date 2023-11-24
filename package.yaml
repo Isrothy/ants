@@ -32,6 +32,7 @@ dependencies:
   - vector
   - raw-strings-qq
   - yaml
+  - fuzzy
 
 ghc-options:
   - -Wall
