@@ -22,6 +22,7 @@ module Model.DocFilter
 where
 
 import Commonmark
+import Data.Maybe
 import qualified Data.Text as T
 import Data.Time
 import Model.Document hiding (ast)
@@ -47,30 +48,24 @@ textFilter :: (T.Text -> Bool) -> DocFilter
 textFilter f = Filter $ \(Document _ _ _ t) -> f t
 
 dateRange :: Maybe UTCTime -> Maybe UTCTime -> DocFilter
-dateRange start end = metadataFilter $ \m -> case M.dateTime m of
-  Nothing -> False
-  Just d -> between start end
-    where
-      between (Just s) (Just e) = s <= e && d >= s && d <= e
-      between (Just s) Nothing = d >= s
-      between Nothing (Just e) = d <= e
-      between Nothing Nothing = True
+dateRange start end = metadataFilter $ maybe False (between start end) . M.dateTime
+  where
+    between (Just s) (Just e) d = s <= e && d >= s && d <= e
+    between (Just s) Nothing d = d >= s
+    between Nothing (Just e) d = d <= e
+    between _ _ _ = True
 
 author :: T.Text -> DocFilter
-author a = metadataFilter $ \m -> case M.author m of
-  Nothing -> False
-  Just a' -> a' == a
+author a = metadataFilter $ (Just a ==) . M.author
 
 title :: T.Text -> DocFilter
-title t = metadataFilter $ \m -> case M.title m of
-  Nothing -> False
-  Just t' -> t' == t
+title t = metadataFilter $ (Just t ==) . M.title
 
 hasTag :: T.Text -> DocFilter
 hasTag t = metadataFilter $ elem t . M.tags
 
 fuzzyDescription :: T.Text -> DocFilter
-fuzzyDescription t = metadataFilter $ \m -> Fuzzy.test t (M.description m)
+fuzzyDescription t = metadataFilter $ Fuzzy.test t . M.description
 
 keyword :: T.Text -> DocFilter
 keyword t = astFilter $ Fuzzy.test t . toPlainText
@@ -91,7 +86,7 @@ matchRelPath :: Path Rel File -> DocFilter
 matchRelPath p = relPathFilter (== p)
 
 matchRelPaths :: [Path Rel File] -> DocFilter
-matchRelPaths ps = relPathFilter $ \p -> p `elem` ps
+matchRelPaths ps = relPathFilter (`elem` ps)
 
 hasLink :: Path Rel File -> DocFilter
 hasLink p = astFilter $ \x -> case x of
