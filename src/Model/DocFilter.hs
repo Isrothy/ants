@@ -11,22 +11,35 @@ module Model.DocFilter
     keywords,
     strictKeyword,
     strictKeywords,
+    matchRelPath,
+    matchRelPaths,
   )
 where
 
 import Commonmark
 import qualified Data.Text as T
 import Data.Time
+import Model.Document hiding (ast)
 import Model.MarkdownAst
 import qualified Model.Metadata as M
+import Path
 import qualified Text.Fuzzy as Fuzzy
 import Util.Filter
 import Prelude hiding (and, not, or)
 
-type DocFilter = Filter (M.Metadata, Maybe MarkdownAst)
+type DocFilter = Filter Document
+
+metadataFilter :: (M.Metadata -> Bool) -> DocFilter
+metadataFilter f = Filter $ \(Document _ m _) -> f m
+
+astFilter :: (Maybe MarkdownAst -> Bool) -> DocFilter
+astFilter f = Filter $ \(Document _ _ ast) -> f ast
+
+relPathFilter :: (Path Rel File -> Bool) -> DocFilter
+relPathFilter f = Filter $ \(Document p _ _) -> f p
 
 dateRange :: Maybe UTCTime -> Maybe UTCTime -> DocFilter
-dateRange start end = Filter $ \(m, _) -> case M.dateTime m of
+dateRange start end = metadataFilter $ \m -> case M.dateTime m of
   Nothing -> False
   Just d -> between start end
     where
@@ -36,29 +49,35 @@ dateRange start end = Filter $ \(m, _) -> case M.dateTime m of
       between Nothing Nothing = True
 
 author :: T.Text -> DocFilter
-author a = Filter $ \(m, _) -> case M.author m of
+author a = metadataFilter $ \m -> case M.author m of
   Nothing -> False
   Just a' -> a' == a
 
 title :: T.Text -> DocFilter
-title t = Filter $ \(m, _) -> case M.title m of
+title t = metadataFilter $ \m -> case M.title m of
   Nothing -> False
   Just t' -> t' == t
 
 hasTag :: T.Text -> DocFilter
-hasTag t = Filter $ \(m, _) -> t `elem` M.tags m
+hasTag t = metadataFilter $ elem t . M.tags
 
 fuzzyDescription :: T.Text -> DocFilter
-fuzzyDescription t = Filter $ \(m, _) -> Fuzzy.test t (M.description m)
+fuzzyDescription t = metadataFilter $ \m -> Fuzzy.test t (M.description m)
 
 keyword :: T.Text -> DocFilter
-keyword t = Filter $ \(_, ast) -> Fuzzy.test t (toPlainText ast)
+keyword t = astFilter $ Fuzzy.test t . toPlainText
 
 keywords :: [T.Text] -> DocFilter
-keywords ts = Filter $ \(_, ast) -> any (\t -> Fuzzy.test t (toPlainText ast)) ts
+keywords ts = astFilter $ \ast -> any (\t -> Fuzzy.test t (toPlainText ast)) ts
 
 strictKeyword :: T.Text -> DocFilter
-strictKeyword t = Filter $ \(_, ast) -> T.isInfixOf t (toPlainText ast)
+strictKeyword t = astFilter $ T.isInfixOf t . toPlainText
 
 strictKeywords :: [T.Text] -> DocFilter
-strictKeywords ts = Filter $ \(_, ast) -> any (\t -> T.isInfixOf t (toPlainText ast)) ts
+strictKeywords ts = astFilter $ \ast -> any (\t -> T.isInfixOf t (toPlainText ast)) ts
+
+matchRelPath :: Path Rel File -> DocFilter
+matchRelPath p = relPathFilter (== p)
+
+matchRelPaths :: [Path Rel File] -> DocFilter
+matchRelPaths ps = relPathFilter $ \p -> p `elem` ps

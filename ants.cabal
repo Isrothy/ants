@@ -29,6 +29,7 @@ library
       Lib
       Model.Config
       Model.DocFilter
+      Model.Document
       Model.MarkdownAst
       Model.Metadata
       Parser.Markdown
@@ -49,9 +50,9 @@ library
     , bytestring
     , commonmark
     , commonmark-extensions
-    , cond
     , fuzzy
     , parsec
+    , path
     , raw-strings-qq
     , text
     , time
@@ -74,9 +75,9 @@ executable ants-exe
     , bytestring
     , commonmark
     , commonmark-extensions
-    , cond
     , fuzzy
     , parsec
+    , path
     , raw-strings-qq
     , text
     , time
@@ -108,10 +109,10 @@ test-suite ants-test
     , bytestring
     , commonmark
     , commonmark-extensions
-    , cond
     , fuzzy
     , hspec
     , parsec
+    , path
     , raw-strings-qq
     , text
     , time
