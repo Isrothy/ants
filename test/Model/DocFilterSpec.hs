@@ -84,6 +84,28 @@ Other phrases include "Haskell programming" and "text analysis".
 
 |]
 
+testDocWithLink :: String
+testDocWithLink =
+  [r|
+# Document with Link
+[somePlace](someLink/here/test.md)
+|]
+
+testDocWithoutLink :: String
+testDocWithoutLink =
+  [r|
+# Document without Link
+This document does not contain any links.
+|]
+
+testDocMultipleLinks :: String
+testDocMultipleLinks =
+  [r|
+# Document with Multiple Links
+[somePlace](someLink/here/test.md)
+[anotherPlace](anotherLink/there/test.md)
+|]
+
 testMarkdownAst :: Maybe MarkdownAst
 testMarkdownAst = fromRight Nothing $ markdownAst "test1" (T.pack testMarkdownDoc)
 
@@ -92,6 +114,15 @@ keywordsMarkdownAst = fromRight Nothing $ markdownAst "test1" (T.pack keywordsDo
 
 strictKeywordsMarkdownAst :: Maybe MarkdownAst
 strictKeywordsMarkdownAst = fromRight Nothing $ markdownAst "test1" (T.pack strictKeywordsDoc)
+
+testMarkdownAstWithLink :: Maybe MarkdownAst
+testMarkdownAstWithLink = fromRight Nothing $ markdownAst "test1" (T.pack testDocWithLink)
+
+testMarkdownAstWithoutLink :: Maybe MarkdownAst
+testMarkdownAstWithoutLink = fromRight Nothing $ markdownAst "test1" (T.pack testDocWithoutLink)
+
+testMarkdownAstMultipleLinks :: Maybe MarkdownAst
+testMarkdownAstMultipleLinks = fromRight Nothing $ markdownAst "test1" (T.pack testDocMultipleLinks)
 
 testMetadata :: M.Metadata
 testMetadata =
@@ -108,7 +139,7 @@ testPath = $(mkRelFile "some/test/path/file.txt")
 
 metadataSpec :: Spec
 metadataSpec = describe "Metadata Filter" $ do
-  let doc = Document testPath testMetadata testMarkdownAst
+  let doc = Document testPath testMetadata testMarkdownAst (T.pack testMarkdownDoc)
   it "matches metadata with a specific date range" $ do
     let startDate = parseTimeOrError True defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ" "2021-01-01T00:00:00Z"
     let endDate = parseTimeOrError True defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ" "2021-12-31T23:59:59Z"
@@ -189,7 +220,7 @@ metadataSpec = describe "Metadata Filter" $ do
 
 keywordsFilterSpec :: Spec
 keywordsFilterSpec = describe "Keywords Filter" $ do
-  let doc = Document testPath testMetadata keywordsMarkdownAst
+  let doc = Document testPath testMetadata keywordsMarkdownAst (T.pack keywordsDoc)
   it "matches a single keyword present in the document" $ do
     let filter' = keywords ["Haskell"]
     filt filter' doc `shouldBe` True
@@ -220,7 +251,7 @@ keywordsFilterSpec = describe "Keywords Filter" $ do
 
 strictKeywordsFilterSpec :: Spec
 strictKeywordsFilterSpec = describe "Strict Keywords Filter" $ do
-  let doc = Document testPath testMetadata strictKeywordsMarkdownAst
+  let doc = Document testPath testMetadata strictKeywordsMarkdownAst (T.pack strictKeywordsDoc)
   it "matches an exact keyword in the document" $ do
     let filter' = strictKeyword "strict search"
     filt filter' doc `shouldBe` True
@@ -260,7 +291,7 @@ strictKeywordsFilterSpec = describe "Strict Keywords Filter" $ do
 pathFilterSpec :: Spec
 pathFilterSpec = do
   describe "Path Matching Filter" $ do
-    let doc = Document testPath testMetadata testMarkdownAst
+    let doc = Document testPath testMetadata testMarkdownAst (T.pack testMarkdownDoc)
 
     it "matches document with specific relative path" $ do
       let filter' = matchRelPath $(mkRelFile "some/test/path/file.txt")
@@ -274,9 +305,9 @@ pathFilterSpec = do
     let doc1Path = $(mkRelFile "docs/complexTest.md")
     let doc2Path = $(mkRelFile "docs/anotherTest.md")
     let doc3Path = $(mkRelFile "docs/yetAnotherTest.md")
-    let doc1 = Document doc1Path testMetadata testMarkdownAst
-    let doc2 = Document doc2Path testMetadata testMarkdownAst
-    let doc3 = Document doc3Path testMetadata testMarkdownAst
+    let doc1 = Document doc1Path testMetadata testMarkdownAst (T.pack testMarkdownDoc)
+    let doc2 = Document doc2Path testMetadata testMarkdownAst (T.pack testMarkdownDoc)
+    let doc3 = Document doc3Path testMetadata testMarkdownAst (T.pack testMarkdownDoc)
 
     it "matches a document with one of the specified paths" $ do
       let paths = [doc1Path, doc2Path]
@@ -303,9 +334,36 @@ pathFilterSpec = do
       filt filter' doc2 `shouldBe` False
       filt filter' doc3 `shouldBe` False
 
+linkFilterSpec :: Spec
+linkFilterSpec = do
+  describe "Has Link Filter" $ do
+    let docWithLink = Document testPath testMetadata testMarkdownAstWithLink (T.pack testDocWithLink)
+    let docWithoutLink = Document testPath testMetadata testMarkdownAstWithoutLink (T.pack testDocWithoutLink)
+
+    let linkInDoc = $(mkRelFile "someLink/here/test.md")
+    let nonExistentLink = $(mkRelFile "nonexistent/link.md")
+
+    it "matches document containing a specific link" $ do
+      let filter' = hasLink linkInDoc
+      filt filter' docWithLink `shouldBe` True
+
+    it "does not match document without the specific link" $ do
+      let filter' = hasLink linkInDoc
+      filt filter' docWithoutLink `shouldBe` False
+
+    it "does not match document with a non-existent link" $ do
+      let filter' = hasLink nonExistentLink
+      filt filter' docWithLink `shouldBe` False
+
+    it "matches document with multiple links if one of them matches" $ do
+      let multipleLinksDoc = Document testPath testMetadata testMarkdownAstMultipleLinks (T.pack testDocMultipleLinks)
+      let filter' = hasLink linkInDoc
+      filt filter' multipleLinksDoc `shouldBe` True
+
 spec :: Spec
 spec = do
   metadataSpec
   keywordsFilterSpec
   strictKeywordsFilterSpec
   pathFilterSpec
+  linkFilterSpec

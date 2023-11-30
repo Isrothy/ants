@@ -9,6 +9,7 @@ module Model.MarkdownAst
     MarkdownElement (..),
     children,
     findPlaceholders,
+    findLinks,
   )
 where
 
@@ -246,3 +247,7 @@ findPlaceholders :: MarkdownAst -> [(Text, SourceRange)]
 findPlaceholders (MarkdownAst (Placeholder txt) (Just srange) _) = [(txt, srange)]
 findPlaceholders (MarkdownAst (Placeholder _) _ _) = []
 findPlaceholders (MarkdownAst ele _ _) = concatMap findPlaceholders (children ele)
+
+findLinks :: MarkdownAst -> [(Text, Text)]
+findLinks (MarkdownAst (Link target title _) _ _) = [(target, title)]
+findLinks (MarkdownAst ele _ _) = concatMap findLinks (children ele)
