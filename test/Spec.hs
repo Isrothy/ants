@@ -1,5 +1,6 @@
 import qualified Cli.NewNoteGenSpec
 import qualified Model.ConfigSpec
+import qualified Model.DocFilterSpec
 import qualified Model.MetadataSpec
 import qualified Parser.MarkdownSpec
 import qualified Parser.MetadataSpec
@@ -12,6 +13,7 @@ main = hspec $ do
   Cli.NewNoteGenSpec.spec
   Model.ConfigSpec.spec
   Model.MetadataSpec.spec
+  Model.DocFilterSpec.spec
   Parser.MarkdownSpec.spec
   Parser.MetadataSpec.spec
   Parser.PlaceholderSpec.spec

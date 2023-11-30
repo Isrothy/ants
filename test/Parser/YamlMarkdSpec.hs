@@ -10,13 +10,10 @@ module Parser.YamlMarkdSpec
 where
 
 import Commonmark
-import Data.Either (isRight)
 import Data.Maybe (isJust)
 import qualified Data.Text as T
 import Data.Time.Format.ISO8601
-import Model.MarkdownAst
 import Model.Metadata
-import Parser.Markdown
 import Parser.YamlMarked
 import Test.Hspec
 import Text.Parsec

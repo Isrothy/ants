@@ -37,6 +37,7 @@ library
       Parser.YamlMarked
       Util.Default
       Util.ExAeson
+      Util.Filter
   other-modules:
       Paths_ants
   hs-source-dirs:
@@ -48,6 +49,7 @@ library
     , bytestring
     , commonmark
     , commonmark-extensions
+    , cond
     , fuzzy
     , parsec
     , raw-strings-qq
@@ -72,6 +74,7 @@ executable ants-exe
     , bytestring
     , commonmark
     , commonmark-extensions
+    , cond
     , fuzzy
     , parsec
     , raw-strings-qq
@@ -88,6 +91,7 @@ test-suite ants-test
   other-modules:
       Cli.NewNoteGenSpec
       Model.ConfigSpec
+      Model.DocFilterSpec
       Model.MetadataSpec
       Parser.MarkdownSpec
       Parser.MetadataSpec
@@ -104,6 +108,7 @@ test-suite ants-test
     , bytestring
     , commonmark
     , commonmark-extensions
+    , cond
     , fuzzy
     , hspec
     , parsec

@@ -33,6 +33,7 @@ dependencies:
   - raw-strings-qq
   - yaml
   - fuzzy
+  - cond
 
 ghc-options:
   - -Wall
