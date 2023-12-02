@@ -4,7 +4,7 @@
 {-# HLINT ignore "Use lambda-case" #-}
 
 module Model.DocFilter
-  ( DocFilter,
+  ( DocFilter (..),
     dateRange,
     author,
     title,
@@ -22,30 +22,42 @@ module Model.DocFilter
 where
 
 import Commonmark
+import Data.Algebra.Boolean
 import Data.Maybe
 import qualified Data.Text as T
 import Data.Time
-import Model.Document hiding (ast)
+import Model.Document
 import Model.MarkdownAst
 import qualified Model.Metadata as M
 import Path
 import qualified Text.Fuzzy as Fuzzy
-import Util.Filter
-import Prelude hiding (and, not, or)
+import Prelude hiding (and, any, not, or, (&&), (||))
 
-type DocFilter = Filter Document
+newtype DocFilter where
+  Filter :: {filt :: Document -> Bool} -> DocFilter
+
+instance Boolean DocFilter where
+  true = Filter $ const True
+  false = Filter $ const False
+  (&&) f1 f2 = Filter $ \x -> filt f1 x && filt f2 x
+  (||) f1 f2 = Filter $ \x -> filt f1 x || filt f2 x
+  not f = Filter $ \x -> not $ filt f x
+  xor f1 f2 = Filter $ \x -> case (filt f1 x, filt f2 x) of
+    (True, True) -> False
+    (False, False) -> False
+    _ -> True
 
 metadataFilter :: (M.Metadata -> Bool) -> DocFilter
-metadataFilter f = Filter $ \(Document _ m _ _) -> f m
+metadataFilter f = Filter $ f . metadata
 
 astFilter :: (Maybe MarkdownAst -> Bool) -> DocFilter
-astFilter f = Filter $ \(Document _ _ ast _) -> f ast
+astFilter f = Filter $ f . ast
 
 relPathFilter :: (Path Rel File -> Bool) -> DocFilter
-relPathFilter f = Filter $ \(Document p _ _ _) -> f p
+relPathFilter f = Filter $ f . relPath
 
 textFilter :: (T.Text -> Bool) -> DocFilter
-textFilter f = Filter $ \(Document _ _ _ t) -> f t
+textFilter f = Filter $ f . text
 
 dateRange :: Maybe UTCTime -> Maybe UTCTime -> DocFilter
 dateRange start end = metadataFilter $ maybe False (between start end) . M.dateTime
@@ -71,24 +83,22 @@ keyword :: T.Text -> DocFilter
 keyword t = astFilter $ Fuzzy.test t . toPlainText
 
 keywords :: [T.Text] -> DocFilter
-keywords ts = astFilter $ \ast -> any (\t -> Fuzzy.test t (toPlainText ast)) ts
+keywords = any keyword
 
 strictKeyword :: T.Text -> DocFilter
-strictKeyword t = textFilter $ T.isInfixOf t
+strictKeyword = textFilter . T.isInfixOf
 
 strictKeywords :: [T.Text] -> DocFilter
-strictKeywords ts = textFilter $ \t -> any (`T.isInfixOf` t) ts
+strictKeywords = any strictKeyword
 
 regularText :: T.Text -> Bool
 regularText = undefined
 
 matchRelPath :: Path Rel File -> DocFilter
-matchRelPath p = relPathFilter (== p)
+matchRelPath = relPathFilter . (==)
 
 matchRelPaths :: [Path Rel File] -> DocFilter
-matchRelPaths ps = relPathFilter (`elem` ps)
+matchRelPaths = any matchRelPath
 
 hasLink :: Path Rel File -> DocFilter
-hasLink p = astFilter $ \x -> case x of
-  Nothing -> False
-  Just ast -> Just p `elem` [parseRelFile $ T.unpack target | (target, _) <- findLinks ast]
+hasLink p = astFilter $ maybe False $ elem (Just p) . map (parseRelFile . T.unpack . fst) . findLinks

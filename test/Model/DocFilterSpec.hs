@@ -18,7 +18,6 @@ import Parser.Markdown
 import Path
 import Test.Hspec
 import Text.RawString.QQ
-import Util.Filter
 import Prelude hiding (and, not, or)
 
 testMarkdownDoc :: String

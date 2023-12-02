@@ -38,7 +38,6 @@ library
       Parser.YamlMarked
       Util.Default
       Util.ExAeson
-      Util.Filter
   other-modules:
       Paths_ants
   hs-source-dirs:
@@ -50,6 +49,7 @@ library
     , bytestring
     , commonmark
     , commonmark-extensions
+    , cond
     , fuzzy
     , parsec
     , path
@@ -75,6 +75,7 @@ executable ants-exe
     , bytestring
     , commonmark
     , commonmark-extensions
+    , cond
     , fuzzy
     , parsec
     , path
@@ -109,6 +110,7 @@ test-suite ants-test
     , bytestring
     , commonmark
     , commonmark-extensions
+    , cond
     , fuzzy
     , hspec
     , parsec
