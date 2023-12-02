@@ -42,7 +42,6 @@ instance Boolean DocFilter where
   (&&) f1 f2 = Filter $ \x -> filt f1 x && filt f2 x
   (||) f1 f2 = Filter $ \x -> filt f1 x || filt f2 x
   not f = Filter $ \x -> not $ filt f x
-  xor f1 f2 = Filter $ \x -> xor (filt f1 x) (filt f2 x)
 
 metadataFilter :: (M.Metadata -> Bool) -> DocFilter
 metadataFilter f = Filter $ f . metadata
