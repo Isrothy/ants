@@ -105,6 +105,35 @@ testDocMultipleLinks =
 [anotherPlace](anotherLink/there/test.md)
 |]
 
+posixRegexMatchingDoc :: String
+posixRegexMatchingDoc =
+  [r|
+# POSIX Regex Matching Document
+
+This document contains various POSIX extended regular expressions for testing.
+
+1. Haskell 101 - An introductory course.
+2. The world of Haskell programming.
+3. Learn Haskell 202, the next step in functional programming.
+4. The word 'Haskell' appears multiple times in this document.
+5. This is a sample phone number: 123-456-7890.
+6. Email address: user@example.com
+|]
+
+nonPosixRegexMatchingDoc :: String
+nonPosixRegexMatchingDoc =
+  [r|
+# Non-POSIX Regex Matching Document
+
+This document does not contain specific POSIX extended regular expressions.
+
+1. Introduction to functional programming.
+2. Exploring different programming paradigms.
+3. A comprehensive study of programming languages.
+4. This is not a valid phone number: 1234567.
+5. This is not a valid email address: userexample.com
+|]
+
 testMarkdownAst :: Maybe MarkdownAst
 testMarkdownAst = fromRight Nothing $ markdownAst "test1" (T.pack testMarkdownDoc)
 
@@ -122,6 +151,12 @@ testMarkdownAstWithoutLink = fromRight Nothing $ markdownAst "test1" (T.pack tes
 
 testMarkdownAstMultipleLinks :: Maybe MarkdownAst
 testMarkdownAstMultipleLinks = fromRight Nothing $ markdownAst "test1" (T.pack testDocMultipleLinks)
+
+posixRegexMatchingMarkdownAst :: Maybe MarkdownAst
+posixRegexMatchingMarkdownAst = fromRight Nothing $ markdownAst "test1" (T.pack posixRegexMatchingDoc)
+
+nonPosixRegexMatchingMarkdownAst :: Maybe MarkdownAst
+nonPosixRegexMatchingMarkdownAst = fromRight Nothing $ markdownAst "test1" (T.pack nonPosixRegexMatchingDoc)
 
 testMetadata :: M.Metadata
 testMetadata =
@@ -293,11 +328,11 @@ pathFilterSpec = do
     let doc = Document testPath testMetadata testMarkdownAst (T.pack testMarkdownDoc)
 
     it "matches document with specific relative path" $ do
-      let filter' = matchRelPath $(mkRelFile "some/test/path/file.txt")
+      let filter' = matchesRelPath $(mkRelFile "some/test/path/file.txt")
       filt filter' doc `shouldBe` True
 
     it "does not match document with different relative path" $ do
-      let filter' = matchRelPath $(mkRelFile "other/test/path/file.txt")
+      let filter' = matchesRelPath $(mkRelFile "other/test/path/file.txt")
       filt filter' doc `shouldBe` False
 
   describe "Match Relative Paths Filter" $ do
@@ -310,25 +345,25 @@ pathFilterSpec = do
 
     it "matches a document with one of the specified paths" $ do
       let paths = [doc1Path, doc2Path]
-      let filter' = matchRelPaths paths
+      let filter' = matchesRelPaths paths
       filt filter' doc1 `shouldBe` True
       filt filter' doc2 `shouldBe` True
 
     it "does not match a document if its path is not in the list" $ do
       let paths = [doc1Path, doc2Path]
-      let filter' = matchRelPaths paths
+      let filter' = matchesRelPaths paths
       filt filter' doc3 `shouldBe` False
 
     it "matches documents with any of the multiple specified paths" $ do
       let paths = [doc1Path, doc2Path, doc3Path]
-      let filter' = matchRelPaths paths
+      let filter' = matchesRelPaths paths
       filt filter' doc1 `shouldBe` True
       filt filter' doc2 `shouldBe` True
       filt filter' doc3 `shouldBe` True
 
     it "matches no documents if the list of paths is empty" $ do
       let paths = []
-      let filter' = matchRelPaths paths
+      let filter' = matchesRelPaths paths
       filt filter' doc1 `shouldBe` False
       filt filter' doc2 `shouldBe` False
       filt filter' doc3 `shouldBe` False
@@ -359,10 +394,41 @@ linkFilterSpec = do
       let filter' = hasLink linkInDoc
       filt filter' multipleLinksDoc `shouldBe` True
 
+regexFilterSpec :: Spec
+regexFilterSpec = do
+  describe "Regex Matching Filter" $ do
+    let docWithPosixRegexMatch = Document testPath testMetadata posixRegexMatchingMarkdownAst (T.pack posixRegexMatchingDoc)
+    let docWithoutPosixRegexMatch = Document testPath testMetadata nonPosixRegexMatchingMarkdownAst (T.pack nonPosixRegexMatchingDoc)
+
+    it "matches document containing text that matches a POSIX-compatible regex" $ do
+      let filter' = matchesRegex "Haskell [0-9]+"
+      filt filter' docWithPosixRegexMatch `shouldBe` True
+
+    it "does not match document without text that matches the POSIX-compatible regex" $ do
+      let filter' = matchesRegex "Haskell [0-9]+"
+      filt filter' docWithoutPosixRegexMatch `shouldBe` False
+
+    it "matches document when POSIX-compatible regex matches anywhere in the text" $ do
+      let filter' = matchesRegex "world"
+      filt filter' docWithPosixRegexMatch `shouldBe` True
+
+    it "does not match document when POSIX-compatible regex does not match any part of the text" $ do
+      let filter' = matchesRegex "^nonexistent"
+      filt filter' docWithoutPosixRegexMatch `shouldBe` False
+
+    it "matches document containing text that matches a phone number regex" $ do
+      let filter' = matchesRegex "[0-9]{3}-[0-9]{3}-[0-9]{4}"
+      filt filter' docWithPosixRegexMatch `shouldBe` True
+
+    it "matches document containing text that matches an email address regex" $ do
+      let filter' = matchesRegex "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,4}"
+      filt filter' docWithPosixRegexMatch `shouldBe` True
+
 spec :: Spec
 spec = do
   metadataSpec
   keywordsFilterSpec
   strictKeywordsFilterSpec
+  regexFilterSpec
   pathFilterSpec
   linkFilterSpec

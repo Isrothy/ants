@@ -14,9 +14,9 @@ module Model.DocFilter
     keywords,
     strictKeyword,
     strictKeywords,
-    regularText,
-    matchRelPath,
-    matchRelPaths,
+    matchesRegex,
+    matchesRelPath,
+    matchesRelPaths,
     hasLink,
   )
 where
@@ -31,6 +31,7 @@ import Model.MarkdownAst
 import qualified Model.Metadata as M
 import Path
 import qualified Text.Fuzzy as Fuzzy
+import Text.Regex.TDFA
 import Prelude hiding (and, any, not, or, (&&), (||))
 
 newtype DocFilter where
@@ -87,14 +88,14 @@ strictKeyword = textFilter . T.isInfixOf
 strictKeywords :: [T.Text] -> DocFilter
 strictKeywords = any strictKeyword
 
-regularText :: T.Text -> DocFilter
-regularText = undefined
+matchesRegex :: String -> DocFilter
+matchesRegex s = textFilter (=~ s)
 
-matchRelPath :: Path Rel File -> DocFilter
-matchRelPath = relPathFilter . (==)
+matchesRelPath :: Path Rel File -> DocFilter
+matchesRelPath = relPathFilter . (==)
 
-matchRelPaths :: [Path Rel File] -> DocFilter
-matchRelPaths = any matchRelPath
+matchesRelPaths :: [Path Rel File] -> DocFilter
+matchesRelPaths = any matchesRelPath
 
 hasLink :: Path Rel File -> DocFilter
 hasLink p = astFilter $ maybe False $ elem (Just p) . map (parseRelFile . T.unpack . fst) . findLinks
