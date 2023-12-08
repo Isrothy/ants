@@ -7,7 +7,6 @@ module Util.Default
   )
 where
 
-import Data.Algebra.Boolean
 import Data.Complex
 import Data.Int
 import Data.Maybe
@@ -77,9 +76,6 @@ instance Default (Maybe a) where
 
 instance Default Bool where
   def = False
-
-instance (Boolean a) => Default a where
-  def = false
 
 instance Default (a -> a) where
   def = id
