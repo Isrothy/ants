@@ -74,6 +74,9 @@ instance Default [a] where
 instance Default (Maybe a) where
   def = Nothing
 
+instance (Default a) => Default (Either a b) where
+  def = Left def
+
 instance Default Bool where
   def = False
 
