@@ -1,7 +1,7 @@
 module Parser.Markdown
   ( markdownAst,
     extensionLookup,
-    allSpecExtions,
+    allSpecExtensions,
     markdownAstWith,
   )
 where
@@ -64,8 +64,8 @@ extensionLookup =
     ("gfm", gfmExtensions)
   ]
 
-allSpecExtions :: SyntaxSpec (Either ParseError) (Maybe MarkdownAst) (Maybe MarkdownAst)
-allSpecExtions = foldMap snd extensionLookup
+allSpecExtensions :: SyntaxSpec (Either ParseError) (Maybe MarkdownAst) (Maybe MarkdownAst)
+allSpecExtensions = foldMap snd extensionLookup
 
 markdownAstWith ::
   (Monad m) =>
