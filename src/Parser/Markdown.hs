@@ -26,6 +26,7 @@ extensionLookup ::
     HasEmoji il,
     HasWikilinks il,
     HasSpan il,
+    HasAlerts il bl,
     ToPlainText il,
     HasStrikethrough il,
     HasSuperscript il,
@@ -65,7 +66,6 @@ extensionLookup =
 
 allSpecExtions :: SyntaxSpec (Either ParseError) (Maybe MarkdownAst) (Maybe MarkdownAst)
 allSpecExtions = foldMap snd extensionLookup
-
 
 markdownAstWith ::
   (Monad m) =>

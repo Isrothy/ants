@@ -20,9 +20,9 @@ import Data.Text (Text, pack)
 import Parser.Placeholder
 
 data MarkdownAst = MarkdownAst
-  { markdownElement :: MarkdownElement,
-    sourceRange :: Maybe SourceRange,
-    attributes :: Attributes
+  { markdownElement :: !MarkdownElement,
+    sourceRange :: !(Maybe SourceRange),
+    attributes :: !Attributes
   }
   deriving (Show, Eq)
 
@@ -43,6 +43,7 @@ data MarkdownElement where
   Strikethrough :: MarkdownAst -> MarkdownElement
   Highlight :: MarkdownAst -> MarkdownElement
   RawInline :: Format -> Text -> MarkdownElement
+  Alert :: AlertType -> (Maybe MarkdownAst) -> MarkdownElement
   Emoji :: Text -> Text -> MarkdownElement
   InlineMath :: Text -> MarkdownElement
   DisplayMath :: Text -> MarkdownElement
@@ -149,6 +150,9 @@ instance HasDefinitionList (Maybe MarkdownAst) (Maybe MarkdownAst) where
 instance HasTaskList (Maybe MarkdownAst) (Maybe MarkdownAst) where
   taskList listtype spacing items = Just $ rawNode (TaskList listtype spacing items)
 
+instance HasAlerts (Maybe MarkdownAst) (Maybe MarkdownAst) where
+  alert a = Just . rawNode . Alert a
+
 instance HasWikilinks (Maybe MarkdownAst) where
   wikilink target = fmap $ rawNode . WikiLink target
 
@@ -192,6 +196,7 @@ toPlainText1 (MarkdownAst ele _ _) = case ele of
   Superscript ast -> toPlainText1 ast
   Paragraph ast -> toPlainText1 ast <> "\n"
   Plain ast -> toPlainText1 ast
+  Alert a ast -> alertName a <> ": " <> toPlainText ast
   Header _ ast -> toPlainText ast <> "\n"
   List _ _ asts -> mconcat $ map (\ast -> toPlainText ast <> "\n") asts
   Blockquote ast -> toPlainText1 ast <> "\n"
