@@ -10,6 +10,11 @@ module Model.MarkdownAst
     children,
     findPlaceholders,
     findLinks,
+    findTasks,
+    findFinishedTasks,
+    findUnfinishedTasks,
+    findAlerts,
+    toPlainText1,
   )
 where
 
@@ -256,3 +261,17 @@ findPlaceholders (MarkdownAst ele _ _) = concatMap findPlaceholders (children el
 findLinks :: MarkdownAst -> [(Text, Text)]
 findLinks (MarkdownAst (Link target title _) _ _) = [(target, title)]
 findLinks (MarkdownAst ele _ _) = concatMap findLinks (children ele)
+
+findTasks :: MarkdownAst -> [(Bool, Maybe MarkdownAst)]
+findTasks (MarkdownAst (TaskList _ _ items) _ _) = items
+findTasks (MarkdownAst ele _ _) = concatMap findTasks (children ele)
+
+findFinishedTasks :: MarkdownAst -> [Maybe MarkdownAst]
+findFinishedTasks = map snd . filter fst . findTasks
+
+findUnfinishedTasks :: MarkdownAst -> [Maybe MarkdownAst]
+findUnfinishedTasks = map snd . filter (not . fst) . findTasks
+
+findAlerts :: MarkdownAst -> [(AlertType, Maybe MarkdownAst)]
+findAlerts (MarkdownAst (Alert t ast) _ _) = [(t, ast)]
+findAlerts (MarkdownAst ele _ _) = concatMap findAlerts (children ele)

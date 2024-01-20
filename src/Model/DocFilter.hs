@@ -1,32 +1,38 @@
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 {-# HLINT ignore "Use lambda-case" #-}
 
 module Model.DocFilter
-  ( DocFilter (..),
+  ( Filter (..),
     dateRange,
     author,
     title,
     hasTag,
-    fuzzyDescription,
-    keyword,
-    keywords,
-    strictKeyword,
-    strictKeywords,
-    matchesRegex,
+    description,
+    fuzzyTerm,
+    strictTerm,
+    regexTerm,
     matchesRelPath,
-    matchesRelPaths,
     hasLink,
+    content,
+    entire,
+    task,
+    finishedTask,
+    unfinishedTask,
+    hasAlert,
+    hasAlertType,
   )
 where
 
 import Commonmark
+import Commonmark.Extensions
 import Data.Algebra.Boolean
 import Data.Maybe
 import qualified Data.Text as T
 import Data.Time
-import Model.Document
+import qualified Model.Document as D
 import Model.MarkdownAst
 import qualified Model.Metadata as M
 import Path
@@ -34,68 +40,86 @@ import qualified Text.Fuzzy as Fuzzy
 import Text.Regex.TDFA
 import Prelude hiding (and, any, not, or, (&&), (||))
 
-newtype DocFilter where
-  Filter :: {filt :: Document -> Bool} -> DocFilter
+newtype Filter a where
+  Filter :: {filt :: a -> Bool} -> Filter a
 
-instance Boolean DocFilter where
+instance Boolean (Filter a) where
   true = Filter $ const True
   false = Filter $ const False
   (&&) f1 f2 = Filter $ \x -> filt f1 x && filt f2 x
   (||) f1 f2 = Filter $ \x -> filt f1 x || filt f2 x
   not f = Filter $ \x -> not $ filt f x
 
-metadataFilter :: (M.Metadata -> Bool) -> DocFilter
-metadataFilter f = Filter $ f . metadata
+type DocFilter = Filter D.Document
 
-astFilter :: (Maybe MarkdownAst -> Bool) -> DocFilter
-astFilter f = Filter $ f . ast
+type AstFilter = Filter (Maybe MarkdownAst)
 
-relPathFilter :: (Path Rel File -> Bool) -> DocFilter
-relPathFilter f = Filter $ f . relPath
+type TextFilter = Filter T.Text
 
-textFilter :: (T.Text -> Bool) -> DocFilter
-textFilter f = Filter $ f . text
+metadata :: (M.Metadata -> Bool) -> DocFilter
+metadata f = Filter $ f . D.metadata
 
-dateRange :: Maybe UTCTime -> Maybe UTCTime -> DocFilter
-dateRange start end = metadataFilter $ maybe False (between start end) . M.dateTime
-  where
-    between (Just s) (Just e) d = s <= e && d >= s && d <= e
-    between (Just s) Nothing d = d >= s
-    between Nothing (Just e) d = d <= e
-    between _ _ _ = True
+ast :: AstFilter -> DocFilter
+ast f = Filter $ filt f . D.ast
 
-author :: T.Text -> DocFilter
-author a = metadataFilter $ (Just a ==) . M.author
+ast' :: (MarkdownAst -> Bool) -> DocFilter
+ast' = ast . Filter . maybe False
 
-title :: T.Text -> DocFilter
-title t = metadataFilter $ (Just t ==) . M.title
+relPath :: (Path Rel File -> Bool) -> DocFilter
+relPath f = Filter $ f . D.relPath
 
-hasTag :: T.Text -> DocFilter
-hasTag t = metadataFilter $ elem t . M.tags
+fuzzyTerm :: T.Text -> TextFilter
+fuzzyTerm = Filter . Fuzzy.test
 
-fuzzyDescription :: T.Text -> DocFilter
-fuzzyDescription t = metadataFilter $ Fuzzy.test t . M.description
+strictTerm :: T.Text -> TextFilter
+strictTerm = Filter . T.isInfixOf
 
-keyword :: T.Text -> DocFilter
-keyword t = astFilter $ Fuzzy.test t . toPlainText
-
-keywords :: [T.Text] -> DocFilter
-keywords = any keyword
-
-strictKeyword :: T.Text -> DocFilter
-strictKeyword = textFilter . T.isInfixOf
-
-strictKeywords :: [T.Text] -> DocFilter
-strictKeywords = any strictKeyword
-
-matchesRegex :: String -> DocFilter
-matchesRegex s = textFilter (=~ s)
+regexTerm :: String -> TextFilter
+regexTerm s = Filter (=~ s)
 
 matchesRelPath :: Path Rel File -> DocFilter
-matchesRelPath = relPathFilter . (==)
+matchesRelPath = relPath . (==)
 
-matchesRelPaths :: [Path Rel File] -> DocFilter
-matchesRelPaths = any matchesRelPath
+content :: TextFilter -> AstFilter
+content f = Filter $ filt f . toPlainText
+
+dateRange :: Maybe UTCTime -> Maybe UTCTime -> DocFilter
+dateRange start end = metadata $ maybe False (between start end) . M.dateTime
+  where
+    between (Just s) (Just e) d = s <= e && d >= s && d <= e
+    between (Just s) _ d = d >= s
+    between _ (Just e) d = d <= e
+    between _ _ _ = True
+
+author :: TextFilter -> DocFilter
+author f = metadata $ filt f . fromMaybe "" . M.author
+
+title :: TextFilter -> DocFilter
+title f = metadata $ filt f . fromMaybe "" . M.title
+
+hasTag :: TextFilter -> DocFilter
+hasTag f = metadata $ any (filt f) . M.tags
+
+description :: TextFilter -> DocFilter
+description f = metadata $ filt f . M.description
+
+entire :: TextFilter -> DocFilter
+entire = ast . content
+
+task :: TextFilter -> DocFilter
+task f = ast' $ any (filt f . toPlainText . snd) . findTasks
+
+finishedTask :: TextFilter -> DocFilter
+finishedTask f = ast' $ any (filt f . toPlainText) . findFinishedTasks
+
+unfinishedTask :: TextFilter -> DocFilter
+unfinishedTask f = ast' $ any (filt f . toPlainText) . findUnfinishedTasks
+
+hasAlert :: DocFilter
+hasAlert = ast' $ not . null . findAlerts
+
+hasAlertType :: AlertType -> DocFilter
+hasAlertType t = ast' $ any ((== t) . fst) . findAlerts
 
 hasLink :: Path Rel File -> DocFilter
-hasLink p = astFilter $ maybe False $ elem (Just p) . map (parseRelFile . T.unpack . fst) . findLinks
+hasLink p = ast' $ elem (Just p) . map (parseRelFile . T.unpack . fst) . findLinks

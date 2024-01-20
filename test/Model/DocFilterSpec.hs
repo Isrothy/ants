@@ -18,10 +18,10 @@ import Parser.Markdown
 import Path
 import Test.Hspec
 import Text.RawString.QQ
-import Prelude hiding (and, not, or)
+import Prelude hiding (and, any, not, or)
 
-testMarkdownDoc :: String
-testMarkdownDoc =
+sampleMarkdownDoc :: String
+sampleMarkdownDoc =
   [r|
 # Introduction
 
@@ -55,111 +55,11 @@ Thank you for reading this document.
 ---
 |]
 
-keywordsDoc :: String
-keywordsDoc =
-  [r|# Sample Markdown Document
+sampleMarkdownAst :: Maybe MarkdownAst
+sampleMarkdownAst = fromRight Nothing $ markdownAst "test1" (T.pack sampleMarkdownDoc)
 
-This document is for testing the keyword search functionality.
-
-It contains some *keywords* that should be detected by the filter.
-
-Here are some of the keywords we might want to find:
-- Haskell
-- Parsing
-- Keyword
-- Search
-|]
-
-strictKeywordsDoc :: String
-strictKeywordsDoc =
-  [r|
-# Strict Keyword Search Document
-
-This document is specifically for testing strict keyword search.
-
-It contains exact phrases like "strict search" and "keyword detection".
-
-Other phrases include "Haskell programming" and "text analysis".
-
-|]
-
-testDocWithLink :: String
-testDocWithLink =
-  [r|
-# Document with Link
-[somePlace](someLink/here/test.md)
-|]
-
-testDocWithoutLink :: String
-testDocWithoutLink =
-  [r|
-# Document without Link
-This document does not contain any links.
-|]
-
-testDocMultipleLinks :: String
-testDocMultipleLinks =
-  [r|
-# Document with Multiple Links
-[somePlace](someLink/here/test.md)
-[anotherPlace](anotherLink/there/test.md)
-|]
-
-posixRegexMatchingDoc :: String
-posixRegexMatchingDoc =
-  [r|
-# POSIX Regex Matching Document
-
-This document contains various POSIX extended regular expressions for testing.
-
-1. Haskell 101 - An introductory course.
-2. The world of Haskell programming.
-3. Learn Haskell 202, the next step in functional programming.
-4. The word 'Haskell' appears multiple times in this document.
-5. This is a sample phone number: 123-456-7890.
-6. Email address: user@example.com
-|]
-
-nonPosixRegexMatchingDoc :: String
-nonPosixRegexMatchingDoc =
-  [r|
-# Non-POSIX Regex Matching Document
-
-This document does not contain specific POSIX extended regular expressions.
-
-1. Introduction to functional programming.
-2. Exploring different programming paradigms.
-3. A comprehensive study of programming languages.
-4. This is not a valid phone number: 1234567.
-5. This is not a valid email address: userexample.com
-|]
-
-testMarkdownAst :: Maybe MarkdownAst
-testMarkdownAst = fromRight Nothing $ markdownAst "test1" (T.pack testMarkdownDoc)
-
-keywordsMarkdownAst :: Maybe MarkdownAst
-keywordsMarkdownAst = fromRight Nothing $ markdownAst "test1" (T.pack keywordsDoc)
-
-strictKeywordsMarkdownAst :: Maybe MarkdownAst
-strictKeywordsMarkdownAst = fromRight Nothing $ markdownAst "test1" (T.pack strictKeywordsDoc)
-
-testMarkdownAstWithLink :: Maybe MarkdownAst
-testMarkdownAstWithLink = fromRight Nothing $ markdownAst "test1" (T.pack testDocWithLink)
-
-testMarkdownAstWithoutLink :: Maybe MarkdownAst
-testMarkdownAstWithoutLink = fromRight Nothing $ markdownAst "test1" (T.pack testDocWithoutLink)
-
-testMarkdownAstMultipleLinks :: Maybe MarkdownAst
-testMarkdownAstMultipleLinks = fromRight Nothing $ markdownAst "test1" (T.pack testDocMultipleLinks)
-
-posixRegexMatchingMarkdownAst :: Maybe MarkdownAst
-posixRegexMatchingMarkdownAst = fromRight Nothing $ markdownAst "test1" (T.pack posixRegexMatchingDoc)
-
-nonPosixRegexMatchingMarkdownAst :: Maybe MarkdownAst
-nonPosixRegexMatchingMarkdownAst = fromRight Nothing $ markdownAst "test1" (T.pack nonPosixRegexMatchingDoc)
-
-testMetadata :: M.Metadata
-testMetadata =
+sampleMetadata :: M.Metadata
+sampleMetadata =
   M.Metadata
     { M.title = Just "Test Title",
       M.author = Just "Test Author",
@@ -168,12 +68,12 @@ testMetadata =
       M.description = "This is a test document with some Haskell and parsing"
     }
 
-testPath :: Path Rel File
-testPath = $(mkRelFile "some/test/path/file.txt")
+samplePath :: Path Rel File
+samplePath = $(mkRelFile "some/test/path/file.txt")
 
 metadataSpec :: Spec
 metadataSpec = describe "Metadata Filter" $ do
-  let doc = Document testPath testMetadata testMarkdownAst (T.pack testMarkdownDoc)
+  let doc = Document samplePath sampleMetadata sampleMarkdownAst (T.pack sampleMarkdownDoc)
   it "matches metadata with a specific date range" $ do
     let startDate = parseTimeOrError True defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ" "2021-01-01T00:00:00Z"
     let endDate = parseTimeOrError True defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ" "2021-12-31T23:59:59Z"
@@ -201,131 +101,167 @@ metadataSpec = describe "Metadata Filter" $ do
     filt filter' doc `shouldBe` True
 
   it "matches metadata with the specific author" $ do
-    let filter' = author "Test Author"
+    let filter' = author $ strictTerm "Test Author"
     filt filter' doc `shouldBe` True
 
   it "does not match metadata with a different author" $ do
-    let filter' = author "Nonexistent Author"
+    let filter' = author $ strictTerm "Nonexistent Author"
     filt filter' doc `shouldBe` False
 
   it "matches metadata with the specific title" $ do
-    let filter' = title "Test Title"
+    let filter' = title $ strictTerm "Test Title"
     filt filter' doc `shouldBe` True
 
   it "does not match metadata with a different title" $ do
-    let filter' = title "Nonexistent Title"
+    let filter' = title $ strictTerm "Nonexistent Title"
     filt filter' doc `shouldBe` False
 
   it "matches metadata with a specific tag" $ do
-    let filter' = hasTag "haskell"
+    let filter' = hasTag $ strictTerm "haskell"
     filt filter' doc `shouldBe` True
 
   it "does not match metadata without a specific tag" $ do
-    let filter' = hasTag "nonexistent"
+    let filter' = hasTag $ strictTerm "nonexistent"
     filt filter' doc `shouldBe` False
 
   it "matches metadata with fuzzy description" $ do
-    let filter' = fuzzyDescription "Haskell parsing"
+    let filter' = description (fuzzyTerm "Haskell parsing")
     filt filter' doc `shouldBe` True
 
   it "matches metadata that does not contain the fuzzy description" $ do
-    let filter' = fuzzyDescription "unrelated topic"
+    let filter' = description (fuzzyTerm "unrelated topic")
     filt filter' doc `shouldBe` False
 
   it "matches metadata when fuzzy description is partially matched" $ do
-    let filter' = fuzzyDescription "test document"
+    let filter' = description (fuzzyTerm "test document")
     filt filter' doc `shouldBe` True
 
   it "does not match metadata when fuzzy description is not matched at all" $ do
-    let filter' = fuzzyDescription "completely unrelated"
+    let filter' = description (fuzzyTerm "completely unrelated")
     filt filter' doc `shouldBe` False
 
   it "matches metadata with case insensitive fuzzy description" $ do
-    let filter' = fuzzyDescription "HASKELL PARSING"
+    let filter' = description (fuzzyTerm "HASKELL PARSING")
     filt filter' doc `shouldBe` True
 
-  it "matches metadata when keyword is found in MarkdownAst" $ do
-    let filter' = keyword "world"
-    filt filter' doc `shouldBe` True
+fuzzyTermSpec :: Spec
+fuzzyTermSpec = describe "fuzzyTerm Filter" $ do
+  let doc =
+        T.pack
+          [r|# Sample Markdown Document
 
-  it "does not match metadata when keyword is not found in MarkdownAst" $ do
-    let filter' = keyword "nonexistent"
-    filt filter' doc `shouldBe` False
+This document is for testing the keyword search functionality.
 
-keywordsFilterSpec :: Spec
-keywordsFilterSpec = describe "Keywords Filter" $ do
-  let doc = Document testPath testMetadata keywordsMarkdownAst (T.pack keywordsDoc)
-  it "matches a single keyword present in the document" $ do
-    let filter' = keywords ["Haskell"]
-    filt filter' doc `shouldBe` True
+It contains some *keywords* that should be detected by the filter.
 
-  it "matches any of multiple keywords present in the document" $ do
-    let filter' = keywords ["Haskell", "JavaScript", "Python"]
-    filt filter' doc `shouldBe` True
+Here are some of the keywords we might want to find:
+- Haskell
+- Parsing
+- Keyword
+- Search
+|]
+  it "matches a single term present in the document" $ do
+    filt (fuzzyTerm "Haskell") doc `shouldBe` True
 
-  it "does not match a keyword that is not present in the document" $ do
-    let filter' = keywords ["Nonexistent"]
-    filt filter' doc `shouldBe` False
+  it "does not match a term that is not present in the document" $ do
+    filt (fuzzyTerm "Nonexistent") doc `shouldBe` False
 
   it "matches keywords with mixed case in the document" $ do
-    let filter' = keywords ["haskell", "parsing"]
-    filt filter' doc `shouldBe` True
-
-  it "does not match when none of the multiple keywords are present" $ do
-    let filter' = keywords ["Java", "C++"]
-    filt filter' doc `shouldBe` False
+    filt (fuzzyTerm "haskell") doc `shouldBe` True
+    filt (fuzzyTerm "parsing") doc `shouldBe` True
 
   it "matches partial keywords if they are part of a word in the document" $ do
-    let filter' = keywords ["key", "pars"]
-    filt filter' doc `shouldBe` True
+    filt (fuzzyTerm "key") doc `shouldBe` True
+    filt (fuzzyTerm "pars") doc `shouldBe` True
 
-  it "matches keywords in a list within the document" $ do
-    let filter' = keywords ["Parsing", "Search"]
-    filt filter' doc `shouldBe` True
+strictTermFilterSpec :: Spec
+strictTermFilterSpec = describe "Strict Keywords Filter" $ do
+  let doc =
+        T.pack
+          [r|
+# Strict Keyword Search Document
 
-strictKeywordsFilterSpec :: Spec
-strictKeywordsFilterSpec = describe "Strict Keywords Filter" $ do
-  let doc = Document testPath testMetadata strictKeywordsMarkdownAst (T.pack strictKeywordsDoc)
+This document is specifically for testing strict keyword search.
+
+It contains exact phrases like "strict search" and "keyword detection".
+
+Other phrases include "Haskell programming" and "text analysis".
+
+|]
   it "matches an exact keyword in the document" $ do
-    let filter' = strictKeyword "strict search"
-    filt filter' doc `shouldBe` True
+    filt (strictTerm "strict search") doc `shouldBe` True
 
   it "does not match a keyword if not an exact match" $ do
-    let filter' = strictKeyword "nonexist"
-    filt filter' doc `shouldBe` False
-
-  it "matches one of the keywords exactly in the document" $ do
-    let filter' = strictKeywords ["nonexistent", "Haskell programming"]
-    filt filter' doc `shouldBe` True
-
-  it "does not match when none of the exact keywords are present" $ do
-    let filter' = strictKeywords ["Ruby", "Java", "C++"]
-    filt filter' doc `shouldBe` False
-
-  it "matches all exact keywords present in the document" $ do
-    let filter' = strictKeywords ["strict search", "keyword detection"]
-    filt filter' doc `shouldBe` True
+    filt (strictTerm "nonexist") doc `shouldBe` False
 
   it "does not match partial keywords" $ do
-    let filter' = strictKeywords ["stricted", "searching"]
-    filt filter' doc `shouldBe` False
+    filt (strictTerm "stricted") doc `shouldBe` False
+    filt (strictTerm "searching") doc `shouldBe` False
 
   it "matches exact keywords regardless of their location in the document" $ do
-    let filter' = strictKeywords ["text analysis"]
-    filt filter' doc `shouldBe` True
+    filt (strictTerm "text analysis") doc `shouldBe` True
 
   it "matches exact phrases including special characters" $ do
-    let filter' = strictKeyword "\"strict search\""
-    filt filter' doc `shouldBe` True
+    filt (strictTerm "\"strict search\"") doc `shouldBe` True
 
   it "does not match keywords if not exactly present (case-sensitive)" $ do
-    let filter' = strictKeywords ["Strict Search", "haskell Programming"]
-    filt filter' doc `shouldBe` False
+    filt (strictTerm "Strict Search") doc `shouldBe` False
+    filt (strictTerm "haskell Programming") doc `shouldBe` False
+
+regexFilterSpec :: Spec
+regexFilterSpec = do
+  describe "Regex Matching Filter" $ do
+    let posixRegexMatchDoc =
+          T.pack
+            [r|
+# POSIX Regex Matching Document
+
+This document contains various POSIX extended regular expressions for testing.
+
+1. Haskell 101 - An introductory course.
+2. The world of Haskell programming.
+3. Learn Haskell 202, the next step in functional programming.
+4. The word 'Haskell' appears multiple times in this document.
+5. This is a sample phone number: 123-456-7890.
+6. Email address: user@example.com
+|]
+
+    let nonPosixRegexMatchDoc =
+          T.pack
+            [r|
+# Non-POSIX Regex Matching Document
+
+This document does not contain specific POSIX extended regular expressions.
+
+1. Introduction to functional programming.
+2. Exploring different programming paradigms.
+3. A comprehensive study of programming languages.
+4. This is not a valid phone number: 1234567.
+5. This is not a valid email address: userexample.com
+|]
+
+    it "matches document containing text that matches a POSIX-compatible regex" $ do
+      filt (regexTerm "Haskell [0-9]+") posixRegexMatchDoc `shouldBe` True
+
+    it "does not match document without text that matches the POSIX-compatible regex" $ do
+      filt (regexTerm "Haskell [0-9]+") nonPosixRegexMatchDoc `shouldBe` False
+
+    it "matches document when POSIX-compatible regex matches anywhere in the text" $ do
+      filt (regexTerm "world") posixRegexMatchDoc `shouldBe` True
+
+    it "does not match document when POSIX-compatible regex does not match any part of the text" $ do
+      filt (regexTerm "^nonexistent") nonPosixRegexMatchDoc `shouldBe` False
+
+    it "matches document containing text that matches a phone number regex" $ do
+      filt (regexTerm "[0-9]{3}-[0-9]{3}-[0-9]{4}") posixRegexMatchDoc `shouldBe` True
+
+    it "matches document containing text that matches an email address regex" $ do
+      filt (regexTerm "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,4}") posixRegexMatchDoc `shouldBe` True
 
 pathFilterSpec :: Spec
 pathFilterSpec = do
   describe "Path Matching Filter" $ do
-    let doc = Document testPath testMetadata testMarkdownAst (T.pack testMarkdownDoc)
+    let doc = Document samplePath sampleMetadata sampleMarkdownAst (T.pack sampleMarkdownDoc)
 
     it "matches document with specific relative path" $ do
       let filter' = matchesRelPath $(mkRelFile "some/test/path/file.txt")
@@ -335,44 +271,32 @@ pathFilterSpec = do
       let filter' = matchesRelPath $(mkRelFile "other/test/path/file.txt")
       filt filter' doc `shouldBe` False
 
-  describe "Match Relative Paths Filter" $ do
-    let doc1Path = $(mkRelFile "docs/complexTest.md")
-    let doc2Path = $(mkRelFile "docs/anotherTest.md")
-    let doc3Path = $(mkRelFile "docs/yetAnotherTest.md")
-    let doc1 = Document doc1Path testMetadata testMarkdownAst (T.pack testMarkdownDoc)
-    let doc2 = Document doc2Path testMetadata testMarkdownAst (T.pack testMarkdownDoc)
-    let doc3 = Document doc3Path testMetadata testMarkdownAst (T.pack testMarkdownDoc)
-
-    it "matches a document with one of the specified paths" $ do
-      let paths = [doc1Path, doc2Path]
-      let filter' = matchesRelPaths paths
-      filt filter' doc1 `shouldBe` True
-      filt filter' doc2 `shouldBe` True
-
-    it "does not match a document if its path is not in the list" $ do
-      let paths = [doc1Path, doc2Path]
-      let filter' = matchesRelPaths paths
-      filt filter' doc3 `shouldBe` False
-
-    it "matches documents with any of the multiple specified paths" $ do
-      let paths = [doc1Path, doc2Path, doc3Path]
-      let filter' = matchesRelPaths paths
-      filt filter' doc1 `shouldBe` True
-      filt filter' doc2 `shouldBe` True
-      filt filter' doc3 `shouldBe` True
-
-    it "matches no documents if the list of paths is empty" $ do
-      let paths = []
-      let filter' = matchesRelPaths paths
-      filt filter' doc1 `shouldBe` False
-      filt filter' doc2 `shouldBe` False
-      filt filter' doc3 `shouldBe` False
-
 linkFilterSpec :: Spec
 linkFilterSpec = do
+  let testDocWithoutLink =
+        [r|
+# Document without Link
+This document does not contain any links.
+|]
+  let testDocWithLink =
+        [r|
+# Document with Link
+[somePlace](someLink/here/test.md)
+|]
+  let testDocMultipleLinks =
+        [r|
+# Document with Multiple Links
+[somePlace](someLink/here/test.md)
+[anotherPlace](anotherLink/there/test.md)
+|]
+
+  let testMarkdownAstWithLink = fromRight Nothing $ markdownAst "test1" (T.pack testDocWithLink)
+  let testMarkdownAstWithoutLink = fromRight Nothing $ markdownAst "test1" (T.pack testDocWithoutLink)
+  let testMarkdownAstMultipleLinks = fromRight Nothing $ markdownAst "test1" (T.pack testDocMultipleLinks)
+
   describe "Has Link Filter" $ do
-    let docWithLink = Document testPath testMetadata testMarkdownAstWithLink (T.pack testDocWithLink)
-    let docWithoutLink = Document testPath testMetadata testMarkdownAstWithoutLink (T.pack testDocWithoutLink)
+    let docWithLink = Document samplePath sampleMetadata testMarkdownAstWithLink (T.pack testDocWithLink)
+    let docWithoutLink = Document samplePath sampleMetadata testMarkdownAstWithoutLink (T.pack testDocWithoutLink)
 
     let linkInDoc = $(mkRelFile "someLink/here/test.md")
     let nonExistentLink = $(mkRelFile "nonexistent/link.md")
@@ -390,45 +314,15 @@ linkFilterSpec = do
       filt filter' docWithLink `shouldBe` False
 
     it "matches document with multiple links if one of them matches" $ do
-      let multipleLinksDoc = Document testPath testMetadata testMarkdownAstMultipleLinks (T.pack testDocMultipleLinks)
+      let multipleLinksDoc = Document samplePath sampleMetadata testMarkdownAstMultipleLinks (T.pack testDocMultipleLinks)
       let filter' = hasLink linkInDoc
       filt filter' multipleLinksDoc `shouldBe` True
-
-regexFilterSpec :: Spec
-regexFilterSpec = do
-  describe "Regex Matching Filter" $ do
-    let docWithPosixRegexMatch = Document testPath testMetadata posixRegexMatchingMarkdownAst (T.pack posixRegexMatchingDoc)
-    let docWithoutPosixRegexMatch = Document testPath testMetadata nonPosixRegexMatchingMarkdownAst (T.pack nonPosixRegexMatchingDoc)
-
-    it "matches document containing text that matches a POSIX-compatible regex" $ do
-      let filter' = matchesRegex "Haskell [0-9]+"
-      filt filter' docWithPosixRegexMatch `shouldBe` True
-
-    it "does not match document without text that matches the POSIX-compatible regex" $ do
-      let filter' = matchesRegex "Haskell [0-9]+"
-      filt filter' docWithoutPosixRegexMatch `shouldBe` False
-
-    it "matches document when POSIX-compatible regex matches anywhere in the text" $ do
-      let filter' = matchesRegex "world"
-      filt filter' docWithPosixRegexMatch `shouldBe` True
-
-    it "does not match document when POSIX-compatible regex does not match any part of the text" $ do
-      let filter' = matchesRegex "^nonexistent"
-      filt filter' docWithoutPosixRegexMatch `shouldBe` False
-
-    it "matches document containing text that matches a phone number regex" $ do
-      let filter' = matchesRegex "[0-9]{3}-[0-9]{3}-[0-9]{4}"
-      filt filter' docWithPosixRegexMatch `shouldBe` True
-
-    it "matches document containing text that matches an email address regex" $ do
-      let filter' = matchesRegex "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,4}"
-      filt filter' docWithPosixRegexMatch `shouldBe` True
 
 spec :: Spec
 spec = do
   metadataSpec
-  keywordsFilterSpec
-  strictKeywordsFilterSpec
+  fuzzyTermSpec
+  strictTermFilterSpec
   regexFilterSpec
   pathFilterSpec
   linkFilterSpec
