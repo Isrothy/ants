@@ -13,7 +13,7 @@ where
 import Cli.NewNoteGen (LookupTable, fromConfig, replacePlaceholders)
 import Data.Aeson (Value (String), decode)
 import Data.HashMap.Internal.Array (write)
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, fromMaybe)
 import Data.String (fromString)
 import qualified Data.Text as T
 import Data.Time (formatTime)
@@ -25,7 +25,7 @@ import Options.Applicative
 import Parser.Opts
 import System.FilePath
 import Text.RawString.QQ
-import Parser.Markdown (allSpecExtensions)
+import Parser.Markdown (allSpecExtensions, extensionLookup)
 import Model.Document (Document(metadata))
 import Model.Metadata
 import qualified Data.Yaml as Y
@@ -45,11 +45,13 @@ initNotebook _ = do
     "variables": {
       "game": "League of Legends"
     }
-  }
+  },
+  "extensions": ["math", "emoji", "footnotes"]
 }|]
   writeFile "config.json" exampleConfig
   let exampleTemplate =
         [r|# {title}
+
 Today is {date} and it's {time} now.
 I'm writing about {game}.
 |]
@@ -72,7 +74,7 @@ newNote op = do
   let newtab = foldr (replaceTime localtim) tab ["date", "time", "dateTime"]
   let filename = joinPath [dir op, "default.md"]
   template <- readFile filename
-  let replacedContent = replacePlaceholders mempty filename (T.pack template) newtab
+  let replacedContent = replacePlaceholders (foldMap (\x -> fromMaybe mempty $ lookup (T.unpack x) extensionLookup) (extensions config)) filename (T.pack template) newtab
   let mdata = Metadata {
     title = Just $ Parser.Opts.title op,
     author = lookup "name" newtab,
