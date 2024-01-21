@@ -1,5 +1,6 @@
 module Parser.SearchLang
   ( booleanTerm,
+    simpleTerm,
     quotedTerm,
     unquotedTerm,
     regexTerm,
