@@ -20,7 +20,7 @@ import Text.Parsec
 import Text.RawString.QQ
 
 spec :: Spec
-spec = describe "markdownWithYamlParser" $ do
+spec = describe "markdownWithYamlParser" $ parallel $ do
   it "parses a document with well-formed YAML header and Markdown content" $ do
     -- let input' = "---\ntitle: Test Document\nauthor: Joshua\ndate: 2023-01-01\ntags:\n  - Haskell\n  - Parsing\ndescription: A sample document\n---\n# Heading\nThis is a Markdown document with a YAML header."
     let input =

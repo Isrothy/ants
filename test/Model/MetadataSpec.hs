@@ -24,7 +24,7 @@ decodeMaybeMetadata str = case Y.decodeEither' (TE.encodeUtf8 $ T.pack str) of
   Right metadata -> Just metadata
 
 spec :: Spec
-spec = describe "parse metadata File" $ do
+spec = describe "parse metadata File" $ parallel $ do
   it "parses metadata with all fields" $ do
     let input =
           [r|

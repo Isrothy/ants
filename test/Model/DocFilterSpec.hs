@@ -117,11 +117,11 @@ metadataSpec = describe "Metadata Filter" $ do
     filt filter' doc `shouldBe` False
 
   it "matches metadata with a specific tag" $ do
-    let filter' = hasTag $ strictTerm "haskell"
+    let filter' = tag $ strictTerm "haskell"
     filt filter' doc `shouldBe` True
 
   it "does not match metadata without a specific tag" $ do
-    let filter' = hasTag $ strictTerm "nonexistent"
+    let filter' = tag $ strictTerm "nonexistent"
     filt filter' doc `shouldBe` False
 
   it "matches metadata with fuzzy description" $ do

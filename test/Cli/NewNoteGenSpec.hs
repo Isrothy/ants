@@ -7,8 +7,8 @@ module Cli.NewNoteGenSpec
   )
 where
 
-import qualified Model.Config as Config
 import Cli.NewNoteGen
+import qualified Model.Config as Config
 import Test.Hspec
 
 splitLinesSpec :: Spec
@@ -19,7 +19,7 @@ splitLinesSpec = describe "splitLines" $ do
     splitLines "Hello, world!\r\nHow are you today?\rI'm fine, thank you!" `shouldBe` ["Hello, world!\r\n", "How are you today?\r", "I'm fine, thank you!"]
 
 findPositionSpec :: Spec
-findPositionSpec = describe "find position" $ do
+findPositionSpec = describe "find position" $ parallel $ do 
   it "finds position correctly in single-line text" $ do
     findPosition 1 1 "Hello, world!" `shouldBe` Just 0
     findPosition 1 2 "Hello, world!" `shouldBe` Just 1
@@ -55,7 +55,7 @@ findPositionSpec = describe "find position" $ do
     findPosition 2 1 macText `shouldBe` Just 14
 
 templateGenSpec :: Spec
-templateGenSpec = describe "tempalteGen" $ do
+templateGenSpec = describe "tempalteGen" $ parallel $ do
   it "replace single placeholders correctly" $ do
     let input = "Hello, world! This is a {placeholder}.\n"
     let lookupTable = [("placeholder", "replacement")]
@@ -147,7 +147,7 @@ templateGenSpec = describe "tempalteGen" $ do
     output `shouldBe` "This is a replacement with mixed case letters.\n"
 
 configToLookupTableSpec :: Spec
-configToLookupTableSpec = describe "fromConfig" $ do
+configToLookupTableSpec = describe "fromConfig" $ parallel $ do
   it "uses default formats when specific formats are not provided" $ do
     let template =
           Config.Template
@@ -210,7 +210,7 @@ configToLookupTableSpec = describe "fromConfig" $ do
                  ]
 
 spec :: Spec
-spec = do
+spec = parallel $ do
   splitLinesSpec
   findPositionSpec
   templateGenSpec

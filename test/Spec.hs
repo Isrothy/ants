@@ -10,7 +10,7 @@ import qualified Parser.SearchLangSpec
 import Test.Hspec
 
 main :: IO ()
-main = hspec $ do
+main = hspec $ parallel $ do
   Cli.NewNoteGenSpec.spec
   Model.ConfigSpec.spec
   Model.MetadataSpec.spec

@@ -22,7 +22,7 @@ decodeConfig :: ByteString -> Maybe Config
 decodeConfig = decode
 
 spec :: Spec
-spec = describe "parse config File" $ do
+spec = describe "parse config File" $ parallel $ do
   it "parses an empty object as a Config with Nothing for template" $ do
     let input = [r|{}|]
     decodeConfig input `shouldBe` Just (Config def [])

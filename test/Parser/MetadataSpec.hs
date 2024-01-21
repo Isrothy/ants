@@ -12,7 +12,7 @@ import Test.Hspec
 import Text.Parsec
 
 spec :: Spec
-spec = describe "metadataParser" $ do
+spec = describe "metadataParser" $ parallel $ do
   it "parses metadata correctly when well-formed" $ do
     let input = "---\nkey: value\ranother: value2\r\n---\nrest of the file"
     let expectedResult = "key: value\ranother: value2\r\n"

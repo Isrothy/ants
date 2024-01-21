@@ -22,7 +22,7 @@ import Text.Parsec
 import Text.RawString.QQ
 
 spec :: Spec
-spec = describe "SearchLanguageParser" $ do
+spec = describe "SearchLanguageParser" $ parallel $ do
   describe "Basic term parsing" $ do
     it "parses a quoted term" $ do
       let (Right t) = parse quotedTerm "" (T.pack "\"example\"")
@@ -74,5 +74,3 @@ spec = describe "SearchLanguageParser" $ do
       F.filt t "term1 term2" `shouldBe` True
       F.filt t "term1 term3" `shouldBe` False
       F.filt t "term1 other" `shouldBe` True
-
-
