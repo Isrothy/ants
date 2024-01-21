@@ -8,18 +8,19 @@ module Model.DocFilter
   ( Filter (..),
     TextFilter,
     AstFilter,
+    DocFilter,
     dateRange,
     author,
     title,
-    hasTag,
+    tag,
     description,
     fuzzyTerm,
     strictTerm,
     regexTerm,
     matchesRelPath,
     hasLink,
+    plain,
     content,
-    entire,
     task,
     finishedTask,
     unfinishedTask,
@@ -28,7 +29,7 @@ module Model.DocFilter
   )
 where
 
-import Commonmark
+import Commonmark hiding (plain)
 import Commonmark.Extensions
 import Data.Algebra.Boolean
 import Data.Maybe
@@ -82,8 +83,8 @@ regexTerm s = Filter (=~ s)
 matchesRelPath :: Path Rel File -> DocFilter
 matchesRelPath = relPath . (==)
 
-content :: TextFilter -> AstFilter
-content f = Filter $ filt f . toPlainText
+plain :: TextFilter -> AstFilter
+plain f = Filter $ filt f . toPlainText
 
 dateRange :: Maybe UTCTime -> Maybe UTCTime -> DocFilter
 dateRange start end = metadata $ maybe False (between start end) . M.dateTime
@@ -99,14 +100,14 @@ author f = metadata $ filt f . fromMaybe "" . M.author
 title :: TextFilter -> DocFilter
 title f = metadata $ filt f . fromMaybe "" . M.title
 
-hasTag :: TextFilter -> DocFilter
-hasTag f = metadata $ any (filt f) . M.tags
+tag :: TextFilter -> DocFilter
+tag f = metadata $ any (filt f) . M.tags
 
 description :: TextFilter -> DocFilter
 description f = metadata $ filt f . M.description
 
-entire :: TextFilter -> DocFilter
-entire = ast . content
+content :: TextFilter -> DocFilter
+content = ast . plain
 
 task :: TextFilter -> DocFilter
 task f = ast' $ any (filt f . toPlainText . snd) . findTasks

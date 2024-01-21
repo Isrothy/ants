@@ -5,17 +5,29 @@ module Parser.SearchLang
     regexTerm,
     fuzzyTerm,
     term,
+    author,
+    tag,
+    description,
+    content,
+    rawTerm,
   )
 where
 
 import Data.Algebra.Boolean
-import Data.Char (isPunctuation, isSpace)
+import Data.Char (isPunctuation)
 import Data.Functor
 import qualified Data.Text as T
 import qualified Model.DocFilter as F
 import Text.Parsec
 import Text.Parsec.Text (Parser)
 import Prelude hiding (and, any, not, or, (&&), (||))
+
+parens :: Parser a -> Parser a
+parens p = do
+  _ <- char '('
+  res <- p
+  _ <- char ')'
+  return res
 
 whiteSpace :: Parser ()
 whiteSpace = do
@@ -25,8 +37,7 @@ whiteSpace = do
 escapedChar :: Parser Char
 escapedChar = do
   _ <- char '\\'
-  c <- punctuation
-  return c
+  punctuation
 
 punctuation :: Parser Char
 punctuation = satisfy isPunctuation
@@ -92,9 +103,25 @@ notTerm = (try (notOperator >> simpleTerm) <&> not) <|> simpleTerm
 simpleTerm :: Parser F.TextFilter
 simpleTerm = parens booleanTerm <|> term
 
-parens :: Parser a -> Parser a
-parens p = do
-  _ <- char '('
-  res <- p
-  _ <- char ')'
-  return res
+author :: Parser F.DocFilter
+author = do
+  _ <- string "author:"
+  F.author <$> simpleTerm
+
+tag :: Parser F.DocFilter
+tag = do
+  _ <- string "tag:"
+  F.tag <$> simpleTerm
+
+description :: Parser F.DocFilter
+description = do
+  _ <- string "description:"
+  F.description <$> simpleTerm
+
+content :: Parser F.DocFilter
+content = do
+  _ <- string "content:"
+  F.content <$> simpleTerm
+
+rawTerm :: Parser F.DocFilter
+rawTerm = F.content <$> simpleTerm
