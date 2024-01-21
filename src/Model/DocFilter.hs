@@ -6,6 +6,8 @@
 
 module Model.DocFilter
   ( Filter (..),
+    TextFilter,
+    AstFilter,
     dateRange,
     author,
     title,

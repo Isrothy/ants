@@ -6,6 +6,7 @@ import qualified Parser.MarkdownSpec
 import qualified Parser.MetadataSpec
 import qualified Parser.PlaceholderSpec
 import qualified Parser.YamlMarkdSpec
+import qualified Parser.SearchLangSpec
 import Test.Hspec
 
 main :: IO ()
@@ -17,5 +18,6 @@ main = hspec $ do
   Parser.MarkdownSpec.spec
   Parser.MetadataSpec.spec
   Parser.PlaceholderSpec.spec
+  Parser.SearchLangSpec.spec
   Parser.YamlMarkdSpec.spec
   return ()

@@ -14,7 +14,7 @@ module Model.MarkdownAst
     findFinishedTasks,
     findUnfinishedTasks,
     findAlerts,
-    toPlainText1,
+    toPlainText',
   )
 where
 
@@ -177,34 +177,34 @@ instance HasSpan (Maybe MarkdownAst) where
 instance HasDiv (Maybe MarkdownAst) where
   div_ = id
 
-toPlainText1 :: MarkdownAst -> Text
-toPlainText1 (MarkdownAst ele _ _) = case ele of
+toPlainText' :: MarkdownAst -> Text
+toPlainText' (MarkdownAst ele _ _) = case ele of
   Text t -> t
   Entity t -> t
   LineBreak -> "\n"
   SoftBreak -> " "
   EscapedChar c -> pack [c]
   Code t -> t
-  Emphasis ast -> toPlainText1 ast
-  Strong ast -> toPlainText1 ast
+  Emphasis ast -> toPlainText' ast
+  Strong ast -> toPlainText' ast
   Link _ _ ast -> toPlainText ast
   Image _ _ ast -> toPlainText ast
-  Strikethrough ast -> toPlainText1 ast
-  Highlight ast -> toPlainText1 ast
+  Strikethrough ast -> toPlainText' ast
+  Highlight ast -> toPlainText' ast
   RawInline _ t -> t
   Emoji _ t -> t
   InlineMath t -> t
   DisplayMath t -> t
-  SingleQuoted ast -> toPlainText ast
-  DoubleQuoted ast -> toPlainText ast
-  Subscript ast -> toPlainText1 ast
-  Superscript ast -> toPlainText1 ast
-  Paragraph ast -> toPlainText1 ast <> "\n"
-  Plain ast -> toPlainText1 ast
+  SingleQuoted ast -> "\'" <> toPlainText ast <> "\'"
+  DoubleQuoted ast -> "\"" <> toPlainText ast <> "\""
+  Subscript ast -> " " <> toPlainText' ast <> " "
+  Superscript ast -> " " <> toPlainText' ast <> " "
+  Paragraph ast -> toPlainText' ast <> "\n"
+  Plain ast -> toPlainText' ast
   Alert a ast -> alertName a <> ": " <> toPlainText ast
   Header _ ast -> toPlainText ast <> "\n"
   List _ _ asts -> mconcat $ map (\ast -> toPlainText ast <> "\n") asts
-  Blockquote ast -> toPlainText1 ast <> "\n"
+  Blockquote ast -> toPlainText' ast <> "\n"
   CodeBlock _ t -> t <> "\n"
   RawBlock _ t -> t <> "\n"
   HorizontalRule -> "\n\n"
@@ -212,20 +212,28 @@ toPlainText1 (MarkdownAst ele _ _) = case ele of
     where
       tableHelper :: [[Maybe MarkdownAst]] -> Text
       tableHelper [] = ""
-      tableHelper (x : xs) = mconcat (map (\y -> toPlainText y <> " ") x) <> "\n" <> tableHelper xs
+      tableHelper (x : xs) =
+        mconcat (map (\y -> toPlainText y <> "\n") x) <> "\n" <> tableHelper xs
   ReferenceLinkDefination label (dest, title) -> "[" <> label <> "] " <> dest <> " " <> title
-  DefinitionList _ asts -> mconcat (map (\(term, defs) -> toPlainText term <> "\n" <> mconcat (map (\def -> toPlainText def <> "\n") defs)) asts)
+  DefinitionList _ asts ->
+    mconcat
+      ( map
+          ( \(term, defs) ->
+              toPlainText term <> "\n" <> mconcat (map (\def -> toPlainText def <> "\n") defs)
+          )
+          asts
+      )
   TaskList _ _ items -> mconcat $ map (\(_, ast) -> toPlainText ast <> "\n") items
-  WikiLink txt ast -> txt <> toPlainText1 ast
+  WikiLink txt ast -> txt <> toPlainText' ast
   Footnote num txt ast -> "[" <> pack (show num) <> "] " <> txt <> toPlainText ast
   FootnoteList items -> mconcat $ map (\item -> toPlainText item <> "\n") items
-  FootnoteRef num label ast -> "[" <> pack (show num) <> "] " <> label <> toPlainText1 ast
+  FootnoteRef num label _ -> "[" <> pack (show num) <> "] " <> label
   Placeholder _ -> ""
-  Span asts -> mconcat $ map toPlainText1 asts
+  Span asts -> mconcat $ map toPlainText' asts
 
 instance ToPlainText (Maybe MarkdownAst) where
   toPlainText Nothing = ""
-  toPlainText (Just ast) = toPlainText1 ast
+  toPlainText (Just ast) = toPlainText' ast
 
 instance HasPlaceholder (Maybe MarkdownAst) where
   placeholder = Just . rawNode . Placeholder
@@ -251,6 +259,7 @@ children (WikiLink _ ast) = [ast]
 children (Footnote _ _ ast) = maybeToList ast
 children (FootnoteList items) = catMaybes items
 children (FootnoteRef _ _ ast) = [ast]
+children (Alert _ ast) = maybeToList ast
 children _ = []
 
 findPlaceholders :: MarkdownAst -> [(Text, SourceRange)]

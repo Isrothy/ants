@@ -36,6 +36,7 @@ library
       Parser.Metadata
       Parser.Opts
       Parser.Placeholder
+      Parser.SearchLang
       Parser.YamlMarked
       Util.Default
       Util.ExAeson
@@ -105,6 +106,7 @@ test-suite ants-test
       Parser.MarkdownSpec
       Parser.MetadataSpec
       Parser.PlaceholderSpec
+      Parser.SearchLangSpec
       Parser.YamlMarkdSpec
       Paths_ants
   hs-source-dirs:
