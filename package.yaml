@@ -35,6 +35,7 @@ dependencies:
   - path
   - cond
   - filepath
+  - loop
   - regex-tdfa ^>= 1.3.2
   - optparse-applicative
 
