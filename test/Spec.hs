@@ -7,6 +7,7 @@ import qualified Parser.MetadataSpec
 import qualified Parser.PlaceholderSpec
 import qualified Parser.YamlMarkdSpec
 import qualified Parser.SearchLangSpec
+import qualified Util.FuzzySpec
 import Test.Hspec
 
 main :: IO ()
@@ -20,4 +21,5 @@ main = hspec $ parallel $ do
   Parser.PlaceholderSpec.spec
   Parser.SearchLangSpec.spec
   Parser.YamlMarkdSpec.spec
+  Util.FuzzySpec.spec
   return ()

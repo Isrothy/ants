@@ -40,6 +40,7 @@ library
       Parser.YamlMarked
       Util.Default
       Util.ExAeson
+      Util.Fuzzy
   other-modules:
       Paths_ants
   hs-source-dirs:
@@ -108,6 +109,7 @@ test-suite ants-test
       Parser.PlaceholderSpec
       Parser.SearchLangSpec
       Parser.YamlMarkdSpec
+      Util.FuzzySpec
       Paths_ants
   hs-source-dirs:
       test

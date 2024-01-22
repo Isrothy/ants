@@ -18,8 +18,8 @@ import Test.Hspec
 import Text.Parsec
 import Text.RawString.QQ
 
-spec :: Spec
-spec = describe "SearchLanguageParser" $ parallel $ do
+searchTermSpec:: Spec
+searchTermSpec = describe "SearchTermParser" $ parallel $ do
   describe "Basic term parsing" $ do
     it "parses a quoted term" $ do
       case parse quotedTerm "" "\"example\"" of
@@ -150,3 +150,6 @@ spec = describe "SearchLanguageParser" $ parallel $ do
         Left _ -> return () -- Expecting a parse failure
         Right _ -> expectationFailure "Parser should not succeed on empty input"
 
+spec :: Spec
+spec = describe "SearchLanguageParser" $ parallel $ do
+  searchTermSpec
