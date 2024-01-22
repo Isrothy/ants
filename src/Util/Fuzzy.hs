@@ -3,8 +3,8 @@ module Util.Fuzzy
     minEditDistanceSubstring,
     matches,
     isInfixOf,
-    tMatches,
-    tIsInfixOf,
+    matchesT,
+    isInfixOfT,
   )
 where
 
@@ -49,14 +49,14 @@ isInfixOf xs ys = minEditDistanceSubstring xs ys <= threshold (length xs)
 preProcess :: T.Text -> String
 preProcess = T.unpack . T.toCaseFold . T.strip
 
-tMatches :: T.Text -> T.Text -> Bool
-tMatches xs ys = editDistance xs' ys' <= threshold (min (length xs') (length ys'))
+matchesT :: T.Text -> T.Text -> Bool
+matchesT xs ys = editDistance xs' ys' <= threshold (min (length xs') (length ys'))
   where
     xs' = preProcess xs
     ys' = preProcess ys
 
-tIsInfixOf :: T.Text -> T.Text -> Bool
-tIsInfixOf xs ys = minEditDistanceSubstring xs' ys' <= threshold (length xs')
+isInfixOfT :: T.Text -> T.Text -> Bool
+isInfixOfT xs ys = minEditDistanceSubstring xs' ys' <= threshold (length xs')
   where
     xs' = preProcess xs
     ys' = preProcess ys

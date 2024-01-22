@@ -132,36 +132,35 @@ fuzzyisInfixOfSpec = describe "isInfixOf" $ parallel $ do
 tIsInfixOfSpec :: Spec
 tIsInfixOfSpec = describe "tIsInfixOf" $ parallel $ do
   it "returns True for identical texts" $ do
-    tIsInfixOf "text" "text" `shouldBe` True
+    "text" `isInfixOfT` "text" `shouldBe` True
 
   it "returns True for text and its uppercase version" $ do
-    tIsInfixOf "text" "TEXT" `shouldBe` True
+    "text" `isInfixOfT` "TEXT" `shouldBe` True
 
   it "returns True for text with spaces and its trimmed version" $ do
-    tIsInfixOf "  text  " "text" `shouldBe` True
+    "  text  " `isInfixOfT` "text" `shouldBe` True
 
   it "returns True for a text contained within another with additional characters" $ do
-    tIsInfixOf "haskell" "I love haskell programming" `shouldBe` True
+    "haskell" `isInfixOfT` "I love haskell programming" `shouldBe` True
 
   it "returns False for unrelated texts" $ do
-    tIsInfixOf "haskell" "pascal" `shouldBe` False
+    "haskell" `isInfixOfT` "pascal" `shouldBe` False
 
   it "handles variations in text length" $ do
-    tIsInfixOf "abcd" "abcdefg" `shouldBe` True
-    tIsInfixOf "abcdefgh" "abcd" `shouldBe` False
+    "abcd" `isInfixOfT` "abcdefg" `shouldBe` True
+    "abcdefgh" `isInfixOfT` "abcd" `shouldBe` False
 
   it "handles texts with common substrings" $ do
-    tIsInfixOf "common" "uncommonphrase" `shouldBe` True
-    tIsInfixOf "common" "completelydifferent" `shouldBe` False
+    "common" `isInfixOfT` "uncommonphrase" `shouldBe` True
+    "common" `isInfixOfT` "completelydifferent" `shouldBe` False
 
   it "handles texts with special characters and spaces" $ do
-    tIsInfixOf "special text" "This is a special text with special characters!" `shouldBe` True
-    tIsInfixOf "special*&text" "specialcharactersintext" `shouldBe` False
+    "special text" `isInfixOfT` "This is a special text with special characters!" `shouldBe` True
+    "special*&text" `isInfixOfT` "specialcharactersintext" `shouldBe` False
 
   it "handles longer texts with various edits" $ do
-    tIsInfixOf "dynamicprogramming" "thisisdynamicprogtammingexample" `shouldBe` True
-    tIsInfixOf "dynamicprogramming" "staticanalysis" `shouldBe` False
-
+    "dynamicprogramming" `isInfixOfT` "thisisdynamicprogtammingexample" `shouldBe` True
+    "dynamicprogramming" `isInfixOfT` "staticanalysis" `shouldBe` False
 
 spec :: Spec
 spec = parallel $ do

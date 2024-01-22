@@ -72,7 +72,7 @@ relPath :: (Path Rel File -> Bool) -> DocFilter
 relPath f = Filter $ f . D.relPath
 
 fuzzyTerm :: T.Text -> TextFilter
-fuzzyTerm = Filter . Fuzzy.tIsInfixOf
+fuzzyTerm = Filter . Fuzzy.isInfixOfT
 
 strictTerm :: T.Text -> TextFilter
 strictTerm = Filter . T.isInfixOf
