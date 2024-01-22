@@ -2,10 +2,13 @@ module Util.Fuzzy
   ( editDistance,
     minEditDistanceSubstring,
     matches,
-    contains,
+    isInfixOf,
+    tMatches,
+    tIsInfixOf,
   )
 where
 
+import qualified Data.Text as T
 import GHC.Arr
 
 dp :: (Eq a) => Bool -> [a] -> [a] -> [Int]
@@ -34,8 +37,26 @@ editDistance xs ys = last $ dp False xs ys
 minEditDistanceSubstring :: (Eq a) => [a] -> [a] -> Int
 minEditDistanceSubstring xs ys = minimum $ dp True xs ys
 
-matches :: (Eq a) => [a] -> [a] -> Bool
-matches xs ys = editDistance xs ys <= floor (log (fromIntegral (min (length xs) (length ys)) :: Double))
+threshold :: Int -> Int
+threshold x = floor $ sqrt (fromIntegral x :: Double)
 
-contains :: (Eq a) => [a] -> [a] -> Bool
-contains xs ys = minEditDistanceSubstring xs ys <= floor (log (fromIntegral (length xs) :: Double))
+matches :: (Eq a) => [a] -> [a] -> Bool
+matches xs ys = editDistance xs ys <= threshold (min (length xs) (length ys))
+
+isInfixOf :: (Eq a) => [a] -> [a] -> Bool
+isInfixOf xs ys = minEditDistanceSubstring xs ys <= threshold (length xs)
+
+preProcess :: T.Text -> String
+preProcess = T.unpack . T.toCaseFold . T.strip
+
+tMatches :: T.Text -> T.Text -> Bool
+tMatches xs ys = editDistance xs' ys' <= threshold (min (length xs') (length ys'))
+  where
+    xs' = preProcess xs
+    ys' = preProcess ys
+
+tIsInfixOf :: T.Text -> T.Text -> Bool
+tIsInfixOf xs ys = minEditDistanceSubstring xs' ys' <= threshold (length xs')
+  where
+    xs' = preProcess xs
+    ys' = preProcess ys

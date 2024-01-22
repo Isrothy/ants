@@ -125,7 +125,7 @@ metadataSpec = describe "Metadata Filter" $ do
     filt filter' doc `shouldBe` False
 
   it "matches metadata with fuzzy description" $ do
-    let filter' = description (fuzzyTerm "Haskell parsing")
+    let filter' = description (fuzzyTerm "Haskell and * parsing")
     filt filter' doc `shouldBe` True
 
   it "matches metadata that does not contain the fuzzy description" $ do
@@ -141,7 +141,7 @@ metadataSpec = describe "Metadata Filter" $ do
     filt filter' doc `shouldBe` False
 
   it "matches metadata with case insensitive fuzzy description" $ do
-    let filter' = description (fuzzyTerm "HASKELL PARSING")
+    let filter' = description (fuzzyTerm "HASKELL AND PARSING")
     filt filter' doc `shouldBe` True
 
 fuzzyTermSpec :: Spec

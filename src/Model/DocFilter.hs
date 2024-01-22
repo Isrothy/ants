@@ -39,8 +39,8 @@ import qualified Model.Document as D
 import Model.MarkdownAst
 import qualified Model.Metadata as M
 import Path
-import qualified Text.Fuzzy as Fuzzy
 import Text.Regex.TDFA
+import qualified Util.Fuzzy as Fuzzy
 import Prelude hiding (and, any, not, or, (&&), (||))
 
 newtype Filter a where
@@ -72,7 +72,7 @@ relPath :: (Path Rel File -> Bool) -> DocFilter
 relPath f = Filter $ f . D.relPath
 
 fuzzyTerm :: T.Text -> TextFilter
-fuzzyTerm = Filter . Fuzzy.test
+fuzzyTerm = Filter . Fuzzy.tIsInfixOf
 
 strictTerm :: T.Text -> TextFilter
 strictTerm = Filter . T.isInfixOf

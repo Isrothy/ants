@@ -54,7 +54,6 @@ library
     , commonmark-extensions
     , cond
     , filepath
-    , fuzzy
     , optparse-applicative
     , parsec
     , path
@@ -83,7 +82,6 @@ executable ants
     , commonmark-extensions
     , cond
     , filepath
-    , fuzzy
     , optparse-applicative
     , parsec
     , path
@@ -123,7 +121,6 @@ test-suite ants-test
     , commonmark-extensions
     , cond
     , filepath
-    , fuzzy
     , hspec
     , optparse-applicative
     , parsec

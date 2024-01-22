@@ -11,7 +11,7 @@ import Util.Fuzzy
 editDistanceSpec :: Spec
 editDistanceSpec = describe "edit Distance" $ parallel $ do
   it "calculates the edit distance for identical lists" $ do
-    editDistance "contains" "contains" `shouldBe` 0
+    editDistance "isInfixOf" "isInfixOf" `shouldBe` 0
 
   it "calculates the edit distance from empty to non-empty list" $ do
     editDistance "" "test" `shouldBe` 4
@@ -90,47 +90,82 @@ minEditDistanceSubstringSpec = describe "minEditDistanceSubstring" $ parallel $ 
     minEditDistanceSubstring "abcdxyz" "xyzabcd" `shouldBe` 3
     minEditDistanceSubstring "abcdefg" "xabxcdxxefxgx" `shouldBe` 4
 
-fuzzyContainsSpec :: Spec
-fuzzyContainsSpec = describe "contains" $ parallel $ do
+fuzzyisInfixOfSpec :: Spec
+fuzzyisInfixOfSpec = describe "isInfixOf" $ parallel $ do
   it "returns True for empty and short strings" $ do
-    contains "" "" `shouldBe` True
-    contains "a" "a" `shouldBe` True
-    contains "a" "ab" `shouldBe` True
+    "" `isInfixOf` "" `shouldBe` True
+    "a" `isInfixOf` "a" `shouldBe` True
+    "a" `isInfixOf` "ab" `shouldBe` True
 
   it "returns True for longer strings with exact matches" $ do
-    contains "algorithm" "algorithmic" `shouldBe` True
-    contains "haskell" "I love haskell programming" `shouldBe` True
+    "algorithm" `isInfixOf` "algorithmic" `shouldBe` True
+    "haskell" `isInfixOf` "I love haskell programming" `shouldBe` True
 
   it "returns False for longer strings with high edit distances" $ do
-    contains "haskell" "pascal" `shouldBe` False
-    contains "functional" "imperative" `shouldBe` False
+    "haskell" `isInfixOf` "pascal" `shouldBe` False
+    "functional" `isInfixOf` "imperative" `shouldBe` False
 
   it "handles variations in xs length" $ do
-    contains "abcd" "abcdefg" `shouldBe` True
-    contains "abcdefgh" "abcd" `shouldBe` False
+    "abcd" `isInfixOf` "abcdefg" `shouldBe` True
+    "abcdefgh" `isInfixOf` "abcd" `shouldBe` False
 
   it "handles special cases" $ do
-    contains "aaaa" "aaaabbbb" `shouldBe` True
-    contains "abcd" "wxyz" `shouldBe` False
+    "aaaa" `isInfixOf` "aaaabbbb" `shouldBe` True
+    "abcd" `isInfixOf` "wxyz" `shouldBe` False
 
   it "handles longer strings with common substrings" $ do
-    contains "longestcommonsubstring" "thisisthelongestcommonsubstringcontains" `shouldBe` True
-    contains "longestcommonsubstring" "completelyunrelatedstring" `shouldBe` False
+    "longestcommonsubstring" `isInfixOf` "thisisthelongestcommonsubstringisInfixOf" `shouldBe` True
+    "longestcommonsubstring" `isInfixOf` "completelyunrelatedstring" `shouldBe` False
 
   it "handles longer strings with various edits" $ do
-    contains "dynamicprogramming" "thisisdynamicprogtammingexample" `shouldBe` True
-    contains "dynamicprogramming" "staticanalysis" `shouldBe` False
-    contains "aaaaabbbbb" "aaaaabbbbbccccc" `shouldBe` True
-    contains "aaaaabbbbb" "cccccaaaaaddddd" `shouldBe` False
-    contains "insertdelete" "intertdelee" `shouldBe` True
-    contains "insertdelete" "completelydifferent" `shouldBe` False
-    contains "short" "averyveryverylongshostring" `shouldBe` True
-    contains "averyveryverylongstring" "short" `shouldBe` False
-    contains "partialmatch" "thisstringcontainsapartialmatchsomewhere" `shouldBe` True
-    contains "partialmatch" "nosimilaritywhatsoever" `shouldBe` False
+    "dynamicprogramming" `isInfixOf` "thisisdynamicprogtammingexample" `shouldBe` True
+    "dynamicprogramming" `isInfixOf` "staticanalysis" `shouldBe` False
+    "aaaaabbbbb" `isInfixOf` "aaaaabbbbbccccc" `shouldBe` True
+    "aaaaabbbbb" `isInfixOf` "cccccaaaaaddddd" `shouldBe` False
+    "insertdelete" `isInfixOf` "intertdelee" `shouldBe` True
+    "insertdelete" `isInfixOf` "completelydifferent" `shouldBe` False
+    "short" `isInfixOf` "averyveryverylongshostring" `shouldBe` True
+    "averyveryverylongstring" `isInfixOf` "short" `shouldBe` False
+    "partialmatch" `isInfixOf` "thisstringisInfixOfapartialmatchsomewhere" `shouldBe` True
+    "partialmatch" `isInfixOf` "nosimilaritywhatsoever" `shouldBe` False
+
+tIsInfixOfSpec :: Spec
+tIsInfixOfSpec = describe "tIsInfixOf" $ parallel $ do
+  it "returns True for identical texts" $ do
+    tIsInfixOf "text" "text" `shouldBe` True
+
+  it "returns True for text and its uppercase version" $ do
+    tIsInfixOf "text" "TEXT" `shouldBe` True
+
+  it "returns True for text with spaces and its trimmed version" $ do
+    tIsInfixOf "  text  " "text" `shouldBe` True
+
+  it "returns True for a text contained within another with additional characters" $ do
+    tIsInfixOf "haskell" "I love haskell programming" `shouldBe` True
+
+  it "returns False for unrelated texts" $ do
+    tIsInfixOf "haskell" "pascal" `shouldBe` False
+
+  it "handles variations in text length" $ do
+    tIsInfixOf "abcd" "abcdefg" `shouldBe` True
+    tIsInfixOf "abcdefgh" "abcd" `shouldBe` False
+
+  it "handles texts with common substrings" $ do
+    tIsInfixOf "common" "uncommonphrase" `shouldBe` True
+    tIsInfixOf "common" "completelydifferent" `shouldBe` False
+
+  it "handles texts with special characters and spaces" $ do
+    tIsInfixOf "special text" "This is a special text with special characters!" `shouldBe` True
+    tIsInfixOf "special*&text" "specialcharactersintext" `shouldBe` False
+
+  it "handles longer texts with various edits" $ do
+    tIsInfixOf "dynamicprogramming" "thisisdynamicprogtammingexample" `shouldBe` True
+    tIsInfixOf "dynamicprogramming" "staticanalysis" `shouldBe` False
+
 
 spec :: Spec
-spec = do
+spec = parallel $ do
   editDistanceSpec
   minEditDistanceSubstringSpec
-  fuzzyContainsSpec
+  fuzzyisInfixOfSpec
+  tIsInfixOfSpec

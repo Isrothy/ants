@@ -93,7 +93,7 @@ searchTermSpec = describe "SearchTermParser" $ parallel $ do
         Left parseError -> expectationFailure $ "Parsing failed: " ++ show parseError
         Right t -> do
           F.filt t "fuzzy example exact" `shouldBe` True
-          F.filt t "fzzy example exact" `shouldBe` False
+          F.filt t "yzuuf example exact" `shouldBe` False
           F.filt t "fuzzy exac" `shouldBe` False
     it "parses combinations of different operations and terms" $ do
       case parse booleanTerm "" "(term1 || !term2)  ~fuzzyTerm~ /regexTerm/" of

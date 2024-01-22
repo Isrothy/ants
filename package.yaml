@@ -32,7 +32,6 @@ dependencies:
   - vector
   - raw-strings-qq
   - yaml
-  - fuzzy
   - path
   - cond
   - filepath
