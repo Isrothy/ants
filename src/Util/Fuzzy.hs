@@ -51,8 +51,7 @@ dp substrings xs ys = runST $ do
       up <- MUV.read curRow j
       let xChar = xs GV.! (i - 1)
           yChar = ys GV.! (j - 1)
-          cost = if xChar == yChar then diag else diag + 1
-      MUV.write newRow j $ min3 (left + 1) (up + 1) cost
+      MUV.write newRow j $ if xChar == yChar then diag else 1 + min3 left up diag
     MUV.copy curRow newRow
 
   UV.freeze curRow
@@ -72,7 +71,7 @@ minEditDistanceSubstring :: (Eq a) => [a] -> [a] -> Int
 minEditDistanceSubstring xs ys = minEditDistanceSubstringV (V.fromList xs) (V.fromList ys)
 
 threshold :: Int -> Int
-threshold x = floor $ sqrt (fromIntegral x :: Double)
+threshold x = (x + 2) `div` 5 -- a magic number. May exist better threshold
 
 matchesV :: (GV.Vector v a, Eq a) => v a -> v a -> Bool
 matchesV xs ys = editDistanceV xs ys <= threshold (min (GV.length xs) (GV.length ys))
@@ -90,7 +89,7 @@ preProcess :: T.Text -> UV.Vector Char
 preProcess = textToVector . T.toCaseFold . T.strip
 
 matchesT :: T.Text -> T.Text -> Bool
-matchesT xs ys = editDistanceV xs' ys' <= threshold (min (UV.length xs') (UV.length ys'))
+matchesT xs ys = editDistanceV xs' ys' <= threshold (max (UV.length xs') (UV.length ys'))
   where
     xs' = preProcess xs
     ys' = preProcess ys
