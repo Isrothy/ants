@@ -2,7 +2,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cli.NewNoteGenSpec
+module Spec.Cli.NewNoteGen
   ( spec,
   )
 where

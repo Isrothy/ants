@@ -14,7 +14,6 @@ module Model.MarkdownAst
     findFinishedTasks,
     findUnfinishedTasks,
     findAlerts,
-    -- toPlainText',
   )
 where
 

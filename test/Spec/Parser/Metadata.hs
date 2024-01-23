@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Parser.MetadataSpec
+module Spec.Parser.Metadata
   ( spec,
   )
 where

@@ -4,7 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 
-module Parser.YamlMarkdSpec
+module Spec.Parser.YamlMarkd
   ( spec,
   )
 where

@@ -1,4 +1,4 @@
-module Parser.MarkdownSpec
+module Spec.Parser.Markdown
   ( spec,
   )
 where

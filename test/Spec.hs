@@ -1,25 +1,25 @@
-import qualified Cli.NewNoteGenSpec
-import qualified Model.ConfigSpec
-import qualified Model.DocFilterSpec
-import qualified Model.MetadataSpec
-import qualified Parser.MarkdownSpec
-import qualified Parser.MetadataSpec
-import qualified Parser.PlaceholderSpec
-import qualified Parser.YamlMarkdSpec
-import qualified Parser.SearchLangSpec
-import qualified Util.FuzzySpec
+import qualified Spec.Cli.NewNoteGen
+import qualified Spec.Model.Config
+import qualified Spec.Model.DocFilter
+import qualified Spec.Model.Metadata
+import qualified Spec.Parser.Markdown
+import qualified Spec.Parser.Metadata
+import qualified Spec.Parser.Placeholder
+import qualified Spec.Parser.SearchLang
+import qualified Spec.Parser.YamlMarkd
+import qualified Spec.Util.Fuzzy
 import Test.Hspec
 
 main :: IO ()
 main = hspec $ parallel $ do
-  Cli.NewNoteGenSpec.spec
-  Model.ConfigSpec.spec
-  Model.MetadataSpec.spec
-  Model.DocFilterSpec.spec
-  Parser.MarkdownSpec.spec
-  Parser.MetadataSpec.spec
-  Parser.PlaceholderSpec.spec
-  Parser.SearchLangSpec.spec
-  Parser.YamlMarkdSpec.spec
-  Util.FuzzySpec.spec
+  Spec.Cli.NewNoteGen.spec
+  Spec.Model.Config.spec
+  Spec.Model.Metadata.spec
+  Spec.Model.DocFilter.spec
+  Spec.Parser.Markdown.spec
+  Spec.Parser.Metadata.spec
+  Spec.Parser.Placeholder.spec
+  Spec.Parser.SearchLang.spec
+  Spec.Parser.YamlMarkd.spec
+  Spec.Util.Fuzzy.spec
   return ()

@@ -100,16 +100,16 @@ test-suite ants-test
   type: exitcode-stdio-1.0
   main-is: Spec.hs
   other-modules:
-      Cli.NewNoteGenSpec
-      Model.ConfigSpec
-      Model.DocFilterSpec
-      Model.MetadataSpec
-      Parser.MarkdownSpec
-      Parser.MetadataSpec
-      Parser.PlaceholderSpec
-      Parser.SearchLangSpec
-      Parser.YamlMarkdSpec
-      Util.FuzzySpec
+      Spec.Cli.NewNoteGen
+      Spec.Model.Config
+      Spec.Model.DocFilter
+      Spec.Model.Metadata
+      Spec.Parser.Markdown
+      Spec.Parser.Metadata
+      Spec.Parser.Placeholder
+      Spec.Parser.SearchLang
+      Spec.Parser.YamlMarkd
+      Spec.Util.Fuzzy
       Paths_ants
   hs-source-dirs:
       test

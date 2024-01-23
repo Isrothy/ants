@@ -6,7 +6,7 @@
 
 {-# HLINT ignore "Redundant bracket" #-}
 
-module Model.ConfigSpec
+module Spec.Model.Config
   ( spec,
   )
 where

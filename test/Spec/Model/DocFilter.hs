@@ -5,7 +5,7 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Model.DocFilterSpec (spec) where
+module Spec.Model.DocFilter (spec) where
 
 import Data.Either
 import qualified Data.Text as T

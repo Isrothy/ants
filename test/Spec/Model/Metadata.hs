@@ -4,7 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 
-module Model.MetadataSpec
+module Spec.Model.Metadata
   ( spec,
   )
 where

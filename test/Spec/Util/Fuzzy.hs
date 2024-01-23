@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module Util.FuzzySpec
+module Spec.Util.Fuzzy
   ( spec,
   )
 where

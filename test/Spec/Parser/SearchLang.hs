@@ -2,7 +2,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Parser.SearchLangSpec
+module Spec.Parser.SearchLang
   ( spec,
   )
 where
