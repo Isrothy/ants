@@ -33,30 +33,31 @@ textToVector t =
       go s0 0
       pure m
 
-min3 :: (Ord a) => a -> a -> a -> a
-min3 a b c = min a (min b c)
-
 dp :: (GV.Vector v a, Eq a) => Bool -> v a -> v a -> UV.Vector Int
 dp substrings xs ys = runST $ do
   let (m, n) = (GV.length xs, GV.length ys)
-  table <- MUV.new ((m + 1) * (n + 1))
+  curRow <- MUV.new (n + 1)
+  newRow <- MUV.new (n + 1)
 
-  forLoop 0 (<= m) (+ 1) $ \i -> MUV.write table (i * (n + 1)) i
-  forLoop 0 (<= n) (+ 1) $ \j -> MUV.write table j (if substrings then 0 else j)
+  forLoop 0 (<= n) (+ 1) $ \j -> do
+    let val = if substrings then 0 else j
+    MUV.write curRow j val
 
-  forLoop 1 (<= m) (+ 1) $ \i ->
+  forLoop 1 (<= m) (+ 1) $ \i -> do
+    MUV.write newRow 0 i
     forLoop 1 (<= n) (+ 1) $ \j -> do
-      let idx = i * (n + 1) + j
-          diagIdx = (i - 1) * (n + 1) + (j - 1)
-      diag <- MUV.read table diagIdx
-      left <- MUV.read table (idx - 1)
-      up <- MUV.read table (idx - (n + 1))
+      diag <- MUV.read curRow (j - 1)
+      left <- MUV.read newRow (j - 1)
+      up <- MUV.read curRow j
       let xChar = xs GV.! (i - 1)
           yChar = ys GV.! (j - 1)
           cost = if xChar == yChar then diag else diag + 1
-      MUV.write table idx $ min3 (left + 1) (up + 1) cost
+      MUV.write newRow j $ min3 (left + 1) (up + 1) cost
+    MUV.copy curRow newRow
 
-  UV.freeze $ MUV.slice (m * (n + 1)) (n + 1) table
+  UV.freeze curRow
+  where
+    min3 x y z = min x (min y z)
 
 editDistanceV :: (GV.Vector v a, Eq a) => v a -> v a -> Int
 editDistanceV xs ys = UV.last $ dp False xs ys
