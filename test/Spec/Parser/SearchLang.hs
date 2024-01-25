@@ -13,16 +13,25 @@ import qualified Data.Text as T
 import Data.Time.Format.ISO8601
 import qualified Model.DocFilter as F
 import Model.Metadata
+import qualified Model.SearchLang as L
 import Parser.SearchLang
 import Test.Hspec
 import Text.Parsec
+import Text.Parsec.Text
 import Text.RawString.QQ
 
-searchTermSpec:: Spec
+parseToFilter :: Parser F.TextFilter -> T.Text -> Either ParseError F.TextFilter
+parseToFilter p = parse p ""
+
+parseToAst :: Parser L.SearchTermAst -> T.Text -> Either ParseError L.SearchTermAst
+parseToAst p = parse p ""
+
+searchTermSpec :: Spec
 searchTermSpec = describe "SearchTermParser" $ parallel $ do
   describe "Basic term parsing" $ do
-    it "parses a quoted term" $ do
-      case parse quotedTerm "" "\"example\"" of
+    it "parses a quotesearchTermd term" $ do
+      let input = T.pack "\"example\""
+      case parseToFilter quotedTerm input of
         Left parseError -> expectationFailure $ "Parsing failed: " ++ show parseError
         Right t -> do
           F.filt t "example" `shouldBe` True
@@ -30,43 +39,54 @@ searchTermSpec = describe "SearchTermParser" $ parallel $ do
           F.filt t "  example  " `shouldBe` True
           F.filt t "ExAmple" `shouldBe` False
           F.filt t "xample" `shouldBe` False
+      parseToAst quotedTerm input `shouldBe` L.StrictTerm "example"
+
     it "parses an unquoted term" $ do
-      case parse unquotedTerm "" "example" of
+      let input = T.pack "example"
+      case parseToFilter unquotedTerm input of
         Left parseError -> expectationFailure $ "Parsing failed: " ++ show parseError
         Right t -> do
           F.filt t "example" `shouldBe` True
           F.filt t "  example  " `shouldBe` True
           F.filt t "ExAmple" `shouldBe` False
           F.filt t "xample" `shouldBe` False
+      parseToAst quotedTerm input `shouldBe` L.StrictTerm "example"
 
   describe "Regex term parsing" $ do
+    let intput = T.pack "/[a-z]+/"
     it "parses a regex term" $ do
-      case parse regexTerm "" "/[a-z]+/" of
+      case parseToFilter regexTerm input of
         Left parseError -> expectationFailure $ "Parsing failed: " ++ show parseError
         Right t -> do
           F.filt t "example" `shouldBe` True
           F.filt t "123" `shouldBe` False
+      parseToAst regexTerm input `shouldBe` L.RegexTerm "^[a-z]+$"
 
   describe "Fuzzy term parsing" $ do
+    let input = T.pack "~example~"
     it "parses a fuzzy term" $ do
-      case parse fuzzyTerm "" "~example~" of
+      case parseToFilter fuzzyTerm input of
         Left parseError -> expectationFailure $ "Parsing failed: " ++ show parseError
         Right t -> do
           F.filt t "example" `shouldBe` True
           F.filt t "exaample" `shouldBe` True
           F.filt t "ExAmple" `shouldBe` True
           F.filt t "xmpl" `shouldBe` False
+      parseToAst fuzzyTerm input `shouldBe` L.FuzzyTerm "example"
 
   describe "Boolean operations parsing - OR" $ do
     it "parses an OR operation" $ do
-      case parse booleanTerm "" "term1 || term2" of
+      let input = T.pack "term1 || term2"
+      case parseToFilter booleanTerm input of
         Left parseError -> expectationFailure $ "Parsing failed: " ++ show parseError
         Right t -> do
           F.filt t "term1" `shouldBe` True
           F.filt t "term2" `shouldBe` True
           F.filt t "term3" `shouldBe` False
+      parseToAst booleanTerm input `shouldBe` L.Or [L.StrictTerm "term1", L.StrictTerm "term2"]
+
     it "parses an AND operation" $ do
-      case parse booleanTerm "" "/term1/ term2" of
+      case parseToFilter booleanTerm "/term1/ term2" of
         Left parseError -> expectationFailure $ "Parsing failed: " ++ show parseError
         Right t -> do
           F.filt t "term1 term2" `shouldBe` True
@@ -74,8 +94,9 @@ searchTermSpec = describe "SearchTermParser" $ parallel $ do
           F.filt t "term1" `shouldBe` False
           F.filt t "term2" `shouldBe` False
 
+
     it "parses a NOT operation" $ do
-      case parse booleanTerm "" "!term1" of
+      case parseToFilter booleanTerm "!term1" of
         Left parseError -> expectationFailure $ "Parsing failed: " ++ show parseError
         Right t -> do
           F.filt t "term1" `shouldBe` False
@@ -83,39 +104,39 @@ searchTermSpec = describe "SearchTermParser" $ parallel $ do
 
   describe "Complex expression parsing" $ do
     it "parses complex expressions" $ do
-      case parse booleanTerm  "" "term1 (term2 || !term3)" of
+      case parseToFilter booleanTerm "term1 (term2 || !term3)" of
         Left parseError -> expectationFailure $ "Parsing failed: " ++ show parseError
         Right t -> do
           F.filt t "term1 term2" `shouldBe` True
           F.filt t "term1 term3" `shouldBe` False
           F.filt t "term1 other" `shouldBe` True
-      case parse booleanTerm "" "~fuzzy~ /[a-z]+/ \"exact\"" of
+      case parseToFilter booleanTerm "~fuzzy~ /[a-z]+/ \"exact\"" of
         Left parseError -> expectationFailure $ "Parsing failed: " ++ show parseError
         Right t -> do
           F.filt t "fuzzy example exact" `shouldBe` True
           F.filt t "yzuuf example exact" `shouldBe` False
           F.filt t "fuzzy exac" `shouldBe` False
     it "parses combinations of different operations and terms" $ do
-      case parse booleanTerm "" "(term1 || !term2)  ~fuzzyTerm~ /regexTerm/" of
+      case parseToFilter booleanTerm "(term1 || !term2)  ~fuzzyTerm~ /regexTerm/" of
         Left parseError -> expectationFailure $ "Parsing failed: " ++ show parseError
         Right t -> do
           F.filt t "term1 fuzzyTerm regexTerm" `shouldBe` True
           F.filt t "term2 fuzzyTerm regexTerm" `shouldBe` False
           F.filt t "term1 fuzzyTerm wrongRegex" `shouldBe` False
-      case parse booleanTerm "" (T.pack "term1 || term2 || term3") of
+      case parseToFilter booleanTerm "term1 || term2 || term3" of
         Left parseError -> expectationFailure $ "Parsing failed: " ++ show parseError
         Right t -> do
           F.filt t "term1" `shouldBe` True
           F.filt t "term2" `shouldBe` True
           F.filt t "term3" `shouldBe` True
           F.filt t "term4" `shouldBe` False
-      case parse booleanTerm "" (T.pack "!term1 !term2") of
+      case parseToFilter booleanTerm "!term1 !term2" of
         Left parseError -> expectationFailure $ "Parsing failed: " ++ show parseError
         Right t -> do
           F.filt t "term1" `shouldBe` False
           F.filt t "term2" `shouldBe` False
           F.filt t "otherTerm" `shouldBe` True
-      case parse booleanTerm "" (T.pack "term1 || !term2 || (term3 !term4)") of
+      case parseToFilter booleanTerm "term1 || !term2 || (term3 !term4)" of
         Left parseError -> expectationFailure $ "Parsing failed: " ++ show parseError
         Right t -> do
           F.filt t "term1" `shouldBe` True
@@ -123,7 +144,7 @@ searchTermSpec = describe "SearchTermParser" $ parallel $ do
           F.filt t "term2" `shouldBe` False
           F.filt t "term2 term3 term4" `shouldBe` False
           F.filt t "term2 term4 term5" `shouldBe` False
-      case parse booleanTerm "" (T.pack "!(term1 || !term2)") of
+      case parseToFilter booleanTerm (T.pack "!(term1 || !term2)") of
         Left parseError -> expectationFailure $ "Parsing failed: " ++ show parseError
         Right t -> do
           F.filt t "term1" `shouldBe` False

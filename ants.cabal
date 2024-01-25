@@ -29,14 +29,15 @@ library
       Lib
       Model.Config
       Model.DocFilter
+      Model.DocSearch
       Model.Document
       Model.MarkdownAst
       Model.Metadata
+      Parser.DocSearch
       Parser.Markdown
       Parser.Metadata
       Parser.Opts
       Parser.Placeholder
-      Parser.SearchLang
       Parser.YamlMarked
       Util.Default
       Util.ExAeson

@@ -1,8 +1,8 @@
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-
 {-# HLINT ignore "Use lambda-case" #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 module Model.DocFilter
   ( Filter (..),
@@ -16,6 +16,7 @@ module Model.DocFilter
     description,
     fuzzyTerm,
     strictTerm,
+    caseInsensitiveTerm,
     regexTerm,
     matchesRelPath,
     hasLink,
@@ -38,21 +39,21 @@ import Data.Time
 import qualified Model.Document as D
 import Model.MarkdownAst
 import qualified Model.Metadata as M
+import qualified Model.SearchLang as L
 import Path
 import Text.Regex.TDFA
 import qualified Util.Fuzzy as Fuzzy
 import Prelude hiding (and, any, not, or, (&&), (||))
 
-newtype Filter a where
-  Filter :: {filt :: a -> Bool} -> Filter a
+type Filter a = a -> Bool
 
-instance Boolean (Filter a) where
-  true = Filter $ const True
-  false = Filter $ const False
-  (&&) f1 f2 = Filter $ \x -> filt f1 x && filt f2 x
-  (||) f1 f2 = Filter $ \x -> filt f1 x || filt f2 x
-  not f = Filter $ \x -> not $ filt f x
-
+-- instance Boolean (Filter a) where
+--   true = Filter $ const True
+--   false = Filter $ const False
+--   (&&) f1 f2 = Filter $ \x -> filt f1 x && filt f2 x
+--   (||) f1 f2 = Filter $ \x -> filt f1 x || filt f2 x
+--   not f = Filter $ \x -> not $ filt f x
+--
 type DocFilter = Filter D.Document
 
 type AstFilter = Filter (Maybe MarkdownAst)
@@ -60,31 +61,34 @@ type AstFilter = Filter (Maybe MarkdownAst)
 type TextFilter = Filter T.Text
 
 metadata :: (M.Metadata -> Bool) -> DocFilter
-metadata f = Filter $ f . D.metadata
+metadata f = f . D.metadata
 
 ast :: AstFilter -> DocFilter
-ast f = Filter $ filt f . D.ast
+ast f = f . D.ast
 
 ast' :: (MarkdownAst -> Bool) -> DocFilter
-ast' = ast . Filter . maybe False
+ast' = ast . maybe False
 
 relPath :: (Path Rel File -> Bool) -> DocFilter
-relPath f = Filter $ f . D.relPath
+relPath f = f . D.relPath
 
 fuzzyTerm :: T.Text -> TextFilter
-fuzzyTerm = Filter . Fuzzy.isInfixOfT
+fuzzyTerm = Fuzzy.isInfixOfT
 
 strictTerm :: T.Text -> TextFilter
-strictTerm = Filter . T.isInfixOf
+strictTerm = T.isInfixOf
 
-regexTerm :: String -> TextFilter
-regexTerm s = Filter (=~ s)
+caseInsensitiveTerm :: T.Text -> TextFilter
+caseInsensitiveTerm t = T.isInfixOf (T.toCaseFold t) . T.toCaseFold
+
+regexTerm :: T.Text -> TextFilter
+regexTerm s = (=~ s)
 
 matchesRelPath :: Path Rel File -> DocFilter
 matchesRelPath = relPath . (==)
 
 plain :: TextFilter -> AstFilter
-plain f = Filter $ filt f . toPlainText
+plain f = f . toPlainText
 
 dateRange :: Maybe UTCTime -> Maybe UTCTime -> DocFilter
 dateRange start end = metadata $ maybe False (between start end) . M.dateTime
@@ -95,28 +99,28 @@ dateRange start end = metadata $ maybe False (between start end) . M.dateTime
     between _ _ _ = True
 
 author :: TextFilter -> DocFilter
-author f = metadata $ filt f . fromMaybe "" . M.author
+author f = metadata $ f . fromMaybe "" . M.author
 
 title :: TextFilter -> DocFilter
-title f = metadata $ filt f . fromMaybe "" . M.title
+title f = metadata $ f . fromMaybe "" . M.title
 
 tag :: TextFilter -> DocFilter
-tag f = metadata $ any (filt f) . M.tags
+tag f = metadata $ any f . M.tags
 
 description :: TextFilter -> DocFilter
-description f = metadata $ filt f . M.description
+description f = metadata $ f . M.description
 
 content :: TextFilter -> DocFilter
 content = ast . plain
 
 task :: TextFilter -> DocFilter
-task f = ast' $ any (filt f . toPlainText . snd) . findTasks
+task f = ast' $ any (f . toPlainText . snd) . findTasks
 
 finishedTask :: TextFilter -> DocFilter
-finishedTask f = ast' $ any (filt f . toPlainText) . findFinishedTasks
+finishedTask f = ast' $ any (f . toPlainText) . findFinishedTasks
 
 unfinishedTask :: TextFilter -> DocFilter
-unfinishedTask f = ast' $ any (filt f . toPlainText) . findUnfinishedTasks
+unfinishedTask f = ast' $ any (f . toPlainText) . findUnfinishedTasks
 
 hasAlert :: DocFilter
 hasAlert = ast' $ not . null . findAlerts
