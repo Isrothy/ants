@@ -23,6 +23,7 @@ import qualified Model.Config as Config
 import Model.MarkdownAst
 import Parser.Markdown
 import Parser.Placeholder
+import Safe
 
 type LookupTable = [(T.Text, T.Text)]
 
@@ -31,9 +32,10 @@ markdownAstWithPlaceholder ::
   String ->
   T.Text ->
   Maybe MarkdownAst
-markdownAstWithPlaceholder extensions filename text = case markdownAstWith (placeholderSpec <> extensions <> defaultSyntaxSpec) filename text of
-  Just (Right ast) -> ast
-  _ -> Nothing
+markdownAstWithPlaceholder extensions filename text =
+  case markdownAstWith (placeholderSpec <> extensions <> defaultSyntaxSpec) filename text of
+    Just (Right ast) -> ast
+    _ -> Nothing
 
 replacePlaceholders :: SyntaxSpec Maybe (Maybe MarkdownAst) (Maybe MarkdownAst) -> String -> T.Text -> [(T.Text, T.Text)] -> T.Text
 replacePlaceholders extensions filename text lookupTable = case markdownAstWithPlaceholder extensions filename text of
@@ -49,6 +51,7 @@ posReverse (_, SourceRange ((pos1, _) : _)) (_, SourceRange ((pos2, _) : _)) =
   pos2 `compare` pos1
 posReverse _ _ = error "posReverse: empty source range"
 
+-- For Text.lines does not treat '\r' (CR, carriage return) as a newline character.
 splitLines :: T.Text -> [T.Text]
 splitLines txt = map (T.reverse . TL.toStrict) $ splitLines' (TL.fromStrict txt) TL.empty
 
@@ -66,7 +69,7 @@ findPosition lineNumber columnNumber text = do
   guard $ lineNumber >= 1 && columnNumber >= 1
   let lines' = splitLines text
   guard $ lineNumber <= length lines'
-  let line = lines' !! (lineNumber - 1)
+  let line = at lines' (lineNumber - 1)
   guard $ columnNumber <= T.length line
   let linesBefore = take (lineNumber - 1) lines'
   let charsInLinesBefore = sum $ map T.length linesBefore

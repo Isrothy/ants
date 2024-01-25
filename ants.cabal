@@ -58,8 +58,10 @@ library
     , optparse-applicative
     , parsec
     , path
+    , random
     , raw-strings-qq
     , regex-tdfa >=1.3.2 && <1.4
+    , safe
     , text
     , time
     , unordered-containers
@@ -87,8 +89,10 @@ executable ants
     , optparse-applicative
     , parsec
     , path
+    , random
     , raw-strings-qq
     , regex-tdfa >=1.3.2 && <1.4
+    , safe
     , text
     , time
     , unordered-containers
@@ -98,7 +102,7 @@ executable ants
 
 test-suite ants-test
   type: exitcode-stdio-1.0
-  main-is: Spec.hs
+  main-is: Main.hs
   other-modules:
       Spec.Cli.NewNoteGen
       Spec.Model.Config
@@ -128,8 +132,42 @@ test-suite ants-test
     , optparse-applicative
     , parsec
     , path
+    , random
     , raw-strings-qq
     , regex-tdfa >=1.3.2 && <1.4
+    , safe
+    , text
+    , time
+    , unordered-containers
+    , vector
+    , yaml
+  default-language: Haskell2010
+
+benchmark ants-bench
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  other-modules:
+      Benchmarks.Util.Fuzzy
+      Paths_ants
+  hs-source-dirs:
+      benchmarks
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N -O2
+  build-depends:
+      aeson
+    , ants
+    , base
+    , bytestring
+    , commonmark
+    , commonmark-extensions
+    , cond
+    , criterion
+    , loop
+    , parsec
+    , path
+    , random
+    , raw-strings-qq
+    , regex-tdfa >=1.3.2 && <1.4
+    , safe
     , text
     , time
     , unordered-containers

@@ -10,8 +10,6 @@ module Model.Metadata
   )
 where
 
-import Util.Default
-import Util.ExAeson
 import Control.Applicative ((<|>))
 import Data.Aeson
 import Data.Aeson.TH
@@ -19,6 +17,8 @@ import Data.Maybe
 import qualified Data.Text as T
 import Data.Time
 import Data.Time.Format.ISO8601
+import Util.Default
+import Util.ExAeson
 
 data Metadata = Metadata
   { title :: !(Maybe T.Text),
