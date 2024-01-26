@@ -29,6 +29,8 @@ library
       Lib
       Model.Config
       Model.DocQuery
+      Model.DocQuery.Query
+      Model.DocQuery.Term
       Model.Document
       Model.MarkdownAst
       Model.Metadata

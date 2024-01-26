@@ -18,7 +18,8 @@ where
 import Data.Char (isPunctuation)
 import Data.Functor
 import qualified Data.Text as T
-import Model.DocQuery
+import Model.DocQuery.Query
+import Model.DocQuery.Term
 import Text.Parsec
 import Text.Parsec.Text (Parser)
 import Prelude hiding (and, any, not, or, (&&), (||))
