@@ -1,6 +1,6 @@
 module Parser.DocQuery
-  ( booleanTerm,
-    simpleTerm,
+  ( boolExpr,
+    simpleExpr,
     singleQuotedTerm,
     doubleQuotedTerm,
     unquotedTerm,
@@ -18,11 +18,14 @@ where
 import Data.Char (isPunctuation)
 import Data.Functor
 import qualified Data.Text as T
-import Model.DocQuery.Query
-import Model.DocQuery.Term
+import Model.DocQuery.BoolExpr ( BoolExpr(..) )
+import Model.DocQuery.Term ( Term(..) )
 import Text.Parsec
 import Text.Parsec.Text (Parser)
 import Prelude hiding (and, any, not, or, (&&), (||))
+
+class HasParser a where
+  parser :: Parser a
 
 parens :: Parser a -> Parser a
 parens p = do
@@ -77,21 +80,20 @@ fuzzyTerm = do
 term :: Parser Term
 term = doubleQuotedTerm <|> singleQuotedTerm <|> regexTerm <|> fuzzyTerm <|> unquotedTerm
 
-booleanTerm :: Parser Term
-booleanTerm = orTerm
+instance HasParser Term where
+  parser = term
 
-notOperator :: Parser ()
-notOperator = do
+boolExpr :: (HasParser a) => Parser (BoolExpr a)
+boolExpr = orExpr
+
+notOp :: Parser (BoolExpr a -> BoolExpr a)
+notOp = do
+  _ <- spaces
   _ <- char '!'
-  return ()
+  _ <- spaces
+  return Not
 
-orTerm :: Parser Term
-orTerm = andTerm `chainl1` try orOp
-
-andTerm :: Parser Term
-andTerm = notTerm `chainl1` try andOp
-
-orOp :: Parser (Term -> Term -> Term)
+orOp :: Parser (BoolExpr a -> BoolExpr a -> BoolExpr a)
 orOp = do
   _ <- spaces
   _ <- string "||"
@@ -99,7 +101,7 @@ orOp = do
   _ <- spaces
   return Or
 
-andOp :: Parser (Term -> Term -> Term)
+andOp :: Parser (BoolExpr a -> BoolExpr a -> BoolExpr a)
 andOp = do
   _ <- spaces
   _ <- string "&&"
@@ -107,11 +109,22 @@ andOp = do
   _ <- spaces
   return And
 
-notTerm :: Parser Term
-notTerm = (notOperator >> spaces >> notTerm <&> Not) <|> simpleTerm
+orExpr :: (HasParser a) => Parser (BoolExpr a)
+orExpr = andExpr `chainl1` try orOp
 
-simpleTerm :: Parser Term
-simpleTerm = parens booleanTerm <|> term
+andExpr :: (HasParser a) => Parser (BoolExpr a)
+andExpr = notExpr `chainl1` try andOp
+
+notExpr :: (HasParser a) => Parser (BoolExpr a)
+notExpr =
+  ( do
+      op <- notOp
+      op <$> notExpr
+  )
+    <|> simpleExpr
+
+simpleExpr :: (HasParser a) => Parser (BoolExpr a)
+simpleExpr = parens boolExpr <|> (parser <&> Val)
 
 -- author :: Parser F.DocFilter
 -- author = do

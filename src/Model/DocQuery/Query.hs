@@ -13,6 +13,7 @@ import Data.Algebra.Boolean
 import Data.Maybe
 import qualified Data.Text as T
 import Data.Time
+import Model.DocQuery.BoolExpr
 import Model.DocQuery.Term
 import qualified Model.Document as D
 import Model.MarkdownAst hiding (Alert)
@@ -47,12 +48,12 @@ data TaskType = Finished | UnFinished | Both
   deriving (Show, Eq)
 
 data Query where
-  Author :: Term -> Query
-  Title :: Term -> Query
-  Tag :: Term -> Query
-  Description :: Term -> Query
-  Content :: Term -> Query
-  Task :: TaskType -> Term -> Query
+  Author :: (BoolExpr Term) -> Query
+  Title :: (BoolExpr Term) -> Query
+  Tag :: (BoolExpr Term) -> Query
+  Description :: (BoolExpr Term) -> Query
+  Content :: (BoolExpr Term) -> Query
+  Task :: TaskType -> (BoolExpr Term) -> Query
   Alert :: AlertType -> Query
   DateRange :: Maybe UTCTime -> Maybe UTCTime -> Query
   HasLink :: Path Rel File -> Query

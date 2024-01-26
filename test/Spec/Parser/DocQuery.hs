@@ -13,6 +13,10 @@ import Model.DocQuery
 import Parser.DocQuery
 import Test.Hspec
 import Text.Parsec
+import Text.Parsec.Text (Parser)
+
+boolTerm :: Parser (BoolExpr Term)
+boolTerm = boolExpr
 
 searchTermSpec :: Spec
 searchTermSpec = describe "SearchTermParser" $ parallel $ do
@@ -37,77 +41,77 @@ searchTermSpec = describe "SearchTermParser" $ parallel $ do
 
   describe "Boolean operations parsing" $ do
     it "parses an OR operation" $ do
-      parse booleanTerm "" "term1 || term2" `shouldBe` Right (CaseInsensitiveTerm "term1" `Or` CaseInsensitiveTerm "term2")
-      parse booleanTerm "" "term1||  term2" `shouldBe` Right (CaseInsensitiveTerm "term1" `Or` CaseInsensitiveTerm "term2")
-      parse booleanTerm "" "term1 ||term2" `shouldBe` Right (CaseInsensitiveTerm "term1" `Or` CaseInsensitiveTerm "term2")
-      parse booleanTerm "" "term1||term2" `shouldBe` Right (CaseInsensitiveTerm "term1" `Or` CaseInsensitiveTerm "term2")
+      parse boolTerm "" "term1 || term2" `shouldBe` Right (Val (CaseInsensitiveTerm "term1") `Or` Val (CaseInsensitiveTerm "term2"))
+      parse boolTerm "" "term1||  term2" `shouldBe` Right (Val (CaseInsensitiveTerm "term1") `Or` Val (CaseInsensitiveTerm "term2"))
+      parse boolTerm "" "term1 ||term2" `shouldBe` Right (Val (CaseInsensitiveTerm "term1") `Or` Val (CaseInsensitiveTerm "term2"))
+      parse boolTerm "" "term1||term2" `shouldBe` Right (Val (CaseInsensitiveTerm "term1") `Or` Val (CaseInsensitiveTerm "term2"))
 
     it "parses an AND operation" $ do
-      parse booleanTerm "" "/term1/ && term2" `shouldBe` Right (RegexTerm "term1" `And` CaseInsensitiveTerm "term2")
-      parse booleanTerm "" "/term1/&& term2" `shouldBe` Right (RegexTerm "term1" `And` CaseInsensitiveTerm "term2")
-      parse booleanTerm "" "/term1/   &&term2" `shouldBe` Right (RegexTerm "term1" `And` CaseInsensitiveTerm "term2")
-      parse booleanTerm "" "/term1/&&term2" `shouldBe` Right (RegexTerm "term1" `And` CaseInsensitiveTerm "term2")
+      parse boolTerm "" "/term1/ && term2" `shouldBe` Right (Val (RegexTerm "term1") `And` Val (CaseInsensitiveTerm "term2"))
+      parse boolTerm "" "/term1/&& term2" `shouldBe` Right (Val (RegexTerm "term1") `And` Val (CaseInsensitiveTerm "term2"))
+      parse boolTerm "" "/term1/   &&term2" `shouldBe` Right (Val (RegexTerm "term1") `And` Val (CaseInsensitiveTerm "term2"))
+      parse boolTerm "" "/term1/&&term2" `shouldBe` Right (Val (RegexTerm "term1") `And` Val (CaseInsensitiveTerm "term2"))
 
     it "parses a NOT operation" $ do
-      parse booleanTerm "" "!term1" `shouldBe` Right (Not (CaseInsensitiveTerm "term1"))
-      parse booleanTerm "" "! term1" `shouldBe` Right (Not (CaseInsensitiveTerm "term1"))
-      parse booleanTerm "" "!   term1" `shouldBe` Right (Not (CaseInsensitiveTerm "term1"))
+      parse boolTerm "" "!term1" `shouldBe` Right (Not (Val (CaseInsensitiveTerm "term1")))
+      parse boolTerm "" "! term1" `shouldBe` Right (Not (Val (CaseInsensitiveTerm "term1")))
+      parse boolTerm "" "!   term1" `shouldBe` Right (Not (Val (CaseInsensitiveTerm "term1")))
 
   describe "Complex expression parsing" $ do
     it "parses complex expressions" $ do
-      parse booleanTerm "" "term1 && (term2 || !term3)"
+      parse boolTerm "" "term1 && (term2 || !term3)"
         `shouldBe` Right
-          (CaseInsensitiveTerm "term1" `And` (CaseInsensitiveTerm "term2" `Or` Not (CaseInsensitiveTerm "term3")))
-      parse booleanTerm "" "~fuzzy~ && /[a-z]+/ && \"exact\""
-        `shouldBe` Right (FuzzyTerm "fuzzy" `And` RegexTerm "[a-z]+" `And` CaseInsensitiveTerm "exact")
+          (Val (CaseInsensitiveTerm "term1") `And` (Val (CaseInsensitiveTerm "term2") `Or` Not (Val (CaseInsensitiveTerm "term3"))))
+      parse boolTerm "" "~fuzzy~ && /[a-z]+/ && \"exact\""
+        `shouldBe` Right (Val (FuzzyTerm "fuzzy") `And` Val (RegexTerm "[a-z]+") `And` Val (CaseInsensitiveTerm "exact"))
     it "parses combinations of different operations and terms" $ do
-      parse booleanTerm "" "(term1)" `shouldBe` Right (CaseInsensitiveTerm "term1")
-      parse booleanTerm "" "((term1))" `shouldBe` Right (CaseInsensitiveTerm "term1")
-      parse booleanTerm "" "((  (term1 )) )" `shouldBe` Right (CaseInsensitiveTerm "term1")
-      parse booleanTerm "" "(term1 || !term2)  && ~fuzzyTerm~ && /regexTerm/"
+      parse boolTerm "" "(term1)" `shouldBe` Right (Val (CaseInsensitiveTerm "term1"))
+      parse boolTerm "" "((term1))" `shouldBe` Right (Val (CaseInsensitiveTerm "term1"))
+      parse boolTerm "" "((  (term1 )) )" `shouldBe` Right (Val (CaseInsensitiveTerm "term1"))
+      parse boolTerm "" "(term1 || !term2)  && ~fuzzyTerm~ && /regexTerm/"
         `shouldBe` Right
-          ( (CaseInsensitiveTerm "term1" `Or` Not (CaseInsensitiveTerm "term2"))
-              `And` FuzzyTerm "fuzzyTerm"
-              `And` RegexTerm "regexTerm"
+          ( (Val (CaseInsensitiveTerm "term1") `Or` Not (Val (CaseInsensitiveTerm "term2")))
+              `And` Val (FuzzyTerm "fuzzyTerm")
+              `And` Val (RegexTerm "regexTerm")
           )
-      parse booleanTerm "" "term1 || term2 || (term3)"
+      parse boolTerm "" "term1 || term2 || (term3)"
         `shouldBe` Right
-          (CaseInsensitiveTerm "term1" `Or` CaseInsensitiveTerm "term2" `Or` CaseInsensitiveTerm "term3")
-      parse booleanTerm "" "!term1  && !term2"
+          (Val (CaseInsensitiveTerm "term1") `Or` Val (CaseInsensitiveTerm "term2") `Or` Val (CaseInsensitiveTerm "term3"))
+      parse boolTerm "" "!term1  && !term2"
         `shouldBe` Right
-          (Not (CaseInsensitiveTerm "term1") `And` Not (CaseInsensitiveTerm "term2"))
-      parse booleanTerm "" "term1 || ! term2 || ( term3 && !(term4))"
+          (Not (Val (CaseInsensitiveTerm "term1")) `And` Not (Val (CaseInsensitiveTerm "term2")))
+      parse boolTerm "" "term1 || ! term2 || ( term3 && !(term4))"
         `shouldBe` Right
-          ( CaseInsensitiveTerm "term1"
-              `Or` Not (CaseInsensitiveTerm "term2")
-              `Or` (CaseInsensitiveTerm "term3" `And` Not (CaseInsensitiveTerm "term4"))
+          ( Val (CaseInsensitiveTerm "term1")
+              `Or` Not (Val (CaseInsensitiveTerm "term2"))
+              `Or` (Val (CaseInsensitiveTerm "term3") `And` Not (Val (CaseInsensitiveTerm "term4")))
           )
-      parse booleanTerm "" "!(  term1 || !term2)"
-        `shouldBe` Right (Not (CaseInsensitiveTerm "term1" `Or` Not (CaseInsensitiveTerm "term2")))
+      parse boolTerm "" "!(  term1 || !term2)"
+        `shouldBe` Right (Not (Val (CaseInsensitiveTerm "term1") `Or` Not (Val (CaseInsensitiveTerm "term2"))))
 
   describe "Multiple NOT operations" $ do
     it "fails to parse double NOT operations (e.g., !!)" $ do
-      parse booleanTerm "" "!!term1" `shouldBe` Right (Not (Not (CaseInsensitiveTerm "term1")))
-      parse booleanTerm "" "! !term1" `shouldBe` Right (Not (Not (CaseInsensitiveTerm "term1")))
-      parse booleanTerm "" "!! term1" `shouldBe` Right (Not (Not (CaseInsensitiveTerm "term1")))
-      parse booleanTerm "" "! !  term1" `shouldBe` Right (Not (Not (CaseInsensitiveTerm "term1")))
+      parse boolTerm "" "!!term1" `shouldBe` Right (Not (Not (Val (CaseInsensitiveTerm "term1"))))
+      parse boolTerm "" "! !term1" `shouldBe` Right (Not (Not (Val (CaseInsensitiveTerm "term1"))))
+      parse boolTerm "" "!! term1" `shouldBe` Right (Not (Not (Val (CaseInsensitiveTerm "term1"))))
+      parse boolTerm "" "! !  term1" `shouldBe` Right (Not (Not (Val (CaseInsensitiveTerm "term1"))))
     it "fails to parse triple NOT operations (e.g., !!!)" $ do
-      parse booleanTerm "" "!!!term1" `shouldBe` Right (Not (Not (Not (CaseInsensitiveTerm "term1"))))
-      parse booleanTerm "" "!!! term1" `shouldBe` Right (Not (Not (Not (CaseInsensitiveTerm "term1"))))
-      parse booleanTerm "" "! !!term1" `shouldBe` Right (Not (Not (Not (CaseInsensitiveTerm "term1"))))
+      parse boolTerm "" "!!!term1" `shouldBe` Right (Not (Not (Not (Val (CaseInsensitiveTerm "term1")))))
+      parse boolTerm "" "!!! term1" `shouldBe` Right (Not (Not (Not (Val (CaseInsensitiveTerm "term1")))))
+      parse boolTerm "" "! !!term1" `shouldBe` Right (Not (Not (Not (Val (CaseInsensitiveTerm "term1")))))
     it "fails to parse multiple consecutive NOT operations (e.g., !!)" $ do
-      parse booleanTerm "" "!! term1 && ! !term2"
-        `shouldBe` Right (Not (Not (CaseInsensitiveTerm "term1")) `And` Not (Not (CaseInsensitiveTerm "term2")))
-      parse booleanTerm "" "!!term1 && ! ! term2 && ! !term3"
+      parse boolTerm "" "!! term1 && ! !term2"
+        `shouldBe` Right (Not (Not (Val (CaseInsensitiveTerm "term1"))) `And` Not (Not (Val (CaseInsensitiveTerm "term2"))))
+      parse boolTerm "" "!!term1 && ! ! term2 && ! !term3"
         `shouldBe` Right
-          ( Not (Not (CaseInsensitiveTerm "term1"))
-              `And` Not (Not (CaseInsensitiveTerm "term2"))
-              `And` Not (Not (CaseInsensitiveTerm "term3"))
+          ( Not (Not (Val (CaseInsensitiveTerm "term1")))
+              `And` Not (Not (Val (CaseInsensitiveTerm "term2")))
+              `And` Not (Not (Val (CaseInsensitiveTerm "term3")))
           )
 
   describe "Edge case handling" $ do
     it "handles an empty input" $ do
-      parse booleanTerm "" "" `shouldSatisfy` isLeft
+      parse boolTerm "" "" `shouldSatisfy` isLeft
 
 spec :: Spec
 spec = describe "SearchLanguageParser" $ parallel $ do

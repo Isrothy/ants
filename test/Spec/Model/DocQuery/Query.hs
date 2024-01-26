@@ -101,47 +101,47 @@ metadataSpec = describe "Metadata Filter" $ do
     query filter' doc `shouldBe` True
 
   it "matches metadata with the specific author" $ do
-    let filter' = Author $ StrictTerm "Test Author"
+    let filter' = Author $ Val $ StrictTerm "Test Author"
     query filter' doc `shouldBe` True
 
   it "does not match metadata with a different author" $ do
-    let filter' = Author $ StrictTerm "Nonexistent Author"
+    let filter' = Author $ Val $ StrictTerm "Nonexistent Author"
     query filter' doc `shouldBe` False
 
   it "matches metadata with the specific title" $ do
-    let filter' = Title $ StrictTerm "Test Title"
+    let filter' = Title $ Val $ StrictTerm "Test Title"
     query filter' doc `shouldBe` True
 
   it "does not match metadata with a different title" $ do
-    let filter' = Title $ StrictTerm "Nonexistent Title"
+    let filter' = Title $ Val $ StrictTerm "Nonexistent Title"
     query filter' doc `shouldBe` False
 
   it "matches metadata with a specific tag" $ do
-    let filter' = Tag $ StrictTerm "haskell"
+    let filter' = Tag $ Val $ StrictTerm "haskell"
     query filter' doc `shouldBe` True
 
   it "does not match metadata without a specific tag" $ do
-    let filter' = Tag $ StrictTerm "nonexistent"
+    let filter' = Tag $ Val $ StrictTerm "nonexistent"
     query filter' doc `shouldBe` False
 
   it "matches metadata with fuzzy description" $ do
-    let filter' = Description (FuzzyTerm "Haskell and * parsing")
+    let filter' = Description $ Val $ FuzzyTerm "Haskell and * parsing"
     query filter' doc `shouldBe` True
 
   it "matches metadata that does not contain the fuzzy description" $ do
-    let filter' = Description (FuzzyTerm "unrelated topic")
+    let filter' = Description $ Val $ FuzzyTerm "unrelated topic"
     query filter' doc `shouldBe` False
 
   it "matches metadata when fuzzy description is partially matched" $ do
-    let filter' = Description (FuzzyTerm "test document")
+    let filter' = Description $ Val $ FuzzyTerm "test document"
     query filter' doc `shouldBe` True
 
   it "does not match metadata when fuzzy description is not matched at all" $ do
-    let filter' = Description (FuzzyTerm "completely unrelated")
+    let filter' = Description $ Val $ FuzzyTerm "completely unrelated"
     query filter' doc `shouldBe` False
 
   it "matches metadata with case insensitive fuzzy description" $ do
-    let filter' = Description (FuzzyTerm "HASKELL AND PARSING")
+    let filter' = Description $ Val $ FuzzyTerm "HASKELL AND PARSING"
     query filter' doc `shouldBe` True
 
 pathFilterSpec :: Spec

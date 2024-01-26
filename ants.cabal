@@ -29,6 +29,7 @@ library
       Lib
       Model.Config
       Model.DocQuery
+      Model.DocQuery.BoolExpr
       Model.DocQuery.Query
       Model.DocQuery.Term
       Model.Document
