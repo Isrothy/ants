@@ -113,6 +113,9 @@ searchTermSpec = describe "SearchTermParser" $ parallel $ do
     it "handles an empty input" $ do
       parse boolTerm "" "" `shouldSatisfy` isLeft
 
+
+
+
 spec :: Spec
 spec = describe "SearchLanguageParser" $ parallel $ do
   searchTermSpec

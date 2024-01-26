@@ -7,19 +7,20 @@ module Parser.DocQuery
     regexTerm,
     fuzzyTerm,
     term,
-    -- author,
-    -- tag,
-    -- description,
-    -- content,
-    -- rawTerm,
+    author,
+    tag,
+    description,
+    content,
+    rawTerm,
   )
 where
 
 import Data.Char (isPunctuation)
 import Data.Functor
 import qualified Data.Text as T
-import Model.DocQuery.BoolExpr ( BoolExpr(..) )
-import Model.DocQuery.Term ( Term(..) )
+import Model.DocQuery.BoolExpr (BoolExpr (..))
+import Model.DocQuery.Query
+import Model.DocQuery.Term (Term (..))
 import Text.Parsec
 import Text.Parsec.Text (Parser)
 import Prelude hiding (and, any, not, or, (&&), (||))
@@ -35,6 +36,46 @@ parens p = do
   _ <- spaces
   _ <- char ')'
   return res
+
+boolExpr :: (HasParser a) => Parser (BoolExpr a)
+boolExpr = orExpr
+
+notOp :: Parser (BoolExpr a -> BoolExpr a)
+notOp = do
+  _ <- spaces
+  _ <- char '!'
+  _ <- spaces
+  return Not
+
+orOp :: Parser (BoolExpr a -> BoolExpr a -> BoolExpr a)
+orOp = do
+  _ <- spaces
+  _ <- string "||"
+  _ <- notFollowedBy $ char '|'
+  _ <- spaces
+  return Or
+
+andOp :: Parser (BoolExpr a -> BoolExpr a -> BoolExpr a)
+andOp = do
+  _ <- spaces
+  _ <- string "&&"
+  _ <- notFollowedBy $ char '&'
+  _ <- spaces
+  return And
+
+orExpr :: (HasParser a) => Parser (BoolExpr a)
+orExpr = andExpr `chainl1` try orOp
+
+andExpr :: (HasParser a) => Parser (BoolExpr a)
+andExpr = notExpr `chainl1` try andOp
+
+notExpr :: (HasParser a) => Parser (BoolExpr a)
+notExpr =
+  ( do
+      op <- notOp
+      op <$> notExpr
+  )
+    <|> simpleExpr
 
 escapedChar :: Parser Char
 escapedChar = do
@@ -80,71 +121,37 @@ fuzzyTerm = do
 term :: Parser Term
 term = doubleQuotedTerm <|> singleQuotedTerm <|> regexTerm <|> fuzzyTerm <|> unquotedTerm
 
+-- boolTerm :: Parser (BoolExpr Term)
+-- boolTerm = boolExpr
+--
+-- simpleTerm :: Parser (BoolExpr Term)
+-- simpleTerm = simpleExpr
+
 instance HasParser Term where
   parser = term
-
-boolExpr :: (HasParser a) => Parser (BoolExpr a)
-boolExpr = orExpr
-
-notOp :: Parser (BoolExpr a -> BoolExpr a)
-notOp = do
-  _ <- spaces
-  _ <- char '!'
-  _ <- spaces
-  return Not
-
-orOp :: Parser (BoolExpr a -> BoolExpr a -> BoolExpr a)
-orOp = do
-  _ <- spaces
-  _ <- string "||"
-  _ <- notFollowedBy $ char '|'
-  _ <- spaces
-  return Or
-
-andOp :: Parser (BoolExpr a -> BoolExpr a -> BoolExpr a)
-andOp = do
-  _ <- spaces
-  _ <- string "&&"
-  _ <- notFollowedBy $ char '&'
-  _ <- spaces
-  return And
-
-orExpr :: (HasParser a) => Parser (BoolExpr a)
-orExpr = andExpr `chainl1` try orOp
-
-andExpr :: (HasParser a) => Parser (BoolExpr a)
-andExpr = notExpr `chainl1` try andOp
-
-notExpr :: (HasParser a) => Parser (BoolExpr a)
-notExpr =
-  ( do
-      op <- notOp
-      op <$> notExpr
-  )
-    <|> simpleExpr
 
 simpleExpr :: (HasParser a) => Parser (BoolExpr a)
 simpleExpr = parens boolExpr <|> (parser <&> Val)
 
--- author :: Parser F.DocFilter
--- author = do
---   _ <- string "author:"
---   F.author <$> simpleTerm
---
--- tag :: Parser F.DocFilter
--- tag = do
---   _ <- string "tag:"
---   F.tag <$> simpleTerm
---
--- description :: Parser F.DocFilter
--- description = do
---   _ <- string "description:"
---   F.description <$> simpleTerm
---
--- content :: Parser F.DocFilter
--- content = do
---   _ <- string "content:"
---   F.content <$> simpleTerm
---
--- rawTerm :: Parser F.DocFilter
--- rawTerm = F.content <$> simpleTerm
+author :: Parser Query
+author = do
+  _ <- string "author:"
+  Author <$> simpleExpr
+
+tag :: Parser Query
+tag = do
+  _ <- string "tag:"
+  Tag <$> simpleExpr
+
+description :: Parser Query
+description = do
+  _ <- string "description:"
+  Description <$> simpleExpr
+
+content :: Parser Query
+content = do
+  _ <- string "content:"
+  Content <$> simpleExpr
+
+rawTerm :: Parser Query
+rawTerm = Content <$> simpleExpr
