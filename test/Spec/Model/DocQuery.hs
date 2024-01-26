@@ -258,18 +258,17 @@ This document does not contain specific POSIX extended regular expressions.
     it "matches document containing text that matches an email address regex" $ do
       match (RegexTerm "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,4}") posixRegexMatchDoc `shouldBe` True
 
--- pathFilterSpec :: Spec
--- pathFilterSpec = do
---   describe "Path Matching Filter" $ do
---     let doc = Document samplePath sampleMetadata sampleMarkdownAst (T.pack sampleMarkdownDoc)
---
---     it "matches document with specific relative path" $ do
---       let filter' = matchesRelPath $(mkRelFile "some/test/path/file.txt")
---       query filter' doc `shouldBe` True
---
---     it "does not match document with different relative path" $ do
---       let filter' = matchesRelPath $(mkRelFile "other/test/path/file.txt")
---       query filter' doc `shouldBe` False
+pathFilterSpec :: Spec
+pathFilterSpec = do
+  describe "Path Matching Filter" $ do
+    let doc = Document samplePath sampleMetadata sampleMarkdownAst (T.pack sampleMarkdownDoc)
+
+    it "matches document with specific relative path" $ do
+      query (InDirectory $(mkRelDir "some/test/path")) doc `shouldBe` True
+      query (InDirectory $(mkRelDir "some/test")) doc `shouldBe` True
+
+    it "does not match document with different relative path" $ do
+      query (InDirectory $(mkRelDir "other/test/path")) doc `shouldBe` False
 
 linkFilterSpec :: Spec
 linkFilterSpec = do
@@ -322,5 +321,5 @@ spec = do
   fuzzyTermSpec
   strictTermFilterSpec
   regexFilterSpec
-  -- pathFilterSpec
+  pathFilterSpec
   linkFilterSpec

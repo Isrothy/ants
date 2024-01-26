@@ -1,7 +1,8 @@
 module Parser.DocQuery
   ( booleanTerm,
     simpleTerm,
-    quotedTerm,
+    singleQuotedTerm,
+    doubleQuotedTerm,
     unquotedTerm,
     regexTerm,
     fuzzyTerm,
@@ -39,17 +40,24 @@ escapedChar = do
 punctuation :: Parser Char
 punctuation = satisfy isPunctuation
 
-quotedTerm :: Parser Term
-quotedTerm = do
+doubleQuotedTerm :: Parser Term
+doubleQuotedTerm = do
   _ <- char '"'
   text <- many1 (escapedChar <|> noneOf "\"")
   _ <- char '"'
+  return $ CaseInsensitiveTerm $ T.pack text
+
+singleQuotedTerm :: Parser Term
+singleQuotedTerm = do
+  _ <- char '\''
+  text <- many1 (escapedChar <|> noneOf "\'")
+  _ <- char '\''
   return $ StrictTerm $ T.pack text
 
 unquotedTerm :: Parser Term
 unquotedTerm = do
   text <- many1 alphaNum
-  return $ StrictTerm $ T.pack text
+  return $ CaseInsensitiveTerm $ T.pack text
 
 regexTerm :: Parser Term
 regexTerm = do
@@ -66,7 +74,7 @@ fuzzyTerm = do
   return $ FuzzyTerm $ T.pack text
 
 term :: Parser Term
-term =  quotedTerm <|> regexTerm <|> fuzzyTerm <|> unquotedTerm
+term = doubleQuotedTerm <|> singleQuotedTerm <|> regexTerm <|> fuzzyTerm <|> unquotedTerm
 
 booleanTerm :: Parser Term
 booleanTerm = orTerm
