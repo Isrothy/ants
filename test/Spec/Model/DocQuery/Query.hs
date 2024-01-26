@@ -5,7 +5,7 @@
 {-# LANGUAGE QuasiQuotes #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Spec.Model.DocQuery (spec) where
+module Spec.Model.DocQuery.Query (spec) where
 
 import Data.Either
 import qualified Data.Text as T
@@ -144,120 +144,6 @@ metadataSpec = describe "Metadata Filter" $ do
     let filter' = Description (FuzzyTerm "HASKELL AND PARSING")
     query filter' doc `shouldBe` True
 
-fuzzyTermSpec :: Spec
-fuzzyTermSpec = describe "fuzzyTerm Filter" $ do
-  let doc =
-        T.pack
-          [r|# Sample Markdown Document
-
-This document is for testing the keyword search functionality.
-
-It contains some *keywords* that should be detected by the filter.
-
-Here are some of the keywords we might want to find:
-- Haskell
-- Parsing
-- Keyword
-- Search
-|]
-  it "matches a single term present in the document" $ do
-    match (FuzzyTerm "Haskell") doc `shouldBe` True
-
-  it "does not match a term that is not present in the document" $ do
-    match (FuzzyTerm "Nonexistent") doc `shouldBe` False
-
-  it "matches keywords with mixed case in the document" $ do
-    match (FuzzyTerm "haskell") doc `shouldBe` True
-    match (FuzzyTerm "parsing") doc `shouldBe` True
-
-  it "matches partial keywords if they are part of a word in the document" $ do
-    match (FuzzyTerm "key") doc `shouldBe` True
-    match (FuzzyTerm "pars") doc `shouldBe` True
-
-strictTermFilterSpec :: Spec
-strictTermFilterSpec = describe "Strict Keywords Filter" $ do
-  let doc =
-        T.pack
-          [r|
-# Strict Keyword Search Document
-
-This document is specifically for testing strict keyword search.
-
-It contains exact phrases like "strict search" and "keyword detection".
-
-Other phrases include "Haskell programming" and "text analysis".
-
-|]
-  it "matches an exact keyword in the document" $ do
-    match (StrictTerm "strict search") doc `shouldBe` True
-
-  it "does not match a keyword if not an exact match" $ do
-    match (StrictTerm "nonexist") doc `shouldBe` False
-
-  it "does not match partial keywords" $ do
-    match (StrictTerm "stricted") doc `shouldBe` False
-    match (StrictTerm "searching") doc `shouldBe` False
-
-  it "matches exact keywords regardless of their location in the document" $ do
-    match (StrictTerm "text analysis") doc `shouldBe` True
-
-  it "matches exact phrases including special characters" $ do
-    match (StrictTerm "\"strict search\"") doc `shouldBe` True
-
-  it "does not match keywords if not exactly present (case-sensitive)" $ do
-    match (StrictTerm "Strict Search") doc `shouldBe` False
-    match (StrictTerm "haskell Programming") doc `shouldBe` False
-
-regexFilterSpec :: Spec
-regexFilterSpec = do
-  describe "Regex Matching Filter" $ do
-    let posixRegexMatchDoc =
-          T.pack
-            [r|
-# POSIX Regex Matching Document
-
-This document contains various POSIX extended regular expressions for testing.
-
-1. Haskell 101 - An introductory course.
-2. The world of Haskell programming.
-3. Learn Haskell 202, the next step in functional programming.
-4. The word 'Haskell' appears multiple times in this document.
-5. This is a sample phone number: 123-456-7890.
-6. Email address: user@example.com
-|]
-
-    let nonPosixRegexMatchDoc =
-          T.pack
-            [r|
-# Non-POSIX Regex Matching Document
-
-This document does not contain specific POSIX extended regular expressions.
-
-1. Introduction to functional programming.
-2. Exploring different programming paradigms.
-3. A comprehensive study of programming languages.
-4. This is not a valid phone number: 1234567.
-5. This is not a valid email address: userexample.com
-|]
-
-    it "matches document containing text that matches a POSIX-compatible regex" $ do
-      match (RegexTerm "Haskell [0-9]+") posixRegexMatchDoc `shouldBe` True
-
-    it "does not match document without text that matches the POSIX-compatible regex" $ do
-      match (RegexTerm "Haskell [0-9]+") nonPosixRegexMatchDoc `shouldBe` False
-
-    it "matches document when POSIX-compatible regex matches anywhere in the text" $ do
-      match (RegexTerm "world") posixRegexMatchDoc `shouldBe` True
-
-    it "does not match document when POSIX-compatible regex does not match any part of the text" $ do
-      match (RegexTerm "^nonexistent") nonPosixRegexMatchDoc `shouldBe` False
-
-    it "matches document containing text that matches a phone number regex" $ do
-      match (RegexTerm "[0-9]{3}-[0-9]{3}-[0-9]{4}") posixRegexMatchDoc `shouldBe` True
-
-    it "matches document containing text that matches an email address regex" $ do
-      match (RegexTerm "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,4}") posixRegexMatchDoc `shouldBe` True
-
 pathFilterSpec :: Spec
 pathFilterSpec = do
   describe "Path Matching Filter" $ do
@@ -316,10 +202,7 @@ This document does not contain any links.
       query filter' multipleLinksDoc `shouldBe` True
 
 spec :: Spec
-spec = do
+spec = parallel $ do
   metadataSpec
-  fuzzyTermSpec
-  strictTermFilterSpec
-  regexFilterSpec
   pathFilterSpec
   linkFilterSpec

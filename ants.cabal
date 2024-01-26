@@ -108,7 +108,8 @@ test-suite ants-test
   other-modules:
       Spec.Cli.NewNoteGen
       Spec.Model.Config
-      Spec.Model.DocQuery
+      Spec.Model.DocQuery.Query
+      Spec.Model.DocQuery.Term
       Spec.Model.Metadata
       Spec.Parser.DocQuery
       Spec.Parser.Markdown
