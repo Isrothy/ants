@@ -121,12 +121,6 @@ fuzzyTerm = do
 term :: Parser Term
 term = doubleQuotedTerm <|> singleQuotedTerm <|> regexTerm <|> fuzzyTerm <|> unquotedTerm
 
--- boolTerm :: Parser (BoolExpr Term)
--- boolTerm = boolExpr
---
--- simpleTerm :: Parser (BoolExpr Term)
--- simpleTerm = simpleExpr
-
 instance HasParser Term where
   parser = term
 

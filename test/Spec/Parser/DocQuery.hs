@@ -113,9 +113,33 @@ searchTermSpec = describe "SearchTermParser" $ parallel $ do
     it "handles an empty input" $ do
       parse boolTerm "" "" `shouldSatisfy` isLeft
 
+searchQuerySpec :: Spec
+searchQuerySpec = describe "SearchTermParser" $ parallel $ do
+  describe "Author Query Parser" $ do
+    it "parses an author query" $ do
+      parse author "" "author:\"John Doe\"" `shouldBe` Right (Author (Val (CaseInsensitiveTerm "John Doe")))
+      parse author "" "author:John" `shouldBe` Right (Author (Val (CaseInsensitiveTerm "John")))
 
+  describe "Tag Query Parser" $ do
+    it "parses a tag query" $ do
+      parse tag "" "tag:\"Haskell\"" `shouldBe` Right (Tag (Val (CaseInsensitiveTerm "Haskell")))
+      parse tag "" "tag:\'Haskell\'" `shouldBe` Right (Tag (Val (StrictTerm "Haskell")))
 
+  describe "Description Query Parser" $ do
+    it "parses a description query" $ do
+      parse description "" "description:\"Haskell programming\"" `shouldBe` Right (Description (Val (CaseInsensitiveTerm "Haskell programming")))
+      parse description "" "description:~Haskell programming~" `shouldBe` Right (Description (Val (FuzzyTerm "Haskell programming")))
+
+  describe "Content Query Parser" $ do
+    it "parses a content query" $ do
+      parse content "" "content:\"sample content\"" `shouldBe` Right (Content (Val (CaseInsensitiveTerm "sample content")))
+      parse content "" "content:/sample content/" `shouldBe` Right (Content (Val (RegexTerm "sample content")))
+
+  describe "RawTerm Query Parser" $ do
+    it "parses a rawTerm query" $ do
+      parse rawTerm "" "\"Haskell applications\"" `shouldBe` Right (Content (Val (CaseInsensitiveTerm "Haskell applications")))
 
 spec :: Spec
 spec = describe "SearchLanguageParser" $ parallel $ do
   searchTermSpec
+  searchQuerySpec
