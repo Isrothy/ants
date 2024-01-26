@@ -1,4 +1,4 @@
-module Parser.DocSearch
+module Parser.DocQuery
   ( booleanTerm,
     simpleTerm,
     quotedTerm,
@@ -14,12 +14,10 @@ module Parser.DocSearch
   )
 where
 
-import Data.Algebra.Boolean
 import Data.Char (isPunctuation)
 import Data.Functor
 import qualified Data.Text as T
-import qualified Model.DocFilter as F
-import qualified Model.DocSearch
+import Model.DocQuery
 import Text.Parsec
 import Text.Parsec.Text (Parser)
 import Prelude hiding (and, any, not, or, (&&), (||))
@@ -33,11 +31,6 @@ parens p = do
   _ <- char ')'
   return res
 
-spaces1 :: Parser ()
-spaces1 = do
-  _ <- many space
-  return ()
-
 escapedChar :: Parser Char
 escapedChar = do
   _ <- char '\\'
@@ -46,65 +39,69 @@ escapedChar = do
 punctuation :: Parser Char
 punctuation = satisfy isPunctuation
 
-quotedTerm :: Parser SearchTerm
+quotedTerm :: Parser Term
 quotedTerm = do
   _ <- char '"'
   text <- many1 (escapedChar <|> noneOf "\"")
   _ <- char '"'
   return $ StrictTerm $ T.pack text
 
-unquotedTerm :: Parser SearchTerm
+unquotedTerm :: Parser Term
 unquotedTerm = do
   text <- many1 alphaNum
   return $ StrictTerm $ T.pack text
 
-regexTerm :: Parser SearchTerm
+regexTerm :: Parser Term
 regexTerm = do
   _ <- char '/'
   text <- many1 (escapedChar <|> noneOf "/")
   _ <- char '/'
   return $ RegexTerm $ T.pack text
 
-fuzzyTerm :: Parser SearchTerm
+fuzzyTerm :: Parser Term
 fuzzyTerm = do
   _ <- char '~'
   text <- many1 (escapedChar <|> noneOf "~")
   _ <- char '~'
   return $ FuzzyTerm $ T.pack text
 
-term :: Parser SearchTerm
-term = unquotedTerm <|> quotedTerm <|> regexTerm <|> fuzzyTerm
+term :: Parser Term
+term =  quotedTerm <|> regexTerm <|> fuzzyTerm <|> unquotedTerm
 
-booleanTerm :: Parser SearchTerm
+booleanTerm :: Parser Term
 booleanTerm = orTerm
-
-orOperator :: Parser ()
-orOperator = do
-  _ <- string "||"
-  _ <- notFollowedBy $ char '|'
-  return ()
 
 notOperator :: Parser ()
 notOperator = do
   _ <- char '!'
   return ()
 
-orTerm :: Parser SearchTerm
-orTerm = do
-  t1 <- andTerm
-  rest <- try (spaces >> orOperator >> spaces >> andTerm)
-  return $ t1 Or rest
+orTerm :: Parser Term
+orTerm = andTerm `chainl1` try orOp
 
-andTerm :: Parser SearchTerm
-andTerm = do
-  t1 <- notTerm
-  rest <- try (spaces >> notTerm)
-  return $ t1 And rest
+andTerm :: Parser Term
+andTerm = notTerm `chainl1` try andOp
 
-notTerm ::  Parser SearchTerm
-notTerm = (notOperator >> spaces >> simpleTerm <&> L.not) <|> simpleTerm
+orOp :: Parser (Term -> Term -> Term)
+orOp = do
+  _ <- spaces
+  _ <- string "||"
+  _ <- notFollowedBy $ char '|'
+  _ <- spaces
+  return Or
 
-simpleTerm :: Parser SearchTerm
+andOp :: Parser (Term -> Term -> Term)
+andOp = do
+  _ <- spaces
+  _ <- string "&&"
+  _ <- notFollowedBy $ char '&'
+  _ <- spaces
+  return And
+
+notTerm :: Parser Term
+notTerm = (notOperator >> spaces >> notTerm <&> Not) <|> simpleTerm
+
+simpleTerm :: Parser Term
 simpleTerm = parens booleanTerm <|> term
 
 -- author :: Parser F.DocFilter

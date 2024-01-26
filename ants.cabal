@@ -28,12 +28,11 @@ library
       Cli.NewNoteGen
       Lib
       Model.Config
-      Model.DocFilter
-      Model.DocSearch
+      Model.DocQuery
       Model.Document
       Model.MarkdownAst
       Model.Metadata
-      Parser.DocSearch
+      Parser.DocQuery
       Parser.Markdown
       Parser.Metadata
       Parser.Opts
@@ -107,12 +106,12 @@ test-suite ants-test
   other-modules:
       Spec.Cli.NewNoteGen
       Spec.Model.Config
-      Spec.Model.DocFilter
+      Spec.Model.DocQuery
       Spec.Model.Metadata
+      Spec.Parser.DocQuery
       Spec.Parser.Markdown
       Spec.Parser.Metadata
       Spec.Parser.Placeholder
-      Spec.Parser.SearchLang
       Spec.Parser.YamlMarkd
       Spec.Util.Fuzzy
       Paths_ants

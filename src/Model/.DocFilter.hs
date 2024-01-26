@@ -39,7 +39,6 @@ import Data.Time
 import qualified Model.Document as D
 import Model.MarkdownAst
 import qualified Model.Metadata as M
-import qualified Model.SearchLang as L
 import Path
 import Text.Regex.TDFA
 import qualified Util.Fuzzy as Fuzzy

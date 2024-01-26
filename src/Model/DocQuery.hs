@@ -1,9 +1,10 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Model.DocSearch
-  ( Term,
-    searchText,
+module Model.DocQuery
+  ( Term (..),
+    Query (..),
+    match,
     query,
   )
 where
@@ -18,7 +19,7 @@ import qualified Model.Document as D
 import Model.MarkdownAst hiding (Alert)
 import qualified Model.Metadata as M
 import Path
-import Text.Regex.TDFA
+import Text.Regex.TDFA hiding (match)
 import qualified Util.Fuzzy as Fuzzy
 import Prelude hiding (and, any, not, or, (&&), (||))
 
@@ -50,9 +51,9 @@ data Term where
   FuzzyTerm :: T.Text -> Term
   CaseInsensitiveTerm :: T.Text -> Term
   RegexTerm :: T.Text -> Term
-  Not :: Term -> Term
-  And :: Term -> Term -> Term
   Or :: Term -> Term -> Term
+  And :: Term -> Term -> Term
+  Not :: Term -> Term
   deriving (Show, Eq)
 
 data TaskType = Finished | UnFinished | Both
@@ -70,24 +71,24 @@ data Query where
   HasLink :: Path Rel File -> Query
   deriving (Show, Eq)
 
-searchText :: Term -> TextFilter
-searchText (StrictTerm t) text = t `T.isInfixOf` text
-searchText (FuzzyTerm t) text = t `Fuzzy.isInfixOfT` text
-searchText (CaseInsensitiveTerm t) text = T.isInfixOf (T.toCaseFold t) (T.toCaseFold text)
-searchText (RegexTerm t) text = text =~ t
-searchText (Not t) text = not $ searchText t text
-searchText (And t1 t2) text = searchText t1 text && searchText t2 text
-searchText (Or t1 t2) text = searchText t1 text || searchText t2 text
+match :: Term -> TextFilter
+match (StrictTerm t) text = t `T.isInfixOf` text
+match (FuzzyTerm t) text = t `Fuzzy.isInfixOfT` text
+match (CaseInsensitiveTerm t) text = T.isInfixOf (T.toCaseFold t) (T.toCaseFold text)
+match (RegexTerm t) text = text =~ t
+match (Not t) text = not $ match t text
+match (And t1 t2) text = match t1 text && match t2 text
+match (Or t1 t2) text = match t1 text || match t2 text
 
 query :: Query -> DocFilter
-query (Author t) = metadata $ searchText t . fromMaybe "" . M.author
-query (Title t) = metadata $ searchText t . fromMaybe "" . M.title
-query (Tag t) = metadata $ any (searchText t) . M.tags
-query (Description t) = metadata $ searchText t . M.description
-query (Content t) = (ast . plain) (searchText t)
-query (Task Both t) = ast' $ any (searchText t . toPlainText . snd) . findTasks
-query (Task Finished t) = ast' $ any (searchText t . toPlainText) . findFinishedTasks
-query (Task UnFinished t) = ast' $ any (searchText t . toPlainText) . findUnfinishedTasks
+query (Author t) = metadata $ match t . fromMaybe "" . M.author
+query (Title t) = metadata $ match t . fromMaybe "" . M.title
+query (Tag t) = metadata $ any (match t) . M.tags
+query (Description t) = metadata $ match t . M.description
+query (Content t) = (ast . plain) (match t)
+query (Task Both t) = ast' $ any (match t . toPlainText . snd) . findTasks
+query (Task Finished t) = ast' $ any (match t . toPlainText) . findFinishedTasks
+query (Task UnFinished t) = ast' $ any (match t . toPlainText) . findUnfinishedTasks
 query (Alert a) = ast' $ any ((== a) . fst) . findAlerts
 query (DateRange start end) = metadata $ maybe False (between start end) . M.dateTime
   where
