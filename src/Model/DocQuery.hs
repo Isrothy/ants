@@ -2,6 +2,7 @@ module Model.DocQuery
   ( Query (..),
     Term (..),
     BoolExpr (..),
+    TaskType (..),
     match,
     query,
   )

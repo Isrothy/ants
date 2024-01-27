@@ -11,7 +11,7 @@ module Parser.DocQuery
     tag,
     description,
     content,
-    rawTerm,
+    task,
   )
 where
 
@@ -127,7 +127,6 @@ term = doubleQuotedTerm <|> singleQuotedTerm <|> regexTerm <|> fuzzyTerm <|> unq
 instance HasParser Term where
   parser = term
 
-
 author :: Parser Query
 author = do
   _ <- string "author:"
@@ -148,6 +147,16 @@ content = do
   _ <- string "content:"
   Content <$> simpleExpr
 
-rawTerm :: Parser Query
-rawTerm = Content <$> simpleExpr
+task :: Parser Query
+task = do
+  _ <- string "task"
+  t <- taskType
+  Task t <$> simpleExpr
+  where
+    taskType =
+      (char ':' >> return Both) <|> do
+        _ <- char '-'
+        (string "done:" >> return Done) <|> (string "todo:" >> return Todo)
 
+query :: Parser Query
+query = author <|> tag <|> description <|> content <|> task

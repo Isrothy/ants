@@ -159,9 +159,30 @@ searchQuerySpec = describe "SearchTermParser" $ parallel $ do
       let input = "content:(\"term1\" && (~fuzzy~ || 'term2'))"
       parse content "" input `shouldBe` Right (Content (And (Val (CaseInsensitiveTerm "term1")) (Or (Val (FuzzyTerm "fuzzy")) (Val (StrictTerm "term2")))))
 
-  describe "RawTerm Query Parser" $ do
-    it "parses a rawTerm query" $ do
-      parse rawTerm "" "\"Haskell applications\"" `shouldBe` Right (Content (Val (CaseInsensitiveTerm "Haskell applications")))
+  describe "Task Query Passer" $ do
+    it "parses a task query with Done tasks and a strict term" $ do
+      let input = "task-done:\"exact term\""
+      parse task "" input `shouldBe` Right (Task Done (Val (CaseInsensitiveTerm "exact term")))
+
+    it "parses a task query with Todo tasks and a fuzzy term" $ do
+      let input = "task-todo:~fuzzyTerm~"
+      parse task "" input `shouldBe` Right (Task Todo (Val (FuzzyTerm "fuzzyTerm")))
+
+    it "parses a task query with Both tasks and a regex term" $ do
+      let input = "task:/regexTerm/"
+      parse task "" input `shouldBe` Right (Task Both (Val (RegexTerm "regexTerm")))
+
+    it "parses a task query with Done tasks and a case insensitive term" $ do
+      let input = "task-done:\"Case Term\""
+      parse task "" input `shouldBe` Right (Task Done (Val (CaseInsensitiveTerm "Case Term")))
+
+    it "parses a task query with Todo tasks and a compound boolean expression" $ do
+      let input = "task-todo:(\'term1\' || ~term2~)"
+      parse task "" input `shouldBe` Right (Task Todo (Or (Val (StrictTerm "term1")) (Val (FuzzyTerm "term2"))))
+
+    it "fails to parse an invalid task query" $ do
+      let input = "task-unknown:\"term\""
+      parse task "" input `shouldSatisfy` isLeft
 
 spec :: Spec
 spec = describe "SearchLanguageParser" $ parallel $ do

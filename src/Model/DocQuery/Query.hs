@@ -4,6 +4,7 @@
 module Model.DocQuery.Query
   ( Query (..),
     query,
+    TaskType (..),
   )
 where
 
@@ -44,7 +45,7 @@ relPath f = f . D.relPath
 plain :: TextFilter -> AstFilter
 plain f = f . toPlainText
 
-data TaskType = Finished | UnFinished | Both
+data TaskType = Done | Todo | Both
   deriving (Show, Eq)
 
 data Query where
@@ -67,8 +68,8 @@ query (Tag t) = metadata $ any (match t) . M.tags
 query (Description t) = metadata $ match t . M.description
 query (Content t) = (ast . plain) (match t)
 query (Task Both t) = ast' $ any (match t . toPlainText . snd) . findTasks
-query (Task Finished t) = ast' $ any (match t . toPlainText) . findFinishedTasks
-query (Task UnFinished t) = ast' $ any (match t . toPlainText) . findUnfinishedTasks
+query (Task Done t) = ast' $ any (match t . toPlainText) . findFinishedTasks
+query (Task Todo t) = ast' $ any (match t . toPlainText) . findUnfinishedTasks
 query (Alert a) = ast' $ any ((== a) . fst) . findAlerts
 query (DateRange start end) = metadata $ maybe False (between start end) . M.dateTime
   where
