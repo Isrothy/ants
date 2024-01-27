@@ -77,6 +77,9 @@ notExpr =
   )
     <|> simpleExpr
 
+simpleExpr :: (HasParser a) => Parser (BoolExpr a)
+simpleExpr = parens boolExpr <|> (parser <&> Val)
+
 escapedChar :: Parser Char
 escapedChar = do
   _ <- char '\\'
@@ -124,8 +127,6 @@ term = doubleQuotedTerm <|> singleQuotedTerm <|> regexTerm <|> fuzzyTerm <|> unq
 instance HasParser Term where
   parser = term
 
-simpleExpr :: (HasParser a) => Parser (BoolExpr a)
-simpleExpr = parens boolExpr <|> (parser <&> Val)
 
 author :: Parser Query
 author = do

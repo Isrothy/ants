@@ -165,7 +165,9 @@ benchmark ants-bench
     , commonmark-extensions
     , cond
     , criterion
+    , filepath
     , loop
+    , optparse-applicative
     , parsec
     , path
     , random

@@ -120,10 +120,22 @@ searchQuerySpec = describe "SearchTermParser" $ parallel $ do
       parse author "" "author:\"John Doe\"" `shouldBe` Right (Author (Val (CaseInsensitiveTerm "John Doe")))
       parse author "" "author:John" `shouldBe` Right (Author (Val (CaseInsensitiveTerm "John")))
 
+    it "parses an author query with a complex boolean expression" $ do
+      let input = "author:(\"John Doe\" || ~Jane~)"
+      parse author "" input `shouldBe` Right (Author (Or (Val (CaseInsensitiveTerm "John Doe")) (Val (FuzzyTerm "Jane"))))
+
   describe "Tag Query Parser" $ do
     it "parses a tag query" $ do
       parse tag "" "tag:\"Haskell\"" `shouldBe` Right (Tag (Val (CaseInsensitiveTerm "Haskell")))
       parse tag "" "tag:\'Haskell\'" `shouldBe` Right (Tag (Val (StrictTerm "Haskell")))
+
+    it "parses a tag query with a NOT expression" $ do
+      let input = "tag:(!\"Haskell\")"
+      parse tag "" input `shouldBe` Right (Tag (Not (Val (CaseInsensitiveTerm "Haskell"))))
+
+    it "parses a tag query with an AND expression" $ do
+      let input = "tag:(\"Haskell\" && 'functional')"
+      parse tag "" input `shouldBe` Right (Tag (And (Val (CaseInsensitiveTerm "Haskell")) (Val (StrictTerm "functional"))))
 
   describe "Description Query Parser" $ do
     it "parses a description query" $ do
@@ -134,6 +146,18 @@ searchQuerySpec = describe "SearchTermParser" $ parallel $ do
     it "parses a content query" $ do
       parse content "" "content:\"sample content\"" `shouldBe` Right (Content (Val (CaseInsensitiveTerm "sample content")))
       parse content "" "content:/sample content/" `shouldBe` Right (Content (Val (RegexTerm "sample content")))
+
+    it "parses a content query with AND combination of strict and fuzzy terms" $ do
+      let input = "content:(\"term1\" && ~fuzzy~)"
+      parse content "" input `shouldBe` Right (Content (And (Val (CaseInsensitiveTerm "term1")) (Val (FuzzyTerm "fuzzy"))))
+
+    it "parses a content query with OR combination of strict and case-insensitive terms" $ do
+      let input = "content:(\"term1\" || 'term2')"
+      parse content "" input `shouldBe` Right (Content (Or (Val (CaseInsensitiveTerm "term1")) (Val (StrictTerm "term2"))))
+
+    it "parses a content query with nested boolean expressions" $ do
+      let input = "content:(\"term1\" && (~fuzzy~ || 'term2'))"
+      parse content "" input `shouldBe` Right (Content (And (Val (CaseInsensitiveTerm "term1")) (Or (Val (FuzzyTerm "fuzzy")) (Val (StrictTerm "term2")))))
 
   describe "RawTerm Query Parser" $ do
     it "parses a rawTerm query" $ do
