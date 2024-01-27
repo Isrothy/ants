@@ -14,7 +14,7 @@ markdownAstWithPlaceholder ::
   String ->
   T.Text ->
   Either ParseError (Either ParseError (Maybe MarkdownAst))
-markdownAstWithPlaceholder = markdownAstWith (placeholderSpec <> allSpecExtions <> defaultSyntaxSpec)
+markdownAstWithPlaceholder = markdownAstWith (placeholderSpec <> allSpecExtensions <> defaultSyntaxSpec)
 
 spec :: Spec
 spec = describe "placeholder" $ do

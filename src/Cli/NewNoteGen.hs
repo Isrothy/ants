@@ -8,6 +8,7 @@ module Cli.NewNoteGen
     replacePlaceholders,
     fromConfig,
     findPosition,
+    LookupTable
   )
 where
 
@@ -100,7 +101,7 @@ fromConfig = fromTemplate . Config.template
     fromTemplate template =
       maybeToList (("name",) <$> Config.name template)
         <> maybeToList (("email",) <$> Config.email template)
-        <> [("date", fromMaybe "YYYY-DD-MM" $ Config.dateFormat template)]
-        <> [("time", fromMaybe "HH:MM:SS" $ Config.timeFormat template)]
-        <> [("dateTime", fromMaybe "YYYY-DD-MM HH:MM:SS" $ Config.dateTimeFormat template)]
+        <> [("date", fromMaybe "%Y-%m-%d" $ Config.dateFormat template)]
+        <> [("time", fromMaybe "%H:%M:%S" $ Config.timeFormat template)]
+        <> [("dateTime", fromMaybe "%Y-%m-%dT%H:%M:%S" $ Config.dateTimeFormat template)]
         <> Config.variables template

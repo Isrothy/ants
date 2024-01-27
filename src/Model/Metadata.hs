@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Model.Metadata
   ( Metadata (..),
@@ -13,6 +14,7 @@ import Util.Default
 import Util.ExAeson
 import Control.Applicative ((<|>))
 import Data.Aeson
+import Data.Aeson.TH
 import Data.Maybe
 import qualified Data.Text as T
 import Data.Time
@@ -29,7 +31,6 @@ data Metadata = Metadata
 
 instance Default Metadata where
   def = Metadata Nothing Nothing Nothing [] ""
-
 instance FromJSON Metadata where
   parseJSON = withObject "metadata" $ \o ->
     Metadata
@@ -38,3 +39,4 @@ instance FromJSON Metadata where
       <*> ((>>= iso8601ParseM) <$> o .:? "dateTime" <|> pure Nothing)
       <*> ((parseList . fromMaybe Null <$> (o .:? "tags")) <|> pure [])
       <*> (o .:? "description" .!= "" <|> pure "")
+$(deriveToJSON defaultOptions{omitNothingFields = True} ''Metadata)

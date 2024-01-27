@@ -162,9 +162,9 @@ configToLookupTableSpec = describe "fromConfig" $ do
     fromConfig config
       `shouldBe` [ ("name", "John"),
                    ("email", "john@example.com"),
-                   ("date", "YYYY-DD-MM"),
-                   ("time", "HH:MM:SS"),
-                   ("dateTime", "YYYY-DD-MM HH:MM:SS")
+                   ("date", "%Y-%m-%d"),
+                   ("time", "%H:%M:%S"),
+                   ("dateTime", "%Y-%m-%dT%H:%M:%S")
                  ]
 
   it "uses provided formats" $ do
@@ -204,9 +204,9 @@ configToLookupTableSpec = describe "fromConfig" $ do
               Config.extensions = []
             }
     fromConfig config
-      `shouldBe` [ ("date", "YYYY-DD-MM"),
-                   ("time", "HH:MM:SS"),
-                   ("dateTime", "YYYY-DD-MM HH:MM:SS")
+      `shouldBe` [ ("date", "%Y-%m-%d"),
+                   ("time", "%H:%M:%S"),
+                   ("dateTime", "%Y-%m-%dT%H:%M:%S")
                  ]
 
 spec :: Spec

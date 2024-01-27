@@ -34,6 +34,7 @@ library
       Model.Metadata
       Parser.Markdown
       Parser.Metadata
+      Parser.Opts
       Parser.Placeholder
       Parser.YamlMarked
       Util.Default
@@ -50,7 +51,9 @@ library
     , commonmark
     , commonmark-extensions
     , cond
+    , filepath
     , fuzzy
+    , optparse-applicative
     , parsec
     , path
     , raw-strings-qq
@@ -62,7 +65,7 @@ library
     , yaml
   default-language: Haskell2010
 
-executable ants-exe
+executable ants
   main-is: Main.hs
   other-modules:
       Paths_ants
@@ -77,7 +80,9 @@ executable ants-exe
     , commonmark
     , commonmark-extensions
     , cond
+    , filepath
     , fuzzy
+    , optparse-applicative
     , parsec
     , path
     , raw-strings-qq
@@ -113,8 +118,10 @@ test-suite ants-test
     , commonmark
     , commonmark-extensions
     , cond
+    , filepath
     , fuzzy
     , hspec
+    , optparse-applicative
     , parsec
     , path
     , raw-strings-qq
