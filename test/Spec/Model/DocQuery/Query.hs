@@ -71,8 +71,8 @@ sampleMetadata =
 samplePath :: Path Rel File
 samplePath = $(mkRelFile "some/test/path/file.txt")
 
-metadataSpec :: Spec
-metadataSpec = describe "Metadata Filter" $ do
+metadataQuerySpec :: Spec
+metadataQuerySpec = describe "Metadata Filter" $ do
   let doc = Document samplePath sampleMetadata sampleMarkdownAst (T.pack sampleMarkdownDoc)
   it "matches metadata with a specific date range" $ do
     let startDate = parseTimeOrError True defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ" "2021-01-01T00:00:00Z"
@@ -144,8 +144,8 @@ metadataSpec = describe "Metadata Filter" $ do
     let filter' = Description $ Val $ FuzzyTerm "HASKELL AND PARSING"
     query filter' doc `shouldBe` True
 
-pathFilterSpec :: Spec
-pathFilterSpec = do
+pathQuerySpec :: Spec
+pathQuerySpec = do
   describe "Path Matching Filter" $ do
     let doc = Document samplePath sampleMetadata sampleMarkdownAst (T.pack sampleMarkdownDoc)
 
@@ -156,8 +156,8 @@ pathFilterSpec = do
     it "does not match document with different relative path" $ do
       query (InDirectory $(mkRelDir "other/test/path")) doc `shouldBe` False
 
-linkFilterSpec :: Spec
-linkFilterSpec = do
+linkQuerySpec :: Spec
+linkQuerySpec = do
   let testDocWithoutLink =
         [r|
 # Document without Link
@@ -201,8 +201,48 @@ This document does not contain any links.
       let filter' = HasLink linkInDoc
       query filter' multipleLinksDoc `shouldBe` True
 
+contentQuerySpec :: Spec
+contentQuerySpec = parallel $ do
+  describe "Complex Content Query Functionality" $ do
+    it "matches a document with content that satisfies both terms in an AND query" $ do
+      let doc = Document samplePath sampleMetadata sampleMarkdownAst $ T.pack sampleMarkdownDoc
+      let query' = Content (And (Val (StrictTerm "Markdown")) (Val (FuzzyTerm "iteem")))
+      query query' doc `shouldBe` True
+
+    it "does not match a document when one term in an AND query is not satisfied" $ do
+      let doc = Document samplePath sampleMetadata sampleMarkdownAst $ T.pack sampleMarkdownDoc
+      let query' = Content (And (Val (StrictTerm "markdown")) (Val (FuzzyTerm "test")))
+      query query' doc `shouldBe` False
+
+    it "matches a document with content that satisfies at least one term in an OR query" $ do
+      let doc = Document samplePath sampleMetadata sampleMarkdownAst $ T.pack sampleMarkdownDoc
+      let query' = Content (Or (Val (StrictTerm "markdown")) (Val (StrictTerm "Ordered")))
+      query query' doc `shouldBe` True
+
+    it "does not match a document when none of the terms in an OR query are satisfied" $ do
+      let doc = Document samplePath sampleMetadata sampleMarkdownAst $ T.pack sampleMarkdownDoc
+      let query' = Content (Or (Val (StrictTerm "markup")) (Val (StrictTerm "markdown")))
+      query query' doc `shouldBe` False
+
+    describe "Complex RawTerm Query Functionality" $ do
+      it "matches a document with a rawTerm query using an AND combination" $ do
+        let doc = Document samplePath sampleMetadata sampleMarkdownAst $ T.pack sampleMarkdownDoc
+        let query' = Content (And (Val (StrictTerm "Markdown")) (Val (FuzzyTerm "item")))
+        query query' doc `shouldBe` True
+
+      it "matches a document with a rawTerm query using an OR combination" $ do
+        let doc = Document samplePath sampleMetadata sampleMarkdownAst $ T.pack sampleMarkdownDoc
+        let query' = Content (Or (Val (StrictTerm "Markdown")) (Val (StrictTerm "Haskell")))
+        query query' doc `shouldBe` True
+
+      it "does not match a document with a rawTerm query using NOT when the term is present" $ do
+        let doc = Document samplePath sampleMetadata sampleMarkdownAst $ T.pack sampleMarkdownDoc
+        let query' = Content (Not (Val (StrictTerm "document")))
+        query query' doc `shouldBe` False
+
 spec :: Spec
 spec = parallel $ do
-  metadataSpec
-  pathFilterSpec
-  linkFilterSpec
+  metadataQuerySpec
+  pathQuerySpec
+  linkQuerySpec
+  contentQuerySpec

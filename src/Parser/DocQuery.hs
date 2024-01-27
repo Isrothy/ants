@@ -150,3 +150,4 @@ content = do
 
 rawTerm :: Parser Query
 rawTerm = Content <$> simpleExpr
+
