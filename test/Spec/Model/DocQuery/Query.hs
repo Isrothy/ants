@@ -203,7 +203,7 @@ This document does not contain any links.
 
 contentQuerySpec :: Spec
 contentQuerySpec = parallel $ do
-  describe "Complex Content Query Functionality" $ do
+  describe "Complex Content Query Functionality" $ parallel $ do
     it "matches a document with content that satisfies both terms in an AND query" $ do
       let doc = Document samplePath sampleMetadata sampleMarkdownAst $ T.pack sampleMarkdownDoc
       let query' = Content (And (Val (StrictTerm "Markdown")) (Val (FuzzyTerm "iteem")))
@@ -224,21 +224,21 @@ contentQuerySpec = parallel $ do
       let query' = Content (Or (Val (StrictTerm "markup")) (Val (StrictTerm "markdown")))
       query query' doc `shouldBe` False
 
-    describe "Complex RawTerm Query Functionality" $ do
-      it "matches a document with a rawTerm query using an AND combination" $ do
-        let doc = Document samplePath sampleMetadata sampleMarkdownAst $ T.pack sampleMarkdownDoc
-        let query' = Content (And (Val (StrictTerm "Markdown")) (Val (FuzzyTerm "item")))
-        query query' doc `shouldBe` True
+  describe "Complex RawTerm Query Functionality" $ parallel $ do
+    it "matches a document with a rawTerm query using an AND combination" $ do
+      let doc = Document samplePath sampleMetadata sampleMarkdownAst $ T.pack sampleMarkdownDoc
+      let query' = Content (And (Val (StrictTerm "Markdown")) (Val (FuzzyTerm "item")))
+      query query' doc `shouldBe` True
 
-      it "matches a document with a rawTerm query using an OR combination" $ do
-        let doc = Document samplePath sampleMetadata sampleMarkdownAst $ T.pack sampleMarkdownDoc
-        let query' = Content (Or (Val (StrictTerm "Markdown")) (Val (StrictTerm "Haskell")))
-        query query' doc `shouldBe` True
+    it "matches a document with a rawTerm query using an OR combination" $ do
+      let doc = Document samplePath sampleMetadata sampleMarkdownAst $ T.pack sampleMarkdownDoc
+      let query' = Content (Or (Val (StrictTerm "Markdown")) (Val (StrictTerm "Haskell")))
+      query query' doc `shouldBe` True
 
-      it "does not match a document with a rawTerm query using NOT when the term is present" $ do
-        let doc = Document samplePath sampleMetadata sampleMarkdownAst $ T.pack sampleMarkdownDoc
-        let query' = Content (Not (Val (StrictTerm "document")))
-        query query' doc `shouldBe` False
+    it "does not match a document with a rawTerm query using NOT when the term is present" $ do
+      let doc = Document samplePath sampleMetadata sampleMarkdownAst $ T.pack sampleMarkdownDoc
+      let query' = Content (Not (Val (StrictTerm "document")))
+      query query' doc `shouldBe` False
 
 spec :: Spec
 spec = parallel $ do
