@@ -10,6 +10,7 @@ where
 import Commonmark.Extensions (AlertType (..))
 import Data.Either
 import qualified Data.Text as T
+import Data.Time
 import Model.DocQuery
 import Parser.DocQuery
 import Test.Hspec
@@ -209,6 +210,31 @@ searchQuerySpec = describe "SearchTermParser" $ parallel $ do
     it "fails to parse an invalid alert query" $ do
       let input = "alert-unknown:\"term\""
       parse alert "" input `shouldSatisfy` isLeft
+
+  describe "DateTimeRange Query Parser" $ parallel $ do
+    it "parses a date query" $ do
+      let input = "date:2021-01-01"
+      parse date "" input `shouldBe` Right (DateTimeRange (Just (UTCTime (fromGregorian 2021 1 1) 0)) (Just (UTCTime (fromGregorian 2021 1 2) 0)))
+
+    it "parses a date range query with both start and end dates" $ do
+      let input = "date:[2021-01-01,2021-12-31]"
+      parse date "" input `shouldBe` Right (DateTimeRange (Just (UTCTime (fromGregorian 2021 1 1) 0)) (Just (UTCTime (fromGregorian 2022 1 1) 0)))
+
+    it "parses a date range query with only a start date" $ do
+      let input = "date:[2021-01-01,]"
+      parse date "" input `shouldBe` Right (DateTimeRange (Just (UTCTime (fromGregorian 2021 1 1) 0)) Nothing)
+
+    it "parses a date range query with only an end date" $ do
+      let input = "date:[,2021-12-31]"
+      parse date "" input `shouldBe` Right (DateTimeRange Nothing (Just (UTCTime (fromGregorian 2022 1 1) 0)))
+
+    it "parses a date range query without dates" $ do
+      let input = "date:[,]"
+      parse date "" input `shouldBe` Right (DateTimeRange Nothing Nothing)
+
+    it "fails to parse an invalid date range query" $ do
+      let input = "date:[invalid,2021-12-31]"
+      parse date "" input `shouldSatisfy` isLeft
 
 spec :: Spec
 spec = describe "SearchLanguageParser" $ parallel $ do

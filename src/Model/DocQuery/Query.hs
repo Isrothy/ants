@@ -56,7 +56,7 @@ data Query where
   Content :: (BoolExpr Term) -> Query
   Task :: TaskType -> (BoolExpr Term) -> Query
   Alert :: AlertType -> (BoolExpr Term) -> Query
-  DateRange :: Maybe UTCTime -> Maybe UTCTime -> Query
+  DateTimeRange :: Maybe UTCTime -> Maybe UTCTime -> Query
   HasLink :: Path Rel File -> Query
   InDirectory :: Path Rel Dir -> Query
   deriving (Show, Eq)
@@ -71,11 +71,11 @@ query (Task Both t) = ast' $ any (match t . toPlainText . snd) . findTasks
 query (Task Done t) = ast' $ any (match t . toPlainText) . findFinishedTasks
 query (Task Todo t) = ast' $ any (match t . toPlainText) . findUnfinishedTasks
 query (Alert a t) = ast' $ any (((== a) . fst) && (match t . toPlainText) . snd) . findAlerts
-query (DateRange start end) = metadata $ maybe False (between start end) . M.dateTime
+query (DateTimeRange start end) = metadata $ maybe False (between start end) . M.dateTime
   where
-    between (Just s) (Just e) d = s <= e && d >= s && d <= e
+    between (Just s) (Just e) d = s <= e && d >= s && d < e
     between (Just s) _ d = d >= s
-    between _ (Just e) d = d <= e
+    between _ (Just e) d = d < e
     between _ _ _ = True
 query (HasLink p) = ast' $ elem (Just p) . map (parseRelFile . T.unpack . fst) . findLinks
 query (InDirectory p) = relPath $ isProperPrefixOf p

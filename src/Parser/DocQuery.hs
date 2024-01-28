@@ -10,6 +10,7 @@ module Parser.DocQuery
     author,
     alert,
     tag,
+    date,
     description,
     content,
     task,
@@ -20,6 +21,9 @@ import Commonmark.Extensions (AlertType (..))
 import Data.Char (isPunctuation)
 import Data.Functor
 import qualified Data.Text as T
+import Data.Time
+import Data.Time.Format
+import Data.Time.Format.ISO8601
 import Model.DocQuery.BoolExpr (BoolExpr (..))
 import Model.DocQuery.Query
 import Model.DocQuery.Term (Term (..))
@@ -173,15 +177,37 @@ alert = do
         <|> (string "warning:" >> return WarningAlert)
         <|> (string "caution:" >> return CautionAlert)
 
+day :: Parser Day
+day = do
+  input <- many (oneOf "0123456789:TZ+-WP")
+  iso8601ParseM input
+
+date :: Parser Query
+date = do
+  _ <- string "date:"
+  range <|> singleDay
+  where
+    dayStartTime d = UTCTime d (timeOfDayToTime midnight)
+    dayEndTime d = UTCTime (addDays 1 d) (timeOfDayToTime midnight)
+    range = do
+      _ <- char '['
+      start <- optionMaybe $ dayStartTime <$> day
+      _ <- char ','
+      end <- optionMaybe $ dayEndTime <$> day
+      _ <- char ']'
+      return $ DateTimeRange start end
+    singleDay = do
+      d <- day
+      let start = Just $ dayStartTime d
+      let end = Just $ dayEndTime d
+      return $ DateTimeRange start end
+
 query :: Parser Query
 query =
-  content
-    <|> description
-    <|> ( do
-            _ <- lookAhead (char 'a')
-            author <|> alert
-        )
-    <|> ( do
-            _ <- lookAhead (char 't')
-            task <|> tag
-        )
+  try content
+    <|> try description
+    <|> try date
+    <|> try author
+    <|> try alert
+    <|> try task
+    <|> try tag

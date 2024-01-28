@@ -77,27 +77,27 @@ metadataQuerySpec = describe "Metadata Filter" $ do
   it "matches metadata with a specific date range" $ do
     let startDate = parseTimeOrError True defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ" "2021-01-01T00:00:00Z"
     let endDate = parseTimeOrError True defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ" "2021-12-31T23:59:59Z"
-    let filter' = DateRange (Just startDate) (Just endDate)
+    let filter' = DateTimeRange (Just startDate) (Just endDate)
     query filter' doc `shouldBe` True
 
   it "does not match metadata outside of a specific date range" $ do
     let beforeDate = parseTimeOrError True defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ" "2020-01-01T00:00:00Z"
     let afterDate = parseTimeOrError True defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ" "2021-01-01T00:00:00Z"
-    let filter' = DateRange (Just beforeDate) (Just afterDate)
+    let filter' = DateTimeRange (Just beforeDate) (Just afterDate)
     query filter' doc `shouldBe` False
 
   it "matches metadata when only start date is given" $ do
     let startDate = parseTimeOrError True defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ" "2021-01-01T00:00:00Z"
-    let filter' = DateRange (Just startDate) Nothing
+    let filter' = DateTimeRange (Just startDate) Nothing
     query filter' doc `shouldBe` True
 
   it "matches metadata when only end date is given" $ do
     let endDate = parseTimeOrError True defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ" "2021-12-31T23:59:59Z"
-    let filter' = DateRange Nothing (Just endDate)
+    let filter' = DateTimeRange Nothing (Just endDate)
     query filter' doc `shouldBe` True
 
   it "matches metadata when no date range is given" $ do
-    let filter' = DateRange Nothing Nothing
+    let filter' = DateTimeRange Nothing Nothing
     query filter' doc `shouldBe` True
 
   it "matches metadata with the specific author" $ do
