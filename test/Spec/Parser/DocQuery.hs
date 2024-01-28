@@ -7,6 +7,7 @@ module Spec.Parser.DocQuery
   )
 where
 
+import Commonmark.Extensions (AlertType (..))
 import Data.Either
 import qualified Data.Text as T
 import Model.DocQuery
@@ -39,7 +40,7 @@ searchTermSpec = describe "SearchTermParser" $ parallel $ do
     it "parses a fuzzy term" $ do
       parse fuzzyTerm "" "~example~" `shouldBe` Right (FuzzyTerm "example")
 
-  describe "Boolean operations parsing" $ do
+  describe "Boolean operations parsing" $ parallel $ do
     it "parses an OR operation" $ do
       parse boolTerm "" "term1 || term2" `shouldBe` Right (Val (CaseInsensitiveTerm "term1") `Or` Val (CaseInsensitiveTerm "term2"))
       parse boolTerm "" "term1||  term2" `shouldBe` Right (Val (CaseInsensitiveTerm "term1") `Or` Val (CaseInsensitiveTerm "term2"))
@@ -57,7 +58,7 @@ searchTermSpec = describe "SearchTermParser" $ parallel $ do
       parse boolTerm "" "! term1" `shouldBe` Right (Not (Val (CaseInsensitiveTerm "term1")))
       parse boolTerm "" "!   term1" `shouldBe` Right (Not (Val (CaseInsensitiveTerm "term1")))
 
-  describe "Complex expression parsing" $ do
+  describe "Complex expression parsing" $ parallel $ do
     it "parses complex expressions" $ do
       parse boolTerm "" "term1 && (term2 || !term3)"
         `shouldBe` Right
@@ -89,7 +90,7 @@ searchTermSpec = describe "SearchTermParser" $ parallel $ do
       parse boolTerm "" "!(  term1 || !term2)"
         `shouldBe` Right (Not (Val (CaseInsensitiveTerm "term1") `Or` Not (Val (CaseInsensitiveTerm "term2"))))
 
-  describe "Multiple NOT operations" $ do
+  describe "Multiple NOT operations" $ parallel $ do
     it "fails to parse double NOT operations (e.g., !!)" $ do
       parse boolTerm "" "!!term1" `shouldBe` Right (Not (Not (Val (CaseInsensitiveTerm "term1"))))
       parse boolTerm "" "! !term1" `shouldBe` Right (Not (Not (Val (CaseInsensitiveTerm "term1"))))
@@ -124,7 +125,7 @@ searchQuerySpec = describe "SearchTermParser" $ parallel $ do
       let input = "author:(\"John Doe\" || ~Jane~)"
       parse author "" input `shouldBe` Right (Author (Or (Val (CaseInsensitiveTerm "John Doe")) (Val (FuzzyTerm "Jane"))))
 
-  describe "Tag Query Parser" $ do
+  describe "Tag Query Parser" $ parallel $ do
     it "parses a tag query" $ do
       parse tag "" "tag:\"Haskell\"" `shouldBe` Right (Tag (Val (CaseInsensitiveTerm "Haskell")))
       parse tag "" "tag:\'Haskell\'" `shouldBe` Right (Tag (Val (StrictTerm "Haskell")))
@@ -142,7 +143,7 @@ searchQuerySpec = describe "SearchTermParser" $ parallel $ do
       parse description "" "description:\"Haskell programming\"" `shouldBe` Right (Description (Val (CaseInsensitiveTerm "Haskell programming")))
       parse description "" "description:~Haskell programming~" `shouldBe` Right (Description (Val (FuzzyTerm "Haskell programming")))
 
-  describe "Content Query Parser" $ do
+  describe "Content Query Parser" $ parallel $ do
     it "parses a content query" $ do
       parse content "" "content:\"sample content\"" `shouldBe` Right (Content (Val (CaseInsensitiveTerm "sample content")))
       parse content "" "content:/sample content/" `shouldBe` Right (Content (Val (RegexTerm "sample content")))
@@ -159,7 +160,7 @@ searchQuerySpec = describe "SearchTermParser" $ parallel $ do
       let input = "content:(\"term1\" && (~fuzzy~ || 'term2'))"
       parse content "" input `shouldBe` Right (Content (And (Val (CaseInsensitiveTerm "term1")) (Or (Val (FuzzyTerm "fuzzy")) (Val (StrictTerm "term2")))))
 
-  describe "Task Query Passer" $ do
+  describe "Task Query Passer" $ parallel $ do
     it "parses a task query with Done tasks and a strict term" $ do
       let input = "task-done:\"exact term\""
       parse task "" input `shouldBe` Right (Task Done (Val (CaseInsensitiveTerm "exact term")))
@@ -183,6 +184,31 @@ searchQuerySpec = describe "SearchTermParser" $ parallel $ do
     it "fails to parse an invalid task query" $ do
       let input = "task-unknown:\"term\""
       parse task "" input `shouldSatisfy` isLeft
+
+  describe "Alert Query Parser" $ parallel $ do
+    it "parses an alert query with NoteAlert type and a strict term" $ do
+      let input = "alert-note:\'exact term\'"
+      parse alert "" input `shouldBe` Right (Alert NoteAlert (Val (StrictTerm "exact term")))
+
+    it "parses an alert query with TipAlert type and a fuzzy term" $ do
+      let input = "alert-tip:~fuzzyTerm~"
+      parse alert "" input `shouldBe` Right (Alert TipAlert (Val (FuzzyTerm "fuzzyTerm")))
+
+    it "parses an alert query with ImportantAlert type and a regex term" $ do
+      let input = "alert-important:/regexTerm/"
+      parse alert "" input `shouldBe` Right (Alert ImportantAlert (Val (RegexTerm "regexTerm")))
+
+    it "parses an alert query with WarningAlert type and a case insensitive term" $ do
+      let input = "alert-warning:\"Case Term\""
+      parse alert "" input `shouldBe` Right (Alert WarningAlert (Val (CaseInsensitiveTerm "Case Term")))
+
+    it "parses an alert query with CautionAlert type and a compound boolean expression" $ do
+      let input = "alert-caution:(\'term1\' || ~term2~)"
+      parse alert "" input `shouldBe` Right (Alert CautionAlert (Or (Val (StrictTerm "term1")) (Val (FuzzyTerm "term2"))))
+
+    it "fails to parse an invalid alert query" $ do
+      let input = "alert-unknown:\"term\""
+      parse alert "" input `shouldSatisfy` isLeft
 
 spec :: Spec
 spec = describe "SearchLanguageParser" $ parallel $ do

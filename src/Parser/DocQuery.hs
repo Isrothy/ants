@@ -8,6 +8,7 @@ module Parser.DocQuery
     fuzzyTerm,
     term,
     author,
+    alert,
     tag,
     description,
     content,
@@ -15,6 +16,7 @@ module Parser.DocQuery
   )
 where
 
+import Commonmark.Extensions (AlertType (..))
 import Data.Char (isPunctuation)
 import Data.Functor
 import qualified Data.Text as T
@@ -158,5 +160,28 @@ task = do
         _ <- char '-'
         (string "done:" >> return Done) <|> (string "todo:" >> return Todo)
 
+alert :: Parser Query
+alert = do
+  _ <- string "alert-"
+  t <- alertType
+  Alert t <$> simpleExpr
+  where
+    alertType =
+      (string "note:" >> return NoteAlert)
+        <|> (string "tip:" >> return TipAlert)
+        <|> (string "important:" >> return ImportantAlert)
+        <|> (string "warning:" >> return WarningAlert)
+        <|> (string "caution:" >> return CautionAlert)
+
 query :: Parser Query
-query = author <|> tag <|> description <|> content <|> task
+query =
+  content
+    <|> description
+    <|> ( do
+            _ <- lookAhead (char 'a')
+            author <|> alert
+        )
+    <|> ( do
+            _ <- lookAhead (char 't')
+            task <|> tag
+        )

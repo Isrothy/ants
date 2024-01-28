@@ -55,7 +55,7 @@ data Query where
   Description :: (BoolExpr Term) -> Query
   Content :: (BoolExpr Term) -> Query
   Task :: TaskType -> (BoolExpr Term) -> Query
-  Alert :: AlertType -> Query
+  Alert :: AlertType -> (BoolExpr Term) -> Query
   DateRange :: Maybe UTCTime -> Maybe UTCTime -> Query
   HasLink :: Path Rel File -> Query
   InDirectory :: Path Rel Dir -> Query
@@ -70,7 +70,7 @@ query (Content t) = (ast . plain) (match t)
 query (Task Both t) = ast' $ any (match t . toPlainText . snd) . findTasks
 query (Task Done t) = ast' $ any (match t . toPlainText) . findFinishedTasks
 query (Task Todo t) = ast' $ any (match t . toPlainText) . findUnfinishedTasks
-query (Alert a) = ast' $ any ((== a) . fst) . findAlerts
+query (Alert a t) = ast' $ any (((== a) . fst) && (match t . toPlainText) . snd) . findAlerts
 query (DateRange start end) = metadata $ maybe False (between start end) . M.dateTime
   where
     between (Just s) (Just e) d = s <= e && d >= s && d <= e
