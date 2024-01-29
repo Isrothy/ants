@@ -13,10 +13,10 @@ where
 
 import Data.Aeson
 import Data.ByteString.Lazy.Internal
+import Data.Default
 import Model.Config
 import Test.Hspec
 import Text.RawString.QQ
-import Util.Default
 
 decodeConfig :: ByteString -> Maybe Config
 decodeConfig = decode

@@ -24,6 +24,7 @@ dependencies:
   - text
   - commonmark
   - commonmark-extensions
+  - data-default
   - parsec
   - aeson
   - bytestring

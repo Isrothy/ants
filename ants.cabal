@@ -41,7 +41,6 @@ library
       Parser.Opts
       Parser.Placeholder
       Parser.YamlMarked
-      Util.Default
       Util.ExAeson
       Util.Fuzzy
   other-modules:
@@ -56,6 +55,7 @@ library
     , commonmark
     , commonmark-extensions
     , cond
+    , data-default
     , filepath
     , loop
     , optparse-applicative
@@ -87,6 +87,7 @@ executable ants
     , commonmark
     , commonmark-extensions
     , cond
+    , data-default
     , filepath
     , loop
     , optparse-applicative
@@ -130,6 +131,7 @@ test-suite ants-test
     , commonmark
     , commonmark-extensions
     , cond
+    , data-default
     , filepath
     , hspec
     , loop
@@ -165,6 +167,7 @@ benchmark ants-bench
     , commonmark-extensions
     , cond
     , criterion
+    , data-default
     , filepath
     , loop
     , optparse-applicative

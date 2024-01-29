@@ -16,10 +16,10 @@ import Control.Applicative ((<|>))
 import Data.Aeson
 import Data.Aeson.Key (fromString, fromText)
 import Data.Maybe
+import Data.Default
 import qualified Data.Text as T
 import qualified Data.Vector as Vector
 import GHC.Generics
-import Util.Default
 import Util.ExAeson
 
 data Config where
