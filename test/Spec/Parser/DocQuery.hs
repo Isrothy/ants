@@ -238,48 +238,72 @@ searchQuerySpec = describe "SearchTermParser" $ parallel $ do
 completeQuerySpec :: Spec
 completeQuerySpec = describe "Complete Query Parser" $ parallel $ do
   it "parses a single term query" $ do
-    parse completeQuery "" "author:\"John Doe\"" `shouldBe` Right (Val (Author (Val (CaseInsensitiveTerm "John Doe"))))
+    parse completeQuery "" "author:\"John Doe\""
+      `shouldBe` Right
+        (Val $ Author $ Val $ CaseInsensitiveTerm "John Doe")
 
   it "parses an AND combination query" $ do
     parse completeQuery "" "tag:\"Haskell\" && description:~functional~"
-      `shouldBe` Right (And (Val (Tag (Val (CaseInsensitiveTerm "Haskell")))) (Val (Description (Val (FuzzyTerm "functional")))))
+      `shouldBe` Right
+        ( And
+            (Val $ Tag $ Val $ CaseInsensitiveTerm "Haskell")
+            (Val $ Description $ Val $ FuzzyTerm "functional")
+        )
 
   it "parses an OR combination query" $ do
     parse completeQuery "" "content:\"algorithm\" || alert-tip:~efficiency~"
-      `shouldBe` Right (Or (Val (Content (Val (CaseInsensitiveTerm "algorithm")))) (Val (Alert TipAlert (Val (FuzzyTerm "efficiency")))))
+      `shouldBe` Right
+        ( Or
+            (Val $ Content $ Val $ CaseInsensitiveTerm "algorithm")
+            (Val $ Alert TipAlert $ Val $ FuzzyTerm "efficiency")
+        )
 
   it "parses nested boolean expressions" $ do
     parse completeQuery "" "author:\"Jane Doe\" && (tag:\"Haskell\" || content:~guide~)"
       `shouldBe` Right
         ( And
-            (Val (Author (Val (CaseInsensitiveTerm "Jane Doe"))))
+            (Val $ Author $ Val $ CaseInsensitiveTerm "Jane Doe")
             ( Or
-                (Val (Tag (Val (CaseInsensitiveTerm "Haskell"))))
-                (Val (Content (Val (FuzzyTerm "guide"))))
+                (Val $ Tag $ Val $ CaseInsensitiveTerm "Haskell")
+                (Val $ Content $ Val $ FuzzyTerm "guide")
             )
         )
 
   it "parses a task query with boolean expression" $ do
-    parse completeQuery "" "task-done:\"Documentation\" && task-todo:~testing~"
-      `shouldBe` Right (And (Val (Task Done (Val (CaseInsensitiveTerm "Documentation")))) (Val (Task Todo (Val (FuzzyTerm "testing")))))
-
-  it "parses complex combined queries" $ do
-    parse completeQuery "" "author:\"John Doe\" && (content:~guide~ || (date:[2021-01-01,2021-12-31] && tag:\"Haskell\"))"
+    parse completeQuery "" "task-done:(\"Documentation\" || \'Haskell\') && task-todo:~testing~"
       `shouldBe` Right
         ( And
-            (Val (Author (Val (CaseInsensitiveTerm "John Doe"))))
+            ( Val $
+                Task Done $
+                  Or
+                    (Val $ CaseInsensitiveTerm "Documentation")
+                    (Val $ StrictTerm "Haskell")
+            )
+            (Val $ Task Todo $ Val $ FuzzyTerm "testing")
+        )
+
+  it "parses complex combined queries" $ do
+    parse completeQuery "" "!author:\"John Doe\" && (content:~guide~ || (date:[2021-01-01,2021-12-31] && tag:\"Haskell\"))"
+      `shouldBe` Right
+        ( And
+            (Not $ Val $ Author $ Val $ CaseInsensitiveTerm "John Doe")
             ( Or
-                (Val (Content (Val (FuzzyTerm "guide"))))
+                (Val $ Content $ Val $ FuzzyTerm "guide")
                 ( And
-                    (Val (DateTimeRange (Just (UTCTime (fromGregorian 2021 1 1) 0)) (Just (UTCTime (fromGregorian 2022 1 1) 0))))
-                    (Val (Tag (Val (CaseInsensitiveTerm "Haskell"))))
+                    ( Val $
+                        DateTimeRange
+                          (Just (UTCTime (fromGregorian 2021 1 1) 0))
+                          (Just (UTCTime (fromGregorian 2022 1 1) 0))
+                    )
+                    (Val $ Tag $ Val $ CaseInsensitiveTerm "Haskell")
                 )
             )
         )
 
   it "parses not operator queries" $ do
     parse completeQuery "" "!author:\"John Doe\""
-      `shouldBe` Right (Not (Val (Author (Val (CaseInsensitiveTerm "John Doe")))))
+      `shouldBe` Right
+        (Not $ Val $ Author $ Val $ CaseInsensitiveTerm "John Doe")
 
   it "fails to parse incorrect syntax" $ do
     parse completeQuery "" "author:\"John Doe\" &&" `shouldSatisfy` isLeft
