@@ -14,6 +14,7 @@ module Parser.DocQuery
     description,
     content,
     task,
+    completeQuery,
   )
 where
 
@@ -25,7 +26,7 @@ import Data.Time
 import Data.Time.Format
 import Data.Time.Format.ISO8601
 import Model.DocQuery.BoolExpr (BoolExpr (..))
-import Model.DocQuery.Query
+import Model.DocQuery.Query hiding (query)
 import Model.DocQuery.Term (Term (..))
 import Text.Parsec
 import Text.Parsec.Text (Parser)
@@ -204,10 +205,19 @@ date = do
 
 query :: Parser Query
 query =
-  try content
+  try author
+    <|> try alert
+    <|> try content
     <|> try description
     <|> try date
-    <|> try author
-    <|> try alert
     <|> try task
     <|> try tag
+
+instance HasParser Query where
+  parser = query
+
+completeQuery :: Parser (BoolExpr Query)
+completeQuery = do
+  q <- boolExpr
+  _ <- eof
+  return q
