@@ -40,6 +40,8 @@ searchTermSpec = describe "SearchTermParser" $ parallel $ do
     it "parses a fuzzy term" $ do
       parse fuzzyTerm "" "~example~" `shouldBe` Right (FuzzyTerm "example")
 
+booleanTermSpec :: Spec
+booleanTermSpec = describe "BoolenTermParser" $ parallel $ do
   describe "Boolean operations parsing" $ parallel $ do
     it "parses an OR operation" $ do
       parse boolTerm "" "term1 || term2" `shouldBe` Right (Val (CaseInsensitiveTerm "term1") `Or` Val (CaseInsensitiveTerm "term2"))
@@ -314,5 +316,6 @@ completeQuerySpec = describe "Complete Query Parser" $ parallel $ do
 spec :: Spec
 spec = describe "SearchLanguageParser" $ parallel $ do
   searchTermSpec
+  booleanTermSpec
   searchQuerySpec
   completeQuerySpec
