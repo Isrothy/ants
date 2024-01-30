@@ -4,10 +4,10 @@ import qualified Spec.Model.DocQuery.Query
 import qualified Spec.Model.DocQuery.Term
 import qualified Spec.Model.Metadata
 import qualified Spec.Parser.DocQuery
+import qualified Spec.Parser.Frontmatter
 import qualified Spec.Parser.Markdown
-import qualified Spec.Parser.Metadata
+import qualified Spec.Parser.MarkdownWithFrontmatter
 import qualified Spec.Parser.Placeholder
-import qualified Spec.Parser.YamlMarkd
 import qualified Spec.Util.Fuzzy
 import Test.Hspec
 
@@ -19,9 +19,9 @@ main = hspec $ parallel $ do
   Spec.Model.DocQuery.Term.spec
   Spec.Model.DocQuery.Query.spec
   Spec.Parser.Markdown.spec
-  Spec.Parser.Metadata.spec
+  Spec.Parser.Frontmatter.spec
   Spec.Parser.Placeholder.spec
   Spec.Parser.DocQuery.spec
-  Spec.Parser.YamlMarkd.spec
+  Spec.Parser.MarkdownWithFrontmatter.spec
   Spec.Util.Fuzzy.spec
   return ()

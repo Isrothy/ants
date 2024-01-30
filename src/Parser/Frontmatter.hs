@@ -1,5 +1,5 @@
-module Parser.Metadata
-  ( metadataParser,
+module Parser.Frontmatter
+  ( frontmatter,
   )
 where
 
@@ -27,8 +27,8 @@ normalLine = do
   eol' <- eol
   return (text ++ eol')
 
-metadataParser :: Parser T.Text
-metadataParser = do
+frontmatter :: Parser T.Text
+frontmatter = do
   dashLine
   metadataContent <- manyTill normalLine (try dashLine)
   return (T.pack (concat metadataContent))

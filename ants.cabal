@@ -36,11 +36,11 @@ library
       Model.MarkdownAst
       Model.Metadata
       Parser.DocQuery
+      Parser.Frontmatter
       Parser.Markdown
-      Parser.Metadata
+      Parser.MarkdownWithFrontmatter
       Parser.Opts
       Parser.Placeholder
-      Parser.YamlMarked
       Util.ExAeson
       Util.Fuzzy
   other-modules:
@@ -114,10 +114,10 @@ test-suite ants-test
       Spec.Model.DocQuery.Term
       Spec.Model.Metadata
       Spec.Parser.DocQuery
+      Spec.Parser.Frontmatter
       Spec.Parser.Markdown
-      Spec.Parser.Metadata
+      Spec.Parser.MarkdownWithFrontmatter
       Spec.Parser.Placeholder
-      Spec.Parser.YamlMarkd
       Spec.Util.Fuzzy
       Paths_ants
   hs-source-dirs:
