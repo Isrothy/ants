@@ -28,17 +28,21 @@ library
       Cli.NewNoteGen
       Lib
       Model.Config
-      Model.DocFilter
+      Model.DocQuery
+      Model.DocQuery.BoolExpr
+      Model.DocQuery.Query
+      Model.DocQuery.Term
       Model.Document
       Model.MarkdownAst
       Model.Metadata
+      Parser.DocQuery
+      Parser.Frontmatter
       Parser.Markdown
-      Parser.Metadata
+      Parser.MarkdownWithFrontmatter
       Parser.Opts
       Parser.Placeholder
-      Parser.YamlMarked
-      Util.Default
       Util.ExAeson
+      Util.Fuzzy
   other-modules:
       Paths_ants
   hs-source-dirs:
@@ -51,13 +55,16 @@ library
     , commonmark
     , commonmark-extensions
     , cond
+    , data-default
     , filepath
-    , fuzzy
+    , loop
     , optparse-applicative
     , parsec
     , path
+    , random
     , raw-strings-qq
     , regex-tdfa >=1.3.2 && <1.4
+    , safe
     , text
     , time
     , unordered-containers
@@ -80,13 +87,16 @@ executable ants
     , commonmark
     , commonmark-extensions
     , cond
+    , data-default
     , filepath
-    , fuzzy
+    , loop
     , optparse-applicative
     , parsec
     , path
+    , random
     , raw-strings-qq
     , regex-tdfa >=1.3.2 && <1.4
+    , safe
     , text
     , time
     , unordered-containers
@@ -96,16 +106,19 @@ executable ants
 
 test-suite ants-test
   type: exitcode-stdio-1.0
-  main-is: Spec.hs
+  main-is: Main.hs
   other-modules:
-      Cli.NewNoteGenSpec
-      Model.ConfigSpec
-      Model.DocFilterSpec
-      Model.MetadataSpec
-      Parser.MarkdownSpec
-      Parser.MetadataSpec
-      Parser.PlaceholderSpec
-      Parser.YamlMarkdSpec
+      Spec.Cli.NewNoteGen
+      Spec.Model.Config
+      Spec.Model.DocQuery.Query
+      Spec.Model.DocQuery.Term
+      Spec.Model.Metadata
+      Spec.Parser.DocQuery
+      Spec.Parser.Frontmatter
+      Spec.Parser.Markdown
+      Spec.Parser.MarkdownWithFrontmatter
+      Spec.Parser.Placeholder
+      Spec.Util.Fuzzy
       Paths_ants
   hs-source-dirs:
       test
@@ -118,14 +131,52 @@ test-suite ants-test
     , commonmark
     , commonmark-extensions
     , cond
+    , data-default
     , filepath
-    , fuzzy
     , hspec
+    , loop
     , optparse-applicative
     , parsec
     , path
+    , random
     , raw-strings-qq
     , regex-tdfa >=1.3.2 && <1.4
+    , safe
+    , text
+    , time
+    , unordered-containers
+    , vector
+    , yaml
+  default-language: Haskell2010
+
+benchmark ants-bench
+  type: exitcode-stdio-1.0
+  main-is: Main.hs
+  other-modules:
+      Benchmarks.Util.Fuzzy
+      Paths_ants
+  hs-source-dirs:
+      benchmarks
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N -O2
+  build-depends:
+      aeson
+    , ants
+    , base
+    , bytestring
+    , commonmark
+    , commonmark-extensions
+    , cond
+    , criterion
+    , data-default
+    , filepath
+    , loop
+    , optparse-applicative
+    , parsec
+    , path
+    , random
+    , raw-strings-qq
+    , regex-tdfa >=1.3.2 && <1.4
+    , safe
     , text
     , time
     , unordered-containers

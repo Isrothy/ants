@@ -10,43 +10,51 @@ module Model.MarkdownAst
     children,
     findPlaceholders,
     findLinks,
+    findTasks,
+    findFinishedTasks,
+    findUnfinishedTasks,
+    findAlerts,
   )
 where
 
 import Commonmark
 import Commonmark.Extensions
 import Data.Maybe
-import Data.Text (Text, pack)
+import qualified Data.Text as T
+import qualified Data.Text.Internal.Builder as TB
+import qualified Data.Text.Lazy as LT
 import Parser.Placeholder
 
-data MarkdownAst = MarkdownAst
-  { markdownElement :: !MarkdownElement,
-    sourceRange :: !(Maybe SourceRange),
-    attributes :: !Attributes
-  }
+data MarkdownAst where
+  MarkdownAst ::
+    { markdownElement :: MarkdownElement,
+      sourceRange :: Maybe SourceRange,
+      attributes :: Attributes
+    } ->
+    MarkdownAst
   deriving (Show, Eq)
 
 rawNode :: MarkdownElement -> MarkdownAst
 rawNode x = MarkdownAst x Nothing []
 
 data MarkdownElement where
-  Text :: Text -> MarkdownElement
-  Entity :: Text -> MarkdownElement
+  Text :: T.Text -> MarkdownElement
+  Entity :: T.Text -> MarkdownElement
   LineBreak :: MarkdownElement
   SoftBreak :: MarkdownElement
   EscapedChar :: Char -> MarkdownElement
-  Code :: Text -> MarkdownElement
+  Code :: T.Text -> MarkdownElement
   Emphasis :: MarkdownAst -> MarkdownElement
   Strong :: MarkdownAst -> MarkdownElement
-  Link :: Text -> Text -> (Maybe MarkdownAst) -> MarkdownElement
-  Image :: Text -> Text -> (Maybe MarkdownAst) -> MarkdownElement
+  Link :: T.Text -> T.Text -> (Maybe MarkdownAst) -> MarkdownElement
+  Image :: T.Text -> T.Text -> (Maybe MarkdownAst) -> MarkdownElement
   Strikethrough :: MarkdownAst -> MarkdownElement
   Highlight :: MarkdownAst -> MarkdownElement
-  RawInline :: Format -> Text -> MarkdownElement
+  RawInline :: Format -> T.Text -> MarkdownElement
   Alert :: AlertType -> (Maybe MarkdownAst) -> MarkdownElement
-  Emoji :: Text -> Text -> MarkdownElement
-  InlineMath :: Text -> MarkdownElement
-  DisplayMath :: Text -> MarkdownElement
+  Emoji :: T.Text -> T.Text -> MarkdownElement
+  InlineMath :: T.Text -> MarkdownElement
+  DisplayMath :: T.Text -> MarkdownElement
   SingleQuoted :: (Maybe MarkdownAst) -> MarkdownElement
   DoubleQuoted :: (Maybe MarkdownAst) -> MarkdownElement
   Subscript :: MarkdownAst -> MarkdownElement
@@ -60,15 +68,15 @@ data MarkdownElement where
     [Maybe MarkdownAst] ->
     MarkdownElement
   Blockquote :: MarkdownAst -> MarkdownElement
-  CodeBlock :: Text -> Text -> MarkdownElement
-  RawBlock :: Format -> Text -> MarkdownElement
+  CodeBlock :: T.Text -> T.Text -> MarkdownElement
+  RawBlock :: Format -> T.Text -> MarkdownElement
   HorizontalRule :: MarkdownElement
   PipeTable ::
     [ColAlignment] ->
     [Maybe MarkdownAst] ->
     [[Maybe MarkdownAst]] ->
     MarkdownElement
-  ReferenceLinkDefination :: Text -> (Text, Text) -> MarkdownElement
+  ReferenceLinkDefination :: T.Text -> (T.Text, T.Text) -> MarkdownElement
   DefinitionList ::
     ListSpacing ->
     [(Maybe MarkdownAst, [Maybe MarkdownAst])] ->
@@ -78,11 +86,11 @@ data MarkdownElement where
     ListSpacing ->
     [(Bool, Maybe MarkdownAst)] ->
     MarkdownElement
-  WikiLink :: Text -> MarkdownAst -> MarkdownElement
-  Footnote :: Int -> Text -> (Maybe MarkdownAst) -> MarkdownElement
+  WikiLink :: T.Text -> MarkdownAst -> MarkdownElement
+  Footnote :: Int -> T.Text -> (Maybe MarkdownAst) -> MarkdownElement
   FootnoteList :: [Maybe MarkdownAst] -> MarkdownElement
-  FootnoteRef :: Text -> Text -> MarkdownAst -> MarkdownElement
-  Placeholder :: Text -> MarkdownElement
+  FootnoteRef :: T.Text -> T.Text -> MarkdownAst -> MarkdownElement
+  Placeholder :: T.Text -> MarkdownElement
   Span :: [MarkdownAst] -> MarkdownElement
   deriving (Show, Eq)
 
@@ -172,55 +180,72 @@ instance HasSpan (Maybe MarkdownAst) where
 instance HasDiv (Maybe MarkdownAst) where
   div_ = id
 
-toPlainText1 :: MarkdownAst -> Text
-toPlainText1 (MarkdownAst ele _ _) = case ele of
-  Text t -> t
-  Entity t -> t
+toPlainTextBuilder' :: MarkdownAst -> TB.Builder
+toPlainTextBuilder' (MarkdownAst ele _ _) = case ele of
+  Text t -> TB.fromText t
+  Entity t -> TB.fromText t
   LineBreak -> "\n"
   SoftBreak -> " "
-  EscapedChar c -> pack [c]
-  Code t -> t
-  Emphasis ast -> toPlainText1 ast
-  Strong ast -> toPlainText1 ast
-  Link _ _ ast -> toPlainText ast
-  Image _ _ ast -> toPlainText ast
-  Strikethrough ast -> toPlainText1 ast
-  Highlight ast -> toPlainText1 ast
-  RawInline _ t -> t
-  Emoji _ t -> t
-  InlineMath t -> t
-  DisplayMath t -> t
-  SingleQuoted ast -> toPlainText ast
-  DoubleQuoted ast -> toPlainText ast
-  Subscript ast -> toPlainText1 ast
-  Superscript ast -> toPlainText1 ast
-  Paragraph ast -> toPlainText1 ast <> "\n"
-  Plain ast -> toPlainText1 ast
-  Alert a ast -> alertName a <> ": " <> toPlainText ast
-  Header _ ast -> toPlainText ast <> "\n"
-  List _ _ asts -> mconcat $ map (\ast -> toPlainText ast <> "\n") asts
-  Blockquote ast -> toPlainText1 ast <> "\n"
-  CodeBlock _ t -> t <> "\n"
-  RawBlock _ t -> t <> "\n"
+  EscapedChar c -> TB.singleton c
+  Code t -> TB.fromText t
+  Emphasis ast -> toPlainTextBuilder' ast
+  Strong ast -> toPlainTextBuilder' ast
+  Link _ _ ast -> toPlainTextBuilder ast
+  Image _ _ ast -> toPlainTextBuilder ast
+  Strikethrough ast -> toPlainTextBuilder' ast
+  Highlight ast -> toPlainTextBuilder' ast
+  RawInline _ t -> TB.fromText t
+  Emoji _ t -> TB.fromText t
+  InlineMath t -> TB.fromText t
+  DisplayMath t -> TB.fromText t
+  SingleQuoted ast -> "\'" <> toPlainTextBuilder ast <> "\'"
+  DoubleQuoted ast -> "\"" <> toPlainTextBuilder ast <> "\""
+  Subscript ast -> " " <> toPlainTextBuilder' ast <> " "
+  Superscript ast -> " " <> toPlainTextBuilder' ast <> " "
+  Paragraph ast -> toPlainTextBuilder' ast <> "\n"
+  Plain ast -> toPlainTextBuilder' ast
+  Alert a ast -> TB.fromText (alertName a) <> ": " <> toPlainTextBuilder ast
+  Header _ ast -> toPlainTextBuilder ast <> "\n"
+  List _ _ asts -> mconcat $ map (\ast -> toPlainTextBuilder ast <> "\n") asts
+  Blockquote ast -> toPlainTextBuilder' ast <> "\n"
+  CodeBlock _ t -> TB.fromText t <> "\n"
+  RawBlock _ t -> TB.fromText t <> "\n"
   HorizontalRule -> "\n\n"
   PipeTable _ title rows -> tableHelper (title : rows) <> "\n"
     where
-      tableHelper :: [[Maybe MarkdownAst]] -> Text
+      tableHelper :: [[Maybe MarkdownAst]] -> TB.Builder
       tableHelper [] = ""
-      tableHelper (x : xs) = mconcat (map (\y -> toPlainText y <> " ") x) <> "\n" <> tableHelper xs
-  ReferenceLinkDefination label (dest, title) -> "[" <> label <> "] " <> dest <> " " <> title
-  DefinitionList _ asts -> mconcat (map (\(term, defs) -> toPlainText term <> "\n" <> mconcat (map (\def -> toPlainText def <> "\n") defs)) asts)
-  TaskList _ _ items -> mconcat $ map (\(_, ast) -> toPlainText ast <> "\n") items
-  WikiLink txt ast -> txt <> toPlainText1 ast
-  Footnote num txt ast -> "[" <> pack (show num) <> "] " <> txt <> toPlainText ast
-  FootnoteList items -> mconcat $ map (\item -> toPlainText item <> "\n") items
-  FootnoteRef num label ast -> "[" <> pack (show num) <> "] " <> label <> toPlainText1 ast
+      tableHelper (x : xs) =
+        mconcat (map (\y -> toPlainTextBuilder y <> " ") x) <> "\n" <> tableHelper xs
+  ReferenceLinkDefination label (dest, title) ->
+    "[" <> TB.fromText label <> "] " <> TB.fromText dest <> " " <> TB.fromText title
+  DefinitionList _ asts ->
+    mconcat
+      ( map
+          ( \(term, defs) ->
+              toPlainTextBuilder term
+                <> "\n"
+                <> mconcat
+                  ( map (\def -> toPlainTextBuilder def <> "\n") defs
+                  )
+          )
+          asts
+      )
+  TaskList _ _ items -> mconcat $ map (\(_, ast) -> toPlainTextBuilder ast <> "\n") items
+  WikiLink txt ast -> TB.fromText txt <> toPlainTextBuilder' ast
+  Footnote num txt ast ->
+    "[" <> TB.fromString (show num) <> "] " <> TB.fromText txt <> toPlainTextBuilder ast
+  FootnoteList items -> mconcat $ map (\item -> toPlainTextBuilder item <> "\n") items
+  FootnoteRef num _ _ -> "[" <> TB.fromString (show num) <> "] "
   Placeholder _ -> ""
-  Span asts -> mconcat $ map toPlainText1 asts
+  Span asts -> mconcat $ map toPlainTextBuilder' asts
+
+toPlainTextBuilder :: Maybe MarkdownAst -> TB.Builder
+toPlainTextBuilder Nothing = ""
+toPlainTextBuilder (Just ast) = toPlainTextBuilder' ast
 
 instance ToPlainText (Maybe MarkdownAst) where
-  toPlainText Nothing = ""
-  toPlainText (Just ast) = toPlainText1 ast
+  toPlainText = LT.toStrict . TB.toLazyText . toPlainTextBuilder
 
 instance HasPlaceholder (Maybe MarkdownAst) where
   placeholder = Just . rawNode . Placeholder
@@ -246,13 +271,28 @@ children (WikiLink _ ast) = [ast]
 children (Footnote _ _ ast) = maybeToList ast
 children (FootnoteList items) = catMaybes items
 children (FootnoteRef _ _ ast) = [ast]
+children (Alert _ ast) = maybeToList ast
 children _ = []
 
-findPlaceholders :: MarkdownAst -> [(Text, SourceRange)]
+findPlaceholders :: MarkdownAst -> [(T.Text, SourceRange)]
 findPlaceholders (MarkdownAst (Placeholder txt) (Just srange) _) = [(txt, srange)]
 findPlaceholders (MarkdownAst (Placeholder _) _ _) = []
 findPlaceholders (MarkdownAst ele _ _) = concatMap findPlaceholders (children ele)
 
-findLinks :: MarkdownAst -> [(Text, Text)]
+findLinks :: MarkdownAst -> [(T.Text, T.Text)]
 findLinks (MarkdownAst (Link target title _) _ _) = [(target, title)]
 findLinks (MarkdownAst ele _ _) = concatMap findLinks (children ele)
+
+findTasks :: MarkdownAst -> [(Bool, Maybe MarkdownAst)]
+findTasks (MarkdownAst (TaskList _ _ items) _ _) = items
+findTasks (MarkdownAst ele _ _) = concatMap findTasks (children ele)
+
+findFinishedTasks :: MarkdownAst -> [Maybe MarkdownAst]
+findFinishedTasks = map snd . filter fst . findTasks
+
+findUnfinishedTasks :: MarkdownAst -> [Maybe MarkdownAst]
+findUnfinishedTasks = map snd . filter (not . fst) . findTasks
+
+findAlerts :: MarkdownAst -> [(AlertType, Maybe MarkdownAst)]
+findAlerts (MarkdownAst (Alert t ast) _ _) = [(t, ast)]
+findAlerts (MarkdownAst ele _ _) = concatMap findAlerts (children ele)

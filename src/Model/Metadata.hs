@@ -10,15 +10,15 @@ module Model.Metadata
   )
 where
 
-import Util.Default
-import Util.ExAeson
 import Control.Applicative ((<|>))
 import Data.Aeson
 import Data.Aeson.TH
+import Data.Default
 import Data.Maybe
 import qualified Data.Text as T
 import Data.Time
 import Data.Time.Format.ISO8601
+import Util.ExAeson
 
 data Metadata = Metadata
   { title :: !(Maybe T.Text),
@@ -31,6 +31,7 @@ data Metadata = Metadata
 
 instance Default Metadata where
   def = Metadata Nothing Nothing Nothing [] ""
+
 instance FromJSON Metadata where
   parseJSON = withObject "metadata" $ \o ->
     Metadata
@@ -39,4 +40,5 @@ instance FromJSON Metadata where
       <*> ((>>= iso8601ParseM) <$> o .:? "dateTime" <|> pure Nothing)
       <*> ((parseList . fromMaybe Null <$> (o .:? "tags")) <|> pure [])
       <*> (o .:? "description" .!= "" <|> pure "")
-$(deriveToJSON defaultOptions{omitNothingFields = True} ''Metadata)
+
+$(deriveToJSON defaultOptions {omitNothingFields = True} ''Metadata)

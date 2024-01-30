@@ -4,11 +4,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE QuasiQuotes #-}
 
-module Model.MetadataSpec
+module Spec.Model.Metadata
   ( spec,
   )
 where
 
+import Data.Default
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import Data.Time.Format.ISO8601
@@ -16,7 +17,6 @@ import qualified Data.Yaml as Y
 import Model.Metadata
 import Test.Hspec
 import Text.RawString.QQ
-import Util.Default
 
 decodeMaybeMetadata :: String -> Maybe Metadata
 decodeMaybeMetadata str = case Y.decodeEither' (TE.encodeUtf8 $ T.pack str) of
@@ -24,7 +24,7 @@ decodeMaybeMetadata str = case Y.decodeEither' (TE.encodeUtf8 $ T.pack str) of
   Right metadata -> Just metadata
 
 spec :: Spec
-spec = describe "parse metadata File" $ do
+spec = describe "parse metadata File" $ parallel $ do
   it "parses metadata with all fields" $ do
     let input =
           [r|

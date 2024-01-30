@@ -1,4 +1,4 @@
-module Parser.MarkdownSpec
+module Spec.Parser.Markdown
   ( spec,
   )
 where
@@ -10,7 +10,7 @@ import Parser.Markdown
 import Test.Hspec
 
 spec :: Spec
-spec = describe "commonmark" $ do
+spec = describe "commonmark" $ parallel $ do
   it "parses valid markdown correctly" $ do
     let result = markdownAst "test1" (T.pack "# Hello, world!")
     result `shouldSatisfy` (not . isLeft)

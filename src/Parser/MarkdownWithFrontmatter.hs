@@ -1,5 +1,5 @@
-module Parser.YamlMarked
-  ( markdownWithYamlParser,
+module Parser.MarkdownWithFrontmatter
+  ( markdownWithFrontmatter,
   )
 where
 
@@ -10,7 +10,7 @@ import qualified Data.Yaml as Y
 import Model.MarkdownAst
 import Model.Metadata
 import Parser.Markdown
-import Parser.Metadata
+import Parser.Frontmatter
 import Text.Parsec
 import Text.Parsec.Text
 
@@ -28,11 +28,11 @@ markdownAstWith' ext file text = case markdownAstWith ext file text of
   Just (Right ast) -> ast
   _ -> Nothing
 
-markdownWithYamlParser ::
+markdownWithFrontmatter ::
   SyntaxSpec Maybe (Maybe MarkdownAst) (Maybe MarkdownAst) ->
   String ->
   Parser (Maybe Metadata, Maybe MarkdownAst)
-markdownWithYamlParser ext file = do
-  metadata <- optionMaybe metadataParser
+markdownWithFrontmatter ext file = do
+  metadata <- optionMaybe frontmatter
   rest <- getInput
   return (metadata >>= decodeMaybeMetadata, markdownAstWith' ext file rest)

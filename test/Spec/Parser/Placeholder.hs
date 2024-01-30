@@ -1,4 +1,4 @@
-module Parser.PlaceholderSpec
+module Spec.Parser.Placeholder
   ( spec,
   )
 where
@@ -17,7 +17,7 @@ markdownAstWithPlaceholder ::
 markdownAstWithPlaceholder = markdownAstWith (placeholderSpec <> allSpecExtensions <> defaultSyntaxSpec)
 
 spec :: Spec
-spec = describe "placeholder" $ do
+spec = describe "placeholder" $ parallel $ do
   it "parses placeholder correctly" $ do
     let input = T.pack "## This is a {placeholder}."
     case markdownAstWithPlaceholder "a" input of
