@@ -61,11 +61,12 @@ extensionLookup =
     ("wikilinks_title_before_pipe", wikilinksSpec TitleBeforePipe),
     ("wikilinks_title_after_pipe", wikilinksSpec TitleAfterPipe),
     ("rebase_relative_paths", rebaseRelativePathsSpec),
+    ("alerts", alertSpec),
     ("gfm", gfmExtensions)
   ]
 
 allSpecExtensions :: SyntaxSpec (Either ParseError) (Maybe MarkdownAst) (Maybe MarkdownAst)
-allSpecExtensions = foldMap snd extensionLookup
+allSpecExtensions = mconcat (map snd extensionLookup)
 
 markdownAstWith ::
   (Monad m) =>

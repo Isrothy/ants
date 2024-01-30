@@ -7,12 +7,14 @@
 
 module Spec.Model.DocQuery.Query (spec) where
 
+import Commonmark
+import Commonmark.Extensions
 import Data.Either
 import qualified Data.Text as T
 import Data.Time
 import Model.DocQuery
 import Model.Document
-import Model.MarkdownAst
+import Model.MarkdownAst hiding (Alert)
 import qualified Model.Metadata as M
 import Parser.Markdown
 import Path
@@ -224,9 +226,84 @@ contentQuerySpec = parallel $ do
       let query' = Content (Or (Val (StrictTerm "markup")) (Val (StrictTerm "markdown")))
       query query' doc `shouldBe` False
 
+fromRight2 :: a -> Either e (Either e a) -> a
+fromRight2 _ (Right (Right x)) = x
+fromRight2 x _ = x
+
+taskQuerySpec :: Spec
+taskQuerySpec = parallel $ do
+  describe "Task Query Functionality" $ parallel $ do
+    let sampleMarkdownDocWithTasks =
+          [r|
+# Introduction
+
+This is a Markdown document with a variety of elements for **testing purposes**.
+
+## Task List
+
+- [x] Done task 1
+- [ ] Todo task 2
+- [x] Done task 3 with specific term
+- [ ] Todo task 4 with general term
+
+|]
+    -- let ast = markdownAstWith allSpecExtensions "testWithTasks" (T.pack sampleMarkdownDocWithTasks)
+    let sampleMarkdownAstWithTasks = fromRight2 Nothing $ markdownAstWith (gfmExtensions <> defaultSyntaxSpec) "testWithTasks" (T.pack sampleMarkdownDocWithTasks)
+    let docWithTasks = Document samplePath sampleMetadata sampleMarkdownAstWithTasks (T.pack sampleMarkdownDocWithTasks)
+
+    it "matches a document with 'Done' tasks containing a specific term" $ do
+      let query' = Task Done (Val (StrictTerm "specific term"))
+      query query' docWithTasks `shouldBe` True
+
+    it "does not match a document if no 'Todo' tasks contain the specific term" $ do
+      let query' = Task Todo (Val (StrictTerm "nonexistent term"))
+      query query' docWithTasks `shouldBe` False
+
+    it "matches a document with any tasks ('Both') containing a specific term" $ do
+      let query' = Task Both (Val (FuzzyTerm "general term"))
+      query query' docWithTasks `shouldBe` True
+
+alertQuerySpec :: Spec
+alertQuerySpec = parallel $ do
+  describe "Alert Query Functionality" $ parallel $ do
+    let sampleMarkdownDocWithAlerts =
+          [r|
+# Introduction
+
+This is a Markdown document with alerts for **testing purposes**.
+
+## Alerts
+
+> [!WARNING]
+> Warning alert with a specific term.
+
+> [!IMPORTANT]
+> Important alert with another term.
+
+> [!NOTE]
+> Another alert
+
+|]
+    let sampleMarkdownAstWithAlerts = fromRight2 Nothing $ markdownAstWith (gfmExtensions <> defaultSyntaxSpec) "testWithAlerts" (T.pack sampleMarkdownDocWithAlerts)
+    let docWithAlerts = Document samplePath sampleMetadata sampleMarkdownAstWithAlerts (T.pack sampleMarkdownDocWithAlerts)
+
+    it "matches a document with a specific type of alert containing a term" $ do
+      let query' = Alert WarningAlert (Val (StrictTerm "term"))
+      query query' docWithAlerts `shouldBe` True
+
+    it "does not match a document with alerts of a different type" $ do
+      let query' = Alert WarningAlert (Val (StrictTerm "another"))
+      query query' docWithAlerts `shouldBe` False
+
+    it "matches a document with alerts of a specific type using a complex boolean expression" $ do
+      let query' = Alert NoteAlert (And (Val (FuzzyTerm "AlErT")) (Not (Val (StrictTerm "Alert"))))
+      query query' docWithAlerts `shouldBe` True
+
 spec :: Spec
 spec = parallel $ do
   metadataQuerySpec
   pathQuerySpec
   linkQuerySpec
   contentQuerySpec
+  taskQuerySpec
+  alertQuerySpec

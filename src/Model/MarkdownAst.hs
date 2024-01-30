@@ -216,7 +216,7 @@ toPlainTextBuilder' (MarkdownAst ele _ _) = case ele of
       tableHelper :: [[Maybe MarkdownAst]] -> TB.Builder
       tableHelper [] = ""
       tableHelper (x : xs) =
-        mconcat (map (\y -> toPlainTextBuilder y <> "\n") x) <> "\n" <> tableHelper xs
+        mconcat (map (\y -> toPlainTextBuilder y <> " ") x) <> "\n" <> tableHelper xs
   ReferenceLinkDefination label (dest, title) ->
     "[" <> TB.fromText label <> "] " <> TB.fromText dest <> " " <> TB.fromText title
   DefinitionList _ asts ->
