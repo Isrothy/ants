@@ -299,6 +299,50 @@ This is a Markdown document with alerts for **testing purposes**.
       let query' = Alert NoteAlert (And (Val (FuzzyTerm "AlErT")) (Not (Val (StrictTerm "Alert"))))
       query query' docWithAlerts `shouldBe` True
 
+complexQuerySpec :: Spec
+complexQuerySpec = describe "Complex Query Functionality" $ parallel $ do
+  let sampleMarkdownDocWithTasksAndAlerts =
+        [r|
+# Document with Tasks and Alerts
+
+## Tasks
+
+- [x] Completed task with specific term
+- [ ] Unfinished task
+- [x] Another completed task
+
+## Alerts
+
+> [!IMPORTANT]
+> Important alert with a specific term.
+
+> [!WARNING]
+> Warning alert with general term.
+
+## Content
+
+|]
+  let sampleMarkdownAstWithTasksAndAlerts = fromRight2 Nothing $ markdownAstWith (gfmExtensions <> defaultSyntaxSpec) "testWithTasksAndAlerts" (T.pack sampleMarkdownDocWithTasksAndAlerts)
+  let docWithTasksAndAlerts = Document samplePath sampleMetadata sampleMarkdownAstWithTasksAndAlerts (T.pack sampleMarkdownDocWithTasksAndAlerts)
+
+  it "matches a document with both a specific alert and a done task" $ do
+    let alertQuery = Alert ImportantAlert (Val (CaseInsensitiveTerm "important"))
+    let taskQuery = Task Done (Val (StrictTerm "specific"))
+    let complexQuery = And (Val alertQuery) (Val taskQuery)
+    query complexQuery docWithTasksAndAlerts `shouldBe` True
+
+  it "does not match a document when only one part of an AND query is satisfied" $ do
+    let alertQuery = Alert ImportantAlert (Val (StrictTerm "nonexistent"))
+    let taskQuery = Task Done (Val (StrictTerm "specific"))
+    let complexQuery = And (Val alertQuery) (Val taskQuery)
+    query complexQuery docWithTasksAndAlerts `shouldBe` False
+
+  it "matches a document when at least one part of an OR query is satisfied" $ do
+    let alertQuery = Alert ImportantAlert (Val (FuzzyTerm "important"))
+    let taskQuery = Task Done (Val (StrictTerm "nonexistent"))
+    let complexQuery = Or (Val alertQuery) (Val taskQuery)
+    query complexQuery docWithTasksAndAlerts `shouldBe` True
+
 spec :: Spec
 spec = parallel $ do
   metadataQuerySpec
@@ -307,3 +351,4 @@ spec = parallel $ do
   contentQuerySpec
   taskQuerySpec
   alertQuerySpec
+  complexQuerySpec

@@ -1,3 +1,4 @@
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -48,6 +49,9 @@ plain f = f . toPlainText
 data TaskType = Done | Todo | Both
   deriving (Show, Eq)
 
+class IsQuery a where
+  query :: a -> DocFilter
+
 data Query where
   Author :: (BoolExpr Term) -> Query
   Title :: (BoolExpr Term) -> Query
@@ -61,21 +65,27 @@ data Query where
   InDirectory :: Path Rel Dir -> Query
   deriving (Show, Eq)
 
-query :: Query -> DocFilter
-query (Author t) = metadata $ match t . fromMaybe "" . M.author
-query (Title t) = metadata $ match t . fromMaybe "" . M.title
-query (Tag t) = metadata $ any (match t) . M.tags
-query (Description t) = metadata $ match t . M.description
-query (Content t) = (ast . plain) (match t)
-query (Task Both t) = ast' $ any (match t . toPlainText . snd) . findTasks
-query (Task Done t) = ast' $ any (match t . toPlainText) . findFinishedTasks
-query (Task Todo t) = ast' $ any (match t . toPlainText) . findUnfinishedTasks
-query (Alert a t) = ast' $ any (((== a) . fst) && (match t . toPlainText) . snd) . findAlerts
-query (DateTimeRange start end) = metadata $ maybe False (between start end) . M.dateTime
-  where
-    between (Just s) (Just e) d = s <= e && d >= s && d < e
-    between (Just s) _ d = d >= s
-    between _ (Just e) d = d < e
-    between _ _ _ = True
-query (HasLink p) = ast' $ elem (Just p) . map (parseRelFile . T.unpack . fst) . findLinks
-query (InDirectory p) = relPath $ isProperPrefixOf p
+instance IsQuery Query where
+  query (Author t) = metadata $ match t . fromMaybe "" . M.author
+  query (Title t) = metadata $ match t . fromMaybe "" . M.title
+  query (Tag t) = metadata $ any (match t) . M.tags
+  query (Description t) = metadata $ match t . M.description
+  query (Content t) = (ast . plain) (match t)
+  query (Task Both t) = ast' $ any (match t . toPlainText . snd) . findTasks
+  query (Task Done t) = ast' $ any (match t . toPlainText) . findFinishedTasks
+  query (Task Todo t) = ast' $ any (match t . toPlainText) . findUnfinishedTasks
+  query (Alert a t) = ast' $ any (((== a) . fst) && (match t . toPlainText) . snd) . findAlerts
+  query (DateTimeRange start end) = metadata $ maybe False (between start end) . M.dateTime
+    where
+      between (Just s) (Just e) d = s <= e && d >= s && d < e
+      between (Just s) _ d = d >= s
+      between _ (Just e) d = d < e
+      between _ _ _ = True
+  query (HasLink p) = ast' $ elem (Just p) . map (parseRelFile . T.unpack . fst) . findLinks
+  query (InDirectory p) = relPath $ isProperPrefixOf p
+
+instance IsQuery (BoolExpr Query) where
+  query (Val q) = query q
+  query (And a b) = query a && query b
+  query (Or a b) = query a || query b
+  query (Not a) = not . query a
