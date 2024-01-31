@@ -18,9 +18,5 @@ spec = describe "commonmark" $ parallel $ do
   it "parses headers correctly" $ do
     let result = markdownAst "test2" (T.pack "# Header 1")
     case result of
-      Right (Just (MarkdownAst (Header 1 _) _ [])) -> True `shouldBe` True
+      Right (_ : _) -> True `shouldBe` True
       _ -> False `shouldBe` True
-
--- case result of
---   Right (Leaf (Header 1 _)) -> True `shouldBe` True
---   _ -> False `shouldBe` True

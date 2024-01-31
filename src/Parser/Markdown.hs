@@ -12,7 +12,7 @@ import Data.Data
 import qualified Data.Text as T
 import Model.MarkdownAst
 
-markdownAst :: String -> T.Text -> Either ParseError (Maybe MarkdownAst)
+markdownAst :: String -> T.Text -> Either ParseError MarkdownAst
 markdownAst = commonmark
 
 extensionLookup ::
@@ -65,13 +65,13 @@ extensionLookup =
     ("gfm", gfmExtensions)
   ]
 
-allSpecExtensions :: SyntaxSpec (Either ParseError) (Maybe MarkdownAst) (Maybe MarkdownAst)
+allSpecExtensions :: (Monad m, Typeable m) => SyntaxSpec m MarkdownAst MarkdownAst
 allSpecExtensions = mconcat (map snd extensionLookup)
 
 markdownAstWith ::
   (Monad m) =>
-  SyntaxSpec m (Maybe MarkdownAst) (Maybe MarkdownAst) ->
+  SyntaxSpec m MarkdownAst MarkdownAst ->
   String ->
   T.Text ->
-  m (Either ParseError (Maybe MarkdownAst))
+  m (Either ParseError MarkdownAst)
 markdownAstWith = commonmarkWith
