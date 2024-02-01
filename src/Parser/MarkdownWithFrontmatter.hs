@@ -4,13 +4,14 @@ module Parser.MarkdownWithFrontmatter
 where
 
 import Commonmark
+import Data.Functor.Identity
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TE
 import qualified Data.Yaml as Y
 import Model.MarkdownAst
 import Model.Metadata
-import Parser.Markdown
 import Parser.Frontmatter
+import Parser.Markdown
 import Text.Parsec
 import Text.Parsec.Text
 
@@ -20,16 +21,16 @@ decodeMaybeMetadata input = case Y.decodeEither' (TE.encodeUtf8 input) of
   Right metadata -> Just metadata
 
 markdownAstWith' ::
-  SyntaxSpec Maybe (Maybe MarkdownAst) (Maybe MarkdownAst) ->
+  SyntaxSpec Identity MarkdownAst MarkdownAst ->
   String ->
   T.Text ->
   Maybe MarkdownAst
 markdownAstWith' ext file text = case markdownAstWith ext file text of
-  Just (Right ast) -> ast
+  Identity (Right ast) -> Just ast
   _ -> Nothing
 
 markdownWithFrontmatter ::
-  SyntaxSpec Maybe (Maybe MarkdownAst) (Maybe MarkdownAst) ->
+  SyntaxSpec Identity MarkdownAst MarkdownAst ->
   String ->
   Parser (Maybe Metadata, Maybe MarkdownAst)
 markdownWithFrontmatter ext file = do

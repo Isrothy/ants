@@ -8,13 +8,14 @@ module Cli.NewNoteGen
     replacePlaceholders,
     fromConfig,
     findPosition,
-    LookupTable
+    LookupTable,
   )
 where
 
 import Commonmark
 import Control.Monad
 import qualified Data.Bifunctor
+import Data.Functor.Identity
 import Data.List (sortBy)
 import Data.Maybe
 import qualified Data.Text as T
@@ -28,23 +29,28 @@ import Safe
 type LookupTable = [(T.Text, T.Text)]
 
 markdownAstWithPlaceholder ::
-  SyntaxSpec Maybe (Maybe MarkdownAst) (Maybe MarkdownAst) ->
+  (Monad m) =>
+  SyntaxSpec m MarkdownAst MarkdownAst ->
   String ->
   T.Text ->
-  Maybe MarkdownAst
-markdownAstWithPlaceholder extensions filename text =
-  case markdownAstWith (placeholderSpec <> extensions <> defaultSyntaxSpec) filename text of
-    Just (Right ast) -> ast
-    _ -> Nothing
+  m (Either ParseError MarkdownAst)
+markdownAstWithPlaceholder extensions =
+  markdownAstWith (placeholderSpec <> extensions <> defaultSyntaxSpec)
 
-replacePlaceholders :: SyntaxSpec Maybe (Maybe MarkdownAst) (Maybe MarkdownAst) -> String -> T.Text -> [(T.Text, T.Text)] -> T.Text
-replacePlaceholders extensions filename text lookupTable = case markdownAstWithPlaceholder extensions filename text of
-  Nothing -> text
-  Just ast ->
-    replacePlaceholders'
-      text
-      (sortBy posReverse (findPlaceholders ast))
-      (map (Data.Bifunctor.first T.toCaseFold) lookupTable)
+replacePlaceholders ::
+  SyntaxSpec Identity MarkdownAst MarkdownAst ->
+  String ->
+  T.Text ->
+  [(T.Text, T.Text)] ->
+  T.Text
+replacePlaceholders extensions filename text lookupTable =
+  case runIdentity $ markdownAstWithPlaceholder extensions filename text of
+    Left _ -> text
+    Right ast ->
+      replacePlaceholders'
+        text
+        (sortBy posReverse (findPlaceholders ast))
+        (map (Data.Bifunctor.first T.toCaseFold) lookupTable)
 
 posReverse :: (T.Text, SourceRange) -> (T.Text, SourceRange) -> Ordering
 posReverse (_, SourceRange ((pos1, _) : _)) (_, SourceRange ((pos2, _) : _)) =

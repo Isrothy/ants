@@ -44,7 +44,7 @@ relPath :: (Path Rel File -> Bool) -> DocFilter
 relPath f = f . D.relPath
 
 plain :: TextFilter -> AstFilter
-plain f = f . toPlainText
+plain f = maybe False (f . toPlainText)
 
 data TaskType = Done | Todo | Both
   deriving (Show, Eq)

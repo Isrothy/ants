@@ -56,6 +56,7 @@ library
     , commonmark-extensions
     , cond
     , data-default
+    , either
     , filepath
     , loop
     , optparse-applicative
@@ -88,6 +89,7 @@ executable ants
     , commonmark-extensions
     , cond
     , data-default
+    , either
     , filepath
     , loop
     , optparse-applicative
@@ -132,6 +134,7 @@ test-suite ants-test
     , commonmark-extensions
     , cond
     , data-default
+    , either
     , filepath
     , hspec
     , loop
@@ -168,6 +171,7 @@ benchmark ants-bench
     , cond
     , criterion
     , data-default
+    , either
     , filepath
     , loop
     , optparse-applicative
