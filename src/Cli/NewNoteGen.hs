@@ -43,13 +43,14 @@ replacePlaceholders ::
   T.Text ->
   [(T.Text, T.Text)] ->
   T.Text
-replacePlaceholders extensions filename text lookupTable = case markdownAstWithPlaceholder extensions filename text of
-  Identity (Left _) -> text
-  Identity (Right ast) ->
-    replacePlaceholders'
-      text
-      (sortBy posReverse (findPlaceholders ast))
-      (map (Data.Bifunctor.first T.toCaseFold) lookupTable)
+replacePlaceholders extensions filename text lookupTable =
+  case runIdentity $ markdownAstWithPlaceholder extensions filename text of
+    Left _ -> text
+    Right ast ->
+      replacePlaceholders'
+        text
+        (sortBy posReverse (findPlaceholders ast))
+        (map (Data.Bifunctor.first T.toCaseFold) lookupTable)
 
 posReverse :: (T.Text, SourceRange) -> (T.Text, SourceRange) -> Ordering
 posReverse (_, SourceRange ((pos1, _) : _)) (_, SourceRange ((pos2, _) : _)) =
