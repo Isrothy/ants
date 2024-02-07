@@ -23,7 +23,6 @@ import Data.Char (isPunctuation)
 import Data.Functor
 import qualified Data.Text as T
 import Data.Time
-import Data.Time.Format
 import Data.Time.Format.ISO8601
 import Model.DocQuery.BoolExpr (BoolExpr (..))
 import Model.DocQuery.Query hiding (query)

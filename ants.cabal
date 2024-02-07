@@ -59,6 +59,9 @@ library
     , either
     , filepath
     , loop
+    , lsp
+    , lsp-test
+    , lsp-types
     , optparse-applicative
     , parsec
     , path
@@ -92,6 +95,45 @@ executable ants
     , either
     , filepath
     , loop
+    , lsp
+    , lsp-test
+    , lsp-types
+    , optparse-applicative
+    , parsec
+    , path
+    , random
+    , raw-strings-qq
+    , regex-tdfa >=1.3.2 && <1.4
+    , safe
+    , text
+    , time
+    , unordered-containers
+    , vector
+    , yaml
+  default-language: Haskell2010
+
+executable ants-lsp
+  main-is: Main.hs
+  other-modules:
+      Paths_ants
+  hs-source-dirs:
+      lsp
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-export-lists -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      aeson
+    , ants
+    , base >=4.7 && <5
+    , bytestring
+    , commonmark
+    , commonmark-extensions
+    , cond
+    , data-default
+    , either
+    , filepath
+    , loop
+    , lsp
+    , lsp-test
+    , lsp-types
     , optparse-applicative
     , parsec
     , path
@@ -138,6 +180,9 @@ test-suite ants-test
     , filepath
     , hspec
     , loop
+    , lsp
+    , lsp-test
+    , lsp-types
     , optparse-applicative
     , parsec
     , path
@@ -174,6 +219,9 @@ benchmark ants-bench
     , either
     , filepath
     , loop
+    , lsp
+    , lsp-test
+    , lsp-types
     , optparse-applicative
     , parsec
     , path

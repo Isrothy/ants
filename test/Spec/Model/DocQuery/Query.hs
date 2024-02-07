@@ -327,8 +327,7 @@ complexQuerySpec = describe "Complex Query Functionality" $ parallel $ do
 
  ## Content
 
- |]
-  -- let sampleMarkdownAstWithTasksAndAlerts = fromRight2 Nothing $ markdownAstWith (gfmExtensions <> defaultSyntaxSpec) "testWithTasksAndAlerts" (T.pack sampleMarkdownDocWithTasksAndAlerts)
+|]
 
   let sampleMarkdownAstWithTasksAndAlerts =
         rightToMaybe $
