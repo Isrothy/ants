@@ -12,25 +12,25 @@ where
 
 import Cli.NewNoteGen (LookupTable, fromConfig, replacePlaceholders)
 import Data.Aeson (Value (String), decode)
+import Data.Char (isSpace)
 import Data.HashMap.Internal.Array (write)
 import Data.Maybe (fromJust, fromMaybe)
 import Data.String (fromString)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as T
 import Data.Time (formatTime)
 import Data.Time.Clock (UTCTime, getCurrentTime)
 import Data.Time.Format (defaultTimeLocale)
 import Data.Time.LocalTime
+import qualified Data.Yaml as Y
 import Model.Config
+import Model.Document (Document (metadata))
+import Model.Metadata
 import Options.Applicative
+import Parser.Markdown (allSpecExtensions, extensionLookup)
 import Parser.Opts
 import System.FilePath
 import Text.RawString.QQ
-import Parser.Markdown (allSpecExtensions, extensionLookup)
-import Model.Document (Document(metadata))
-import Model.Metadata
-import qualified Data.Yaml as Y
-import qualified Data.Text.Encoding as T
-import Data.Char (isSpace)
 
 initNotebook :: InitOptions -> IO ()
 initNotebook _ = do
@@ -50,10 +50,10 @@ initNotebook _ = do
 }|]
   writeFile "config.json" exampleConfig
   let exampleTemplate =
-        [r|# {title}
+        [r|# {{title}}
 
-Today is {date} and it's {time} now.
-I'm writing about {game}.
+Today is {{date}} and it's {{time}} now.
+I'm writing about {{game}}.
 |]
   writeFile "default.md" exampleTemplate
 
@@ -75,16 +75,18 @@ newNote op = do
   let filename = joinPath [dir op, "default.md"]
   template <- readFile filename
   let replacedContent = replacePlaceholders (foldMap (\x -> fromMaybe mempty $ lookup (T.unpack x) extensionLookup) (extensions config)) filename (T.pack template) newtab
-  let mdata = Metadata {
-    title = Just $ Parser.Opts.title op,
-    author = lookup "name" newtab,
-    dateTime = Just tim,
-    tags = [],
-    description = ""
-  }
+  let mdata =
+        Metadata
+          { title = Just $ Parser.Opts.title op,
+            author = lookup "name" newtab,
+            dateTime = Just tim,
+            tags = [],
+            description = ""
+          }
   let output = joinPath [dir op, T.unpack (T.map (\c -> if isSpace c then '-' else c) $ T.toLower $ Parser.Opts.title op) ++ ".md"]
   writeFile output ("---\n" ++ T.unpack (T.decodeUtf8 (Y.encode mdata)) ++ "---\n" ++ T.unpack replacedContent)
   putStrLn output
+
 entrance :: Options -> IO ()
 entrance op = case optCommand op of
   Init x -> initNotebook x
