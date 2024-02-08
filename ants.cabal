@@ -172,6 +172,7 @@ test-suite ants-test
   main-is: Main.hs
   other-modules:
       Spec.Cli.NewNoteGen
+      Spec.Lsp.Server
       Spec.Model.Config
       Spec.Model.DocQuery.Query
       Spec.Model.DocQuery.Term

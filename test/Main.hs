@@ -1,4 +1,5 @@
 import qualified Spec.Cli.NewNoteGen
+import qualified Spec.Lsp.Server
 import qualified Spec.Model.Config
 import qualified Spec.Model.DocQuery.Query
 import qualified Spec.Model.DocQuery.Term
@@ -24,4 +25,5 @@ main = hspec $ parallel $ do
   Spec.Parser.DocQuery.spec
   Spec.Parser.MarkdownWithFrontmatter.spec
   Spec.Util.Fuzzy.spec
+  Spec.Lsp.Server.spec
   return ()
