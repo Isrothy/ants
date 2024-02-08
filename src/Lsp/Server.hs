@@ -24,7 +24,12 @@ import System.IO (stderr)
 debug :: (MonadIO m) => T.Text -> m ()
 debug msg = liftIO $ Text.hPutStrLn stderr $ "[ants-lsp] " <> msg
 
-textDocumentHoverHandler :: forall {f :: MessageDirection} {m :: Method f Request} {a} {b} {t}. (MessageParams m ~ HoverParams) => TRequestMessage m -> (Either a (Hover |? b) -> t) -> t
+textDocumentHoverHandler ::
+  forall {f :: MessageDirection} {m :: Method f Request} {a} {b} {t}.
+  (MessageParams m ~ HoverParams) =>
+  TRequestMessage m ->
+  (Either a (Hover |? b) -> t) ->
+  t
 textDocumentHoverHandler req responder = do
   let TRequestMessage _ _ _ (HoverParams _doc pos _workDone) = req
       Position _l _c' = pos
@@ -37,7 +42,12 @@ initializedHandler :: (MonadIO m) => p -> m ()
 initializedHandler _not = do
   debug "Initialized"
 
-textDocumentDefinitionHandler :: forall {f :: MessageDirection} {m :: Method f Request} {a} {b} {t}. (MessageParams m ~ DefinitionParams) => TRequestMessage m -> (Either a (Definition |? b) -> t) -> t
+textDocumentDefinitionHandler ::
+  forall {f :: MessageDirection} {m :: Method f Request} {a} {b} {t}.
+  (MessageParams m ~ DefinitionParams) =>
+  TRequestMessage m ->
+  (Either a (Definition |? b) -> t) ->
+  t
 textDocumentDefinitionHandler req responder = do
   let TRequestMessage _ _ _ (DefinitionParams (TextDocumentIdentifier doc) pos _ _) = req
   responder (Right $ InL $ Definition $ InL $ Location doc $ Range pos pos)
