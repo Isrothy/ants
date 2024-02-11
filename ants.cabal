@@ -27,6 +27,7 @@ library
   exposed-modules:
       Cli.InitNoteBook
       Cli.NewNoteGen
+      Data.Aeson.Extra
       Lib
       Lsp.Server
       Model.Config
@@ -43,8 +44,9 @@ library
       Parser.MarkdownWithFrontmatter
       Parser.Opts
       Parser.Placeholder
+      Path.Bridge
+      Project.DocLoader
       Project.ProjectRoot
-      Util.ExAeson
       Util.Fuzzy
   other-modules:
       Paths_ants
