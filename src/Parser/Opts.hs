@@ -9,17 +9,17 @@ module Parser.Opts
     Command (..),
     InitOptions (..),
     NewOptions (..),
+    LookupTable,
   )
 where
 
-import Cli.NewNoteGen (LookupTable)
-import Data.Aeson (Value (String))
 import Data.List (elemIndex)
 import Data.Maybe (maybeToList)
 import Data.String (fromString)
 import qualified Data.Text as T
-import Model.Document (Document (metadata))
 import Options.Applicative
+
+type LookupTable = [(T.Text, T.Text)]
 
 data NewOptions = NewOptions
   { title :: T.Text,
