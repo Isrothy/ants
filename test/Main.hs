@@ -10,6 +10,7 @@ import qualified Spec.Parser.Markdown
 import qualified Spec.Parser.MarkdownWithFrontmatter
 import qualified Spec.Parser.Placeholder
 import qualified Spec.Util.Fuzzy
+import qualified Spec.Util.ProjectRoot
 import Test.Hspec
 
 main :: IO ()
@@ -25,5 +26,6 @@ main = hspec $ parallel $ do
   Spec.Parser.DocQuery.spec
   Spec.Parser.MarkdownWithFrontmatter.spec
   Spec.Util.Fuzzy.spec
+  Spec.Util.ProjectRoot.spec
   Spec.Lsp.Server.spec
   return ()

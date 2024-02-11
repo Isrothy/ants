@@ -46,6 +46,7 @@ dependencies:
   - regex-tdfa ^>= 1.3.2
   - safe
   - text
+  - temporary
   - time
   - unliftio
   - unordered-containers
