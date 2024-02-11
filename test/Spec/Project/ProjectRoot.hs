@@ -8,8 +8,8 @@ where
 
 import Control.Exception (bracket_)
 import Path
+import Path.Bridge
 import Project.ProjectRoot
-import System.Directory
 import System.IO.Temp (withSystemTempDirectory)
 import Test.Hspec
 
@@ -22,11 +22,12 @@ spec = do
     withSystemTempDirectory "projectRoot" $ \dir -> do
       currentDir <- parseAbsDir dir
       let setup = do
-            createDirectory (toFilePath (currentDir </> configDir))
-            setCurrentDirectory dir
+            createDirectory (currentDir </> configDir)
+            setCurrentDirectory currentDir
           cleanup = do
-            sub <- listDirectory dir
-            mapM_ removeDirectoryRecursive sub
+            (dirs, files) <- listDirectory currentDir
+            mapM_ removeDirectoryRecursive dirs
+            mapM_ removeFile files
       bracket_ setup cleanup $ do
         foundRoot <- findRoot
         foundRoot `shouldBe` Just currentDir
@@ -40,13 +41,14 @@ spec = do
     withSystemTempDirectory "deepProjectRoot" $ \dir -> do
       rootDir <- parseAbsDir dir
       let setup = do
-            createDirectoryIfMissing True (toFilePath (rootDir </> configDir))
-            createDirectoryIfMissing True (toFilePath (rootDir </> $(mkRelDir "a/b/c")))
-            setCurrentDirectory $ toFilePath (rootDir </> $(mkRelDir "a/b/c"))
+            createDirectoryIfMissing True (rootDir </> configDir)
+            createDirectoryIfMissing True (rootDir </> $(mkRelDir "a/b/c"))
+            setCurrentDirectory (rootDir </> $(mkRelDir "a/b/c"))
           cleanup = do
-            setCurrentDirectory dir
-            sub <- listDirectory dir
-            mapM_ removeDirectoryRecursive sub
+            setCurrentDirectory rootDir
+            (dirs, files) <- listDirectory rootDir
+            mapM_ removeDirectoryRecursive dirs
+            mapM_ removeFile files
       bracket_ setup cleanup $ do
         foundRoot <- findRoot
         foundRoot `shouldBe` Just rootDir

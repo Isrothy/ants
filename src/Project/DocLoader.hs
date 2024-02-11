@@ -2,7 +2,7 @@
 
 module Project.DocLoader
   ( loadDocumentFromPath,
-    loadAllFromDirectory,
+    -- loadAllFromDirectory,
   )
 where
 
@@ -40,12 +40,12 @@ loadDocumentFromPath spec path = do
         text = text
       }
 
-loadAllFromDirectory ::
-  SyntaxSpec Identity MarkdownAst MarkdownAst ->
-  P.Path b P.Dir ->
-  IO Document
-loadAllFromDirectory spec dir = do
-  docs <- listDirectory (P.toFilePath dir)
-  let paths = map (dir </>) docs
-  docs <- mapM (loadDocumentFromPath spec) paths
-  return (head docs)
+-- loadAllFromDirectory ::
+--   SyntaxSpec Identity MarkdownAst MarkdownAst ->
+--   P.Path b P.Dir ->
+--   IO Document
+-- loadAllFromDirectory spec dir = do
+--   docs <- listDirectory (P.toFilePath dir)
+--   let paths = map (dir </>) docs
+--   docs <- mapM (loadDocumentFromPath spec) paths
+--   return (head docs)
