@@ -30,6 +30,7 @@ dependencies:
   - data-default
   - directory
   - either
+  - extra
   - filepath
   - mtl
   - lens
