@@ -1,6 +1,6 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Util.ProjectRoot (findRoot) where
+module Project.ProjectRoot (findRoot) where
 
 import Control.Conditional
 import Path

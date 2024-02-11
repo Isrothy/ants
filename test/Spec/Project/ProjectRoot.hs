@@ -1,17 +1,17 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Spec.Util.ProjectRoot
+module Spec.Project.ProjectRoot
   ( spec,
   )
 where
 
 import Control.Exception (bracket_)
 import Path
+import Project.ProjectRoot
 import System.Directory
 import System.IO.Temp (withSystemTempDirectory)
 import Test.Hspec
-import Util.ProjectRoot
 
 configDir :: Path Rel Dir
 configDir = $(mkRelDir ".ants")

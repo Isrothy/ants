@@ -43,9 +43,9 @@ library
       Parser.MarkdownWithFrontmatter
       Parser.Opts
       Parser.Placeholder
+      Project.ProjectRoot
       Util.ExAeson
       Util.Fuzzy
-      Util.ProjectRoot
   other-modules:
       Paths_ants
   hs-source-dirs:
@@ -187,8 +187,8 @@ test-suite ants-test
       Spec.Parser.Markdown
       Spec.Parser.MarkdownWithFrontmatter
       Spec.Parser.Placeholder
+      Spec.Project.ProjectRoot
       Spec.Util.Fuzzy
-      Spec.Util.ProjectRoot
       Paths_ants
   hs-source-dirs:
       test
