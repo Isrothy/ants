@@ -46,6 +46,7 @@ library
       Parser.Opts
       Parser.Placeholder
       Project.DocLoader
+      Project.Link
       Project.ProjectRoot
       Util.Fuzzy
   other-modules:
@@ -72,6 +73,7 @@ library
     , lsp-test
     , lsp-types
     , mtl
+    , network-uri
     , optparse-applicative
     , parsec
     , path
@@ -117,6 +119,7 @@ executable ants
     , lsp-test
     , lsp-types
     , mtl
+    , network-uri
     , optparse-applicative
     , parsec
     , path
@@ -162,6 +165,7 @@ executable ants-ls
     , lsp-test
     , lsp-types
     , mtl
+    , network-uri
     , optparse-applicative
     , parsec
     , path
@@ -197,6 +201,7 @@ test-suite ants-test
       Spec.Parser.MarkdownWithFrontmatter
       Spec.Parser.Placeholder
       Spec.Project.DocLoader
+      Spec.Project.Link
       Spec.Project.ProjectRoot
       Spec.Util.Fuzzy
       Paths_ants
@@ -224,6 +229,7 @@ test-suite ants-test
     , lsp-test
     , lsp-types
     , mtl
+    , network-uri
     , optparse-applicative
     , parsec
     , path
@@ -272,6 +278,7 @@ benchmark ants-bench
     , lsp-test
     , lsp-types
     , mtl
+    , network-uri
     , optparse-applicative
     , parsec
     , path

@@ -1,5 +1,5 @@
-{-# OPTIONS_GHC -Wno-name-shadowing #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 module Project.DocLoader
   ( loadDocument,
@@ -10,35 +10,28 @@ where
 import Commonmark
 import Control.Monad.Identity (Identity)
 import Data.Default
-import Data.Either
+import Data.Maybe (fromMaybe)
 import qualified Data.Text as T
 import Model.Document
 import Model.MarkdownAst
 import Parser.MarkdownWithFrontmatter
 import Path
 import Path.IO
-import Text.Parsec (parse)
-import Data.Maybe (fromMaybe)
 
 loadDocument ::
   SyntaxSpec Identity MarkdownAst MarkdownAst ->
   Path b Dir ->
   Path Rel File ->
   IO Document
-loadDocument spec anker relPath = do
-  let path = anker </> relPath
+loadDocument spec root relPath = do
+  let path = root </> relPath
   timeCreated <- getModificationTime path
   lastModified <- getModificationTime path
   text <- T.pack <$> readFile (toFilePath path)
   let filename = toFilePath (Path.filename path)
-  let result = markdownWithFrontmatter spec filename text
-  let (meta, ast) = result
-  let metadata = fromMaybe (def metadata) meta
-  return
-    Document
-      {
-        ..
-      }
+  let (mMetadata, ast) = markdownWithFrontmatter spec filename text
+  let metadata = fromMaybe (def metadata) mMetadata
+  return Document {..}
 
 loadAllFromDirectory ::
   SyntaxSpec Identity MarkdownAst MarkdownAst ->
