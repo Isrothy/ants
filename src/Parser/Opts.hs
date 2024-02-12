@@ -42,7 +42,7 @@ data Command
 parsePair :: ReadM (T.Text, T.Text)
 parsePair = eitherReader $ \s ->
   case elemIndex '=' s of
-    Nothing -> Left "No = in var"
+    Nothing -> Left "No = in variable assignment"
     Just idx -> Right (fromString (take idx s), fromString (drop (idx + 1) s))
 
 newCommand :: Parser Command
