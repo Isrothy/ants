@@ -4,17 +4,17 @@ module Project.ProjectRoot (findRoot) where
 
 import Control.Conditional
 import Path
-import System.Directory
+import Path.IO
 
 configDir :: Path Rel Dir
 configDir = $(mkRelDir ".ants")
 
 hasSubdir :: Path Abs Dir -> Path Rel Dir -> IO Bool
-hasSubdir root target = doesDirectoryExist (toFilePath (root </> target))
+hasSubdir root target = doesDirExist (root </> target)
 
 findRoot :: IO (Maybe (Path Abs Dir))
 findRoot = do
-  cwd <- getCurrentDirectory >>= parseAbsDir
+  cwd <- getCurrentDir
   helper cwd
   where
     helper dir = do

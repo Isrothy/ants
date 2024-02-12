@@ -44,7 +44,6 @@ library
       Parser.MarkdownWithFrontmatter
       Parser.Opts
       Parser.Placeholder
-      Path.Bridge
       Project.DocLoader
       Project.ProjectRoot
       Util.Fuzzy
@@ -75,6 +74,7 @@ library
     , optparse-applicative
     , parsec
     , path
+    , path-io
     , process
     , random
     , raw-strings-qq
@@ -119,6 +119,7 @@ executable ants
     , optparse-applicative
     , parsec
     , path
+    , path-io
     , process
     , random
     , raw-strings-qq
@@ -163,6 +164,7 @@ executable ants-ls
     , optparse-applicative
     , parsec
     , path
+    , path-io
     , process
     , random
     , raw-strings-qq
@@ -192,6 +194,7 @@ test-suite ants-test
       Spec.Parser.Markdown
       Spec.Parser.MarkdownWithFrontmatter
       Spec.Parser.Placeholder
+      Spec.Project.DocLoader
       Spec.Project.ProjectRoot
       Spec.Util.Fuzzy
       Paths_ants
@@ -222,6 +225,7 @@ test-suite ants-test
     , optparse-applicative
     , parsec
     , path
+    , path-io
     , process
     , random
     , raw-strings-qq
@@ -269,6 +273,7 @@ benchmark ants-bench
     , optparse-applicative
     , parsec
     , path
+    , path-io
     , process
     , random
     , raw-strings-qq

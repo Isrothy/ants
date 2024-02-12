@@ -41,6 +41,7 @@ dependencies:
   - optparse-applicative
   - parsec
   - path
+  - path-io
   - process
   - random
   - raw-strings-qq

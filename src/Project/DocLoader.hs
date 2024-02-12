@@ -7,7 +7,6 @@ module Project.DocLoader
 where
 
 import Commonmark
-import Control.Monad.Extra
 import Control.Monad.Identity (Identity)
 import Data.Default
 import Data.Either
@@ -16,7 +15,7 @@ import qualified Model.Document as D
 import Model.MarkdownAst
 import Parser.MarkdownWithFrontmatter
 import Path
-import Path.Bridge
+import Path.IO
 import Text.Parsec (parse)
 
 loadDocument ::
@@ -43,19 +42,11 @@ loadDocument spec anker relPath = do
         D.text = text
       }
 
-tree :: Path b Dir -> IO [Path b File]
-tree dir = do
-  (dirs, files) <- listDirectory dir
-  let dirs' = map (dir </>) dirs
-      files' = map (dir </>) files
-  sub <- concatMapM tree dirs'
-  return $ sub ++ files'
-
 loadAllFromDirectory ::
   SyntaxSpec Identity MarkdownAst MarkdownAst ->
   Path b Dir ->
   IO [D.Document]
-loadAllFromDirectory spec dir =
-  tree dir
-    >>= mapM (stripProperPrefix dir)
-    >>= mapM (loadDocument spec dir)
+loadAllFromDirectory spec dir = do
+  (_, files) <- listDirRecurRel dir
+  let mdFiles = filter ((== Just ".md") . fileExtension) files
+  mapM (loadDocument spec dir) mdFiles
