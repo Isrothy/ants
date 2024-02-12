@@ -10,12 +10,14 @@
 module Model.MarkdownAst
   ( MarkdownAst,
     MarkdownElement (..),
+    MarkdownAstNode (..),
     findPlaceholders,
     findLinks,
     findTasks,
     findFinishedTasks,
     findUnfinishedTasks,
     findAlerts,
+    nodeAt,
   )
 where
 
@@ -27,17 +29,17 @@ import qualified Data.Text.Internal.Builder as TB
 import qualified Data.Text.Lazy as LT
 import Parser.Placeholder
 
-data Node = Node
+data MarkdownAstNode = MarkdownAstNode
   { element :: MarkdownElement,
     sourceRange :: Maybe SourceRange,
     attributes :: Attributes
   }
   deriving (Show, Eq)
 
-type MarkdownAst = [Node]
+type MarkdownAst = [MarkdownAstNode]
 
 rawNode :: MarkdownElement -> MarkdownAst
-rawNode x = [Node x Nothing []]
+rawNode x = [MarkdownAstNode x Nothing []]
 
 data MarkdownElement where
   Text :: T.Text -> MarkdownElement
@@ -98,13 +100,13 @@ data MarkdownElement where
 
 instance HasAttributes MarkdownAst where
   addAttributes _ [] = []
-  addAttributes attrs1 [Node item sr attrs2] = [Node item sr (attrs1 ++ attrs2)]
-  addAttributes attrs1 xs = [Node (Span xs) Nothing attrs1]
+  addAttributes attrs1 [MarkdownAstNode item sr attrs2] = [MarkdownAstNode item sr (attrs1 ++ attrs2)]
+  addAttributes attrs1 xs = [MarkdownAstNode (Span xs) Nothing attrs1]
 
 instance Rangeable MarkdownAst where
   ranged _ [] = []
-  ranged sr [Node item _ attrs] = [Node item (Just sr) attrs]
-  ranged sr xs = [Node (Span xs) (Just sr) []]
+  ranged sr [MarkdownAstNode item _ attrs] = [MarkdownAstNode item (Just sr) attrs]
+  ranged sr xs = [MarkdownAstNode (Span xs) (Just sr) []]
 
 instance IsInline MarkdownAst where
   lineBreak = rawNode LineBreak
@@ -172,14 +174,14 @@ instance HasQuoted MarkdownAst where
 
 instance HasSpan MarkdownAst where
   spanWith _ [] = []
-  spanWith attrs1 [Node item sr attrs2] = [Node item sr (attrs1 ++ attrs2)]
-  spanWith attrs1 xs = [Node (Span xs) Nothing attrs1]
+  spanWith attrs1 [MarkdownAstNode item sr attrs2] = [MarkdownAstNode item sr (attrs1 ++ attrs2)]
+  spanWith attrs1 xs = [MarkdownAstNode (Span xs) Nothing attrs1]
 
 instance HasDiv MarkdownAst where
   div_ = id
 
-toPlainTextBuilder' :: Node -> TB.Builder
-toPlainTextBuilder' (Node ele _ _) = case ele of
+toPlainTextBuilder' :: MarkdownAstNode -> TB.Builder
+toPlainTextBuilder' (MarkdownAstNode ele _ _) = case ele of
   Text t -> TB.fromText t
   Entity t -> TB.fromText t
   LineBreak -> "\n"
@@ -272,18 +274,18 @@ children _ = []
 
 findPlaceholders :: MarkdownAst -> [(T.Text, SourceRange)]
 findPlaceholders = concatMap \case
-  (Node (Placeholder txt) srange _) -> maybeToList (fmap (txt,) srange)
-  (Node ele _ _) -> concatMap findPlaceholders (children ele)
+  (MarkdownAstNode (Placeholder txt) srange _) -> maybeToList (fmap (txt,) srange)
+  (MarkdownAstNode ele _ _) -> concatMap findPlaceholders (children ele)
 
 findLinks :: MarkdownAst -> [(T.Text, T.Text)]
 findLinks = concatMap \case
-  (Node (Link target title _) _ _) -> [(target, title)]
-  (Node ele _ _) -> concatMap findLinks (children ele)
+  (MarkdownAstNode (Link target title _) _ _) -> [(target, title)]
+  (MarkdownAstNode ele _ _) -> concatMap findLinks (children ele)
 
 findTasks :: MarkdownAst -> [(Bool, MarkdownAst)]
 findTasks = concatMap \case
-  (Node (TaskList _ _ items) _ _) -> items
-  (Node ele _ _) -> concatMap findTasks (children ele)
+  (MarkdownAstNode (TaskList _ _ items) _ _) -> items
+  (MarkdownAstNode ele _ _) -> concatMap findTasks (children ele)
 
 findFinishedTasks :: MarkdownAst -> [MarkdownAst]
 findFinishedTasks = map snd . filter fst . findTasks
@@ -293,5 +295,33 @@ findUnfinishedTasks = map snd . filter (not . fst) . findTasks
 
 findAlerts :: MarkdownAst -> [(AlertType, MarkdownAst)]
 findAlerts = concatMap \case
-  (Node (Alert t ast) _ _) -> [(t, ast)]
-  (Node ele _ _) -> concatMap findAlerts (children ele)
+  (MarkdownAstNode (Alert t ast) _ _) -> [(t, ast)]
+  (MarkdownAstNode ele _ _) -> concatMap findAlerts (children ele)
+
+betweenPos :: Int -> Int -> (SourcePos, SourcePos) -> Bool
+betweenPos row col (s1, s2)
+  | row == r1 && row == r2 = c1 <= col && col < c2
+  | row == r1 = c1 <= col
+  | row == r2 = col < c2
+  | r1 < row && row < r2 = True
+  | otherwise = False
+  where
+    r1 = sourceLine s1
+    c1 = sourceColumn s1
+    r2 = sourceLine s2
+    c2 = sourceColumn s2
+
+inRange :: Int -> Int -> SourceRange -> Bool
+inRange row col sr = any (betweenPos row col) (unSourceRange sr)
+
+nodeAt' :: (MarkdownAstNode -> Bool) -> Int -> Int -> MarkdownAstNode -> Maybe MarkdownAstNode
+nodeAt' f row col node@(MarkdownAstNode ele src _) = case src of
+  Just sr
+    | inRange row col sr ->
+        if f node
+          then Just node
+          else listToMaybe $ mapMaybe (nodeAt f row col) $ children ele
+  _ -> Nothing
+
+nodeAt :: (MarkdownAstNode -> Bool) -> Int -> Int -> MarkdownAst -> Maybe MarkdownAstNode
+nodeAt f row col ast = listToMaybe $ mapMaybe (nodeAt' f row col) ast

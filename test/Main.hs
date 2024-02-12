@@ -3,6 +3,7 @@ import qualified Spec.Lsp.Server
 import qualified Spec.Model.Config
 import qualified Spec.Model.DocQuery.Query
 import qualified Spec.Model.DocQuery.Term
+import qualified Spec.Model.MarkdownAst
 import qualified Spec.Model.Metadata
 import qualified Spec.Parser.DocQuery
 import qualified Spec.Parser.Frontmatter
@@ -19,6 +20,7 @@ main = hspec $ parallel $ do
   Spec.Cli.NewNoteGen.spec
   Spec.Model.Config.spec
   Spec.Model.Metadata.spec
+  Spec.Model.MarkdownAst.spec
   Spec.Model.DocQuery.Term.spec
   Spec.Model.DocQuery.Query.spec
   Spec.Parser.Markdown.spec
