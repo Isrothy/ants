@@ -3,11 +3,13 @@
 
 module Project.Link where
 
+import Control.Conditional
 import Control.Exception
 import qualified Data.Text as T
 import Model.MarkdownAst
 import Path
 import Path.IO
+import System.FilePath
 
 headerWithId :: MarkdownAstNode -> T.Text -> Bool
 headerWithId (MarkdownAstNode (Header _ _) _ attrs) id = lookup "id" attrs == Just id
@@ -19,9 +21,9 @@ parseLink input = case T.splitOn "#" input of
   [link] -> Just (link, Nothing)
   link : bookmark : _ -> Just (link, Just bookmark)
 
-followLink :: Path Abs File -> FilePath -> IO (Path Abs File)
-followLink orig link = do
-  let file = parseAbsFile link
-  case file of
-    Just p -> return p
-    Nothing -> resolveFile (parent orig) link
+followLink :: Path Abs File -> FilePath -> IO (Maybe (Path Abs File))
+followLink orig link
+  | null link = return $ Just orig
+  | not (isValid link) = return Nothing
+  | isAbsolute link = return $ parseAbsFile link
+  | otherwise = Just <$> resolveFile (parent orig) link

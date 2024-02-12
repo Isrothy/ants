@@ -4,7 +4,6 @@
 
 module Spec.Project.Link (spec) where
 
-import qualified Data.Text as T
 import Path
 import Path.IO
 import Project.Link
@@ -16,12 +15,16 @@ spec = describe "followLink" $ sequential $ do
     withSystemTempDir "test" $ \dir -> do
       let orig = dir </> $(mkRelFile "orig.md")
       let absPath = dir </> $(mkRelFile "test.md")
-      followLink orig (toFilePath absPath) `shouldReturn` absPath
+      followLink orig (toFilePath absPath) `shouldReturn` Just absPath
 
   it "follows a relative file path correctly" $ do
     withSystemTempDir "test" $ \dir -> do
       _ <- ensureDir (dir </> $(mkRelDir "some/sub/dir"))
       let orig = dir </> $(mkRelFile "some/sub/dir/orig.md")
-      followLink orig "../test.md" `shouldReturn` (dir </> $(mkRelFile "some/sub/test.md"))
+      followLink orig "../test.md" `shouldReturn` Just (dir </> $(mkRelFile "some/sub/test.md"))
 
--- Additional tests can include scenarios with permissions issues, malformed paths, etc.
+  it "is unchanged if link is empty" $ do
+    withSystemTempDir "test" $ \dir -> do
+      _ <- ensureDir (dir </> $(mkRelDir "some/sub/dir"))
+      let orig = dir </> $(mkRelFile "some/sub/dir/orig.md")
+      followLink orig "" `shouldReturn` Just orig
