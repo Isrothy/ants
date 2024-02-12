@@ -25,13 +25,15 @@ placeholderSpec =
 parsePlaceholder :: (Monad m, HasPlaceholder a) => InlineParser m a
 parsePlaceholder = try $ do
   _ <- symbol '{'
+  _ <- symbol '{'
   contents <- try $ untokenize <$> tockens
   return $ placeholder contents
   where
     tockens = do
       tk@(Tok toktype _ _) <- anyTok
       case toktype of
-        Symbol '}' ->
+        Symbol '}' -> do
+          _ <- symbol '}'
           return []
         Symbol '\\' -> do
           tk' <- anyTok

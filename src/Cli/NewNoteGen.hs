@@ -8,32 +8,40 @@ module Cli.NewNoteGen
     replacePlaceholders,
     fromConfig,
     findPosition,
-    LookupTable,
+    newNote,
   )
 where
 
 import Commonmark
 import Control.Monad
+import Data.Aeson (decode)
 import qualified Data.Bifunctor
+import Data.Char (isSpace)
 import Data.Functor.Identity
-import Data.List (sortBy)
-import Data.Maybe
+import Data.List (elemIndex, sortBy)
+import Data.Maybe (fromJust, fromMaybe, maybeToList)
+import Data.String (fromString)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as T
 import qualified Data.Text.Lazy as TL
+import Data.Time
+import qualified Data.Yaml as Y
+import Model.Config
 import qualified Model.Config as Config
 import Model.MarkdownAst
+import qualified Model.Metadata as M
 import Parser.Markdown
+import Parser.Opts
 import Parser.Placeholder
 import Safe
-
-type LookupTable = [(T.Text, T.Text)]
+import System.FilePath
 
 markdownAstWithPlaceholder ::
   (Monad m) =>
   SyntaxSpec m MarkdownAst MarkdownAst ->
   String ->
   T.Text ->
-  m (Either ParseError MarkdownAst)
+  m (Either Commonmark.ParseError MarkdownAst)
 markdownAstWithPlaceholder extensions =
   markdownAstWith (placeholderSpec <> extensions <> defaultSyntaxSpec)
 
@@ -114,3 +122,33 @@ fromConfig = fromTemplate . Config.template
         <> [("time", fromMaybe "%H:%M:%S" $ Config.timeFormat template)]
         <> [("dateTime", fromMaybe "%Y-%m-%dT%H:%M:%S" $ Config.dateTimeFormat template)]
         <> Config.variables template
+
+replaceTime :: LocalTime -> T.Text -> LookupTable -> LookupTable
+replaceTime tim s tab = (s, T.pack $ formatTime defaultTimeLocale (T.unpack $ fromJust (lookup s tab)) tim) : tab
+
+newNote :: NewOptions -> IO ()
+newNote op = do
+  conf <- readFile "config.json"
+  let config =
+        case Data.Aeson.decode $ fromString conf of
+          Just x -> x
+          Nothing -> error "config: Decode failed"
+  let tab = table op ++ fromConfig config
+  tim <- getCurrentTime
+  tz <- getTimeZone tim
+  let localtim = utcToLocalTime tz tim
+  let newtab = foldr (replaceTime localtim) tab ["date", "time", "dateTime"]
+  let filename = joinPath [dir op, "default.md"]
+  template <- readFile filename
+  let replacedContent = replacePlaceholders (foldMap (\x -> fromMaybe mempty $ lookup (T.unpack x) extensionLookup) (extensions config)) filename (T.pack template) newtab
+  let mdata =
+        M.Metadata
+          { M.title = Just $ Parser.Opts.title op,
+            M.author = lookup "name" newtab,
+            M.dateTime = Just tim,
+            M.tags = [],
+            M.description = ""
+          }
+  let output = joinPath [dir op, T.unpack (T.map (\c -> if isSpace c then '-' else c) $ T.toLower $ Parser.Opts.title op) ++ ".md"]
+  writeFile output ("---\n" ++ T.unpack (T.decodeUtf8 (Y.encode mdata)) ++ "---\n" ++ T.unpack replacedContent)
+  putStrLn output

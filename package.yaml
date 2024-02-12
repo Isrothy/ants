@@ -25,10 +25,15 @@ dependencies:
   - bytestring
   - commonmark
   - commonmark-extensions
+  - containers
   - cond
   - data-default
+  - directory
   - either
+  - extra
   - filepath
+  - mtl
+  - lens
   - loop
   - lsp
   - lsp-test
@@ -36,12 +41,16 @@ dependencies:
   - optparse-applicative
   - parsec
   - path
+  - path-io
+  - process
   - random
   - raw-strings-qq
   - regex-tdfa ^>= 1.3.2
   - safe
   - text
+  - temporary
   - time
+  - unliftio
   - unordered-containers
   - vector
   - yaml
@@ -70,7 +79,7 @@ executables:
       - -with-rtsopts=-N
     dependencies:
       - ants
-  ants-lsp:
+  ants-ls:
     main: Main.hs
     source-dirs: lsp
     ghc-options:

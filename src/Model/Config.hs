@@ -20,7 +20,7 @@ import Data.Default
 import qualified Data.Text as T
 import qualified Data.Vector as Vector
 import GHC.Generics
-import Util.ExAeson
+import Data.Aeson.Extra
 
 data Config where
   Config ::

@@ -1,4 +1,4 @@
-module Util.ExAeson
+module Data.Aeson.Extra
   ( parseMap,
     parseList,
     parseString,

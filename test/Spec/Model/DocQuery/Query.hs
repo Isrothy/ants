@@ -18,7 +18,7 @@ import Model.Document
 import Model.MarkdownAst hiding (Alert)
 import qualified Model.Metadata as M
 import Parser.Markdown
-import Path
+import qualified Path as P
 import Test.Hspec
 import Text.RawString.QQ
 import Prelude hiding (and, any, not, or)
@@ -71,12 +71,24 @@ sampleMetadata =
       M.description = "This is a test document with some Haskell and parsing"
     }
 
-samplePath :: Path Rel File
-samplePath = $(mkRelFile "some/test/path/file.txt")
+samplePath :: P.Path P.Rel P.File
+samplePath = $(P.mkRelFile "some/test/path/file.txt")
+
+sampleDoc :: Document
+sampleDoc =
+  Document
+    { relPath = samplePath,
+      timeCreated = UTCTime (fromGregorian 2024 1 1) 0,
+      lastModified = UTCTime (fromGregorian 2024 1 1) 0,
+      filename = "sample.md",
+      metadata = sampleMetadata,
+      ast = sampleMarkdownAst,
+      text = T.pack sampleMarkdownDoc
+    }
 
 metadataQuerySpec :: Spec
 metadataQuerySpec = describe "Metadata Filter" $ do
-  let doc = Document samplePath sampleMetadata sampleMarkdownAst (T.pack sampleMarkdownDoc)
+  let doc = sampleDoc
   it "matches metadata with a specific date range" $ do
     let startDate = parseTimeOrError True defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ" "2021-01-01T00:00:00Z"
     let endDate = parseTimeOrError True defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ" "2021-12-31T23:59:59Z"
@@ -150,14 +162,14 @@ metadataQuerySpec = describe "Metadata Filter" $ do
 pathQuerySpec :: Spec
 pathQuerySpec = do
   describe "Path Matching Filter" $ do
-    let doc = Document samplePath sampleMetadata sampleMarkdownAst (T.pack sampleMarkdownDoc)
+    let doc = sampleDoc
 
     it "matches document with specific relative path" $ do
-      query (InDirectory $(mkRelDir "some/test/path")) doc `shouldBe` True
-      query (InDirectory $(mkRelDir "some/test")) doc `shouldBe` True
+      query (InDirectory $(P.mkRelDir "some/test/path")) doc `shouldBe` True
+      query (InDirectory $(P.mkRelDir "some/test")) doc `shouldBe` True
 
     it "does not match document with different relative path" $ do
-      query (InDirectory $(mkRelDir "other/test/path")) doc `shouldBe` False
+      query (InDirectory $(P.mkRelDir "other/test/path")) doc `shouldBe` False
 
 linkQuerySpec :: Spec
 linkQuerySpec = do
@@ -181,11 +193,11 @@ This document does not contain any links.
   let testMarkdownAstWithLink = rightToMaybe $ markdownAst "test1" (T.pack testDocWithLink)
   let testMarkdownAstWithoutLink = rightToMaybe $ markdownAst "test1" (T.pack testDocWithoutLink)
   let testMarkdownAstMultipleLinks = rightToMaybe $ markdownAst "test1" (T.pack testDocMultipleLinks)
-  let docWithLink = Document samplePath sampleMetadata testMarkdownAstWithLink (T.pack testDocWithLink)
-  let docWithoutLink = Document samplePath sampleMetadata testMarkdownAstWithoutLink (T.pack testDocWithoutLink)
-  let multipleLinksDoc = Document samplePath sampleMetadata testMarkdownAstMultipleLinks (T.pack testDocMultipleLinks)
-  let linkInDoc = $(mkRelFile "someLink/here/test.md")
-  let nonExistentLink = $(mkRelFile "nonexistent/link.md")
+  let docWithLink = sampleDoc {ast = testMarkdownAstWithLink, text = (T.pack testDocWithLink)}
+  let docWithoutLink = sampleDoc {ast = testMarkdownAstWithoutLink, text = (T.pack testDocWithoutLink)}
+  let multipleLinksDoc = sampleDoc {ast = testMarkdownAstMultipleLinks, text = (T.pack testDocMultipleLinks)}
+  let linkInDoc = $(P.mkRelFile "someLink/here/test.md")
+  let nonExistentLink = $(P.mkRelFile "nonexistent/link.md")
 
   describe "Has Link Filter" $ do
     it "matches document containing a specific link" $ do
@@ -208,22 +220,22 @@ contentQuerySpec :: Spec
 contentQuerySpec = parallel $ do
   describe "Complex Content Query Functionality" $ parallel $ do
     it "matches a document with content that satisfies both terms in an AND query" $ do
-      let doc = Document samplePath sampleMetadata sampleMarkdownAst $ T.pack sampleMarkdownDoc
+      let doc = sampleDoc
       let query' = Content (And (Val (StrictTerm "Markdown")) (Val (FuzzyTerm "iteem")))
       query query' doc `shouldBe` True
 
     it "does not match a document when one term in an AND query is not satisfied" $ do
-      let doc = Document samplePath sampleMetadata sampleMarkdownAst $ T.pack sampleMarkdownDoc
+      let doc = sampleDoc
       let query' = Content (And (Val (StrictTerm "markdown")) (Val (FuzzyTerm "test")))
       query query' doc `shouldBe` False
 
     it "matches a document with content that satisfies at least one term in an OR query" $ do
-      let doc = Document samplePath sampleMetadata sampleMarkdownAst $ T.pack sampleMarkdownDoc
+      let doc = sampleDoc
       let query' = Content (Or (Val (StrictTerm "markdown")) (Val (StrictTerm "Ordered")))
       query query' doc `shouldBe` True
 
     it "does not match a document when none of the terms in an OR query are satisfied" $ do
-      let doc = Document samplePath sampleMetadata sampleMarkdownAst $ T.pack sampleMarkdownDoc
+      let doc = sampleDoc
       let query' = Content (Or (Val (StrictTerm "markup")) (Val (StrictTerm "markdown")))
       query query' doc `shouldBe` False
 
@@ -250,7 +262,11 @@ This is a Markdown document with a variety of elements for **testing purposes**.
               )
               "testWithTasks"
               (T.pack sampleMarkdownDocWithTasks)
-  let docWithTasks = Document samplePath sampleMetadata sampleMarkdownAstWithTasks (T.pack sampleMarkdownDocWithTasks)
+  let docWithTasks =
+        sampleDoc
+          { ast = sampleMarkdownAstWithTasks,
+            text = (T.pack sampleMarkdownDocWithTasks)
+          }
 
   it "matches a document with 'Done' tasks containing a specific term" $ do
     let query' = Task Done (Val (StrictTerm "specific term"))
@@ -291,7 +307,11 @@ alertQuerySpec = describe "Alert Query Functionality" $ parallel $ do
               )
               "testWithTasks"
               (T.pack sampleMarkdownDocWithAlerts)
-  let docWithAlerts = Document samplePath sampleMetadata sampleMarkdownAstWithAlerts (T.pack sampleMarkdownDocWithAlerts)
+  let docWithAlerts =
+        sampleDoc
+          { ast = sampleMarkdownAstWithAlerts,
+            text = (T.pack sampleMarkdownDocWithAlerts)
+          }
 
   it "matches a document with a specific type of alert containing a term" $ do
     let query' = Alert WarningAlert (Val (StrictTerm "term"))
@@ -337,7 +357,11 @@ complexQuerySpec = describe "Complex Query Functionality" $ parallel $ do
               )
               "testWithTasks"
               (T.pack sampleMarkdownDocWithTasksAndAlerts)
-  let docWithTasksAndAlerts = Document samplePath sampleMetadata sampleMarkdownAstWithTasksAndAlerts (T.pack sampleMarkdownDocWithTasksAndAlerts)
+  let docWithTasksAndAlerts =
+        sampleDoc
+          { ast = sampleMarkdownAstWithTasksAndAlerts,
+            text = (T.pack sampleMarkdownDocWithTasksAndAlerts)
+          }
 
   it "matches a document with both a specific alert and a done task" $ do
     let alertQuery = Alert ImportantAlert (Val (CaseInsensitiveTerm "important"))
