@@ -49,7 +49,7 @@ gotoLinkedElement ::
   Path Abs Dir ->
   Path Abs File ->
   T.Text ->
-  IO (Maybe (Path Abs File, Maybe MarkdownAstNode))
+  IO (Maybe (D.Document, Maybe MarkdownAstNode))
 gotoLinkedElement spec root orig txt =
   runMaybeT $ do
     (link, tag) <- MaybeT $ return $ parseLink txt
@@ -57,5 +57,6 @@ gotoLinkedElement spec root orig txt =
     exist <- doesFileExist path
     unless exist mzero
     rel <- MaybeT $ return $ stripProperPrefix root path
+    doc <- MaybeT $ Just <$> loadDocument spec root rel
     ast <- MaybeT $ loadDocument spec root rel <&> D.ast
-    return (path, tag >>= (`findHeaderWithId` ast))
+    return (doc, tag >>= (`findHeaderWithId` ast))

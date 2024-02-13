@@ -9,6 +9,7 @@ import qualified Data.Text as T
 import Parser.Markdown
 import Path
 import Path.IO
+import Project.DocLoader
 import Project.Link
 import Test.Hspec
 import Text.RawString.QQ
@@ -61,8 +62,9 @@ gotoLinkedElementSpec = describe "gotoLinkedElement" $ sequential $ do
       let orig = dir </> $(mkRelFile "orig.md")
       let linked = dir </> $(mkRelFile "linked.md")
       writeFile (toFilePath linked) sampleMarkdownDoc
+      doc <- loadDocument allSpecExtensions dir $(mkRelFile "linked.md")
       gotoLinkedElement allSpecExtensions dir orig (T.pack (toFilePath linked))
-        `shouldReturn` Just (linked, Nothing)
+        `shouldReturn` Just (doc, Nothing)
 
   it "resolves a relative link to an existing file without a bookmark" $ do
     withSystemTempDir "test" $ \dir -> do
@@ -70,8 +72,9 @@ gotoLinkedElementSpec = describe "gotoLinkedElement" $ sequential $ do
       let orig = dir </> $(mkRelFile "some/sub/orig.md")
       let linked = dir </> $(mkRelFile "some/sub/dir/linked.md")
       writeFile (toFilePath linked) sampleMarkdownDoc
+      doc <- loadDocument allSpecExtensions dir $(mkRelFile "some/sub/dir/linked.md")
       gotoLinkedElement allSpecExtensions dir orig "../sub/dir/linked.md"
-        `shouldReturn` Just (linked, Nothing)
+        `shouldReturn` Just (doc, Nothing)
 
   it "resolves a absolute link to an existing file with a bookmark" $ do
     withSystemTempDir "test" $ \dir -> do
