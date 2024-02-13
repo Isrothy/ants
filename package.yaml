@@ -51,6 +51,7 @@ dependencies:
   - temporary
   - text
   - time
+  - transformers
   - unliftio
   - unordered-containers
   - vector

@@ -32,7 +32,7 @@ nodeAtSpec :: Spec
 nodeAtSpec = describe "nodeAt" $ do
   it "finds the header node correctly" $ do
     case markdownAst "test" (T.pack sampleMarkdownDoc) of
-      Left _ -> error "Failed to parse markdown"
+      Left _ -> expectationFailure "Failed to parse markdown"
       Right ast -> do
         nodeAt isHeader 1 1 ast `shouldSatisfy` isJust
         nodeAt isHeader 1 9 ast `shouldSatisfy` isJust
@@ -42,7 +42,7 @@ nodeAtSpec = describe "nodeAt" $ do
 
   it "finds the link correctly" $ do
     case markdownAst "test" (T.pack sampleMarkdownDoc) of
-      Left _ -> error "Failed to parse markdown"
+      Left _ -> expectationFailure "Failed to parse markdown"
       Right ast -> do
         nodeAt isLink 2 52 ast `shouldSatisfy` isNothing
         nodeAt isLink 3 49 ast `shouldSatisfy` isNothing

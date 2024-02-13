@@ -17,6 +17,8 @@ module Model.MarkdownAst
     findFinishedTasks,
     findUnfinishedTasks,
     findAlerts,
+    firstNode,
+    allNodes,
     nodeAt,
   )
 where
@@ -314,14 +316,20 @@ betweenPos row col (s1, s2)
 inRange :: Int -> Int -> SourceRange -> Bool
 inRange row col sr = any (betweenPos row col) (unSourceRange sr)
 
-nodeAt' :: (MarkdownAstNode -> Bool) -> Int -> Int -> MarkdownAstNode -> Maybe MarkdownAstNode
-nodeAt' f row col node@(MarkdownAstNode ele src _) = case src of
-  Just sr
-    | inRange row col sr ->
-        if f node
-          then Just node
-          else listToMaybe $ mapMaybe (nodeAt f row col) $ children ele
-  _ -> Nothing
+allNodes' :: (MarkdownAstNode -> Bool) -> MarkdownAstNode -> [MarkdownAstNode]
+allNodes' f node =
+  if f node
+    then [node]
+    else concatMap (allNodes f) $ children $ element node
+
+allNodes :: (MarkdownAstNode -> Bool) -> MarkdownAst -> [MarkdownAstNode]
+allNodes f = concatMap (allNodes' f)
+
+firstNode :: (MarkdownAstNode -> Bool) -> MarkdownAst -> Maybe MarkdownAstNode
+firstNode f ast = listToMaybe (allNodes f ast)
 
 nodeAt :: (MarkdownAstNode -> Bool) -> Int -> Int -> MarkdownAst -> Maybe MarkdownAstNode
-nodeAt f row col ast = listToMaybe $ mapMaybe (nodeAt' f row col) ast
+nodeAt f row col =
+  firstNode \node -> case sourceRange node of
+    Just sr -> inRange row col sr && f node
+    _ -> False

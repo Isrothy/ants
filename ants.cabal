@@ -86,6 +86,7 @@ library
     , temporary
     , text
     , time
+    , transformers
     , unliftio
     , unordered-containers
     , vector
@@ -132,6 +133,7 @@ executable ants
     , temporary
     , text
     , time
+    , transformers
     , unliftio
     , unordered-containers
     , vector
@@ -178,6 +180,7 @@ executable ants-ls
     , temporary
     , text
     , time
+    , transformers
     , unliftio
     , unordered-containers
     , vector
@@ -242,6 +245,7 @@ test-suite ants-test
     , temporary
     , text
     , time
+    , transformers
     , unliftio
     , unordered-containers
     , vector
@@ -291,6 +295,7 @@ benchmark ants-bench
     , temporary
     , text
     , time
+    , transformers
     , unliftio
     , unordered-containers
     , vector
