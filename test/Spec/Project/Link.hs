@@ -86,6 +86,15 @@ gotoLinkedElementSpec = describe "gotoLinkedElement" $ sequential $ do
         Nothing -> expectationFailure "should return something"
         Just (_, ast) -> ast `shouldSatisfy` isJust
 
+  it "goto the bookmark of current file" $ do
+    withSystemTempDir "test" $ \dir -> do
+      let orig = dir </> $(mkRelFile "orig.md")
+      writeFile (toFilePath orig) sampleMarkdownDocWithBookmark
+      ret <- gotoLinkedElement allSpecExtensions dir orig (T.pack "#tag")
+      case ret of
+        Nothing -> expectationFailure "should return something"
+        Just (_, ast) -> ast `shouldSatisfy` isJust
+
   it "resolves a absolute link to an existing file with a wrong bookmark" $ do
     withSystemTempDir "test" $ \dir -> do
       let orig = dir </> $(mkRelFile "orig.md")
