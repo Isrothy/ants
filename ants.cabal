@@ -30,7 +30,10 @@ library
       Cli.NewNoteGen
       Data.Aeson.Extra
       Lib
+      Lsp.Handlers
       Lsp.Server
+      Lsp.State
+      Lsp.Util
       Model.Config
       Model.DocQuery
       Model.DocQuery.BoolExpr
@@ -85,6 +88,7 @@ library
     , safe
     , temporary
     , text
+    , text-rope
     , time
     , transformers
     , unliftio
@@ -132,6 +136,7 @@ executable ants
     , safe
     , temporary
     , text
+    , text-rope
     , time
     , transformers
     , unliftio
@@ -179,6 +184,7 @@ executable ants-ls
     , safe
     , temporary
     , text
+    , text-rope
     , time
     , transformers
     , unliftio
@@ -244,6 +250,7 @@ test-suite ants-test
     , safe
     , temporary
     , text
+    , text-rope
     , time
     , transformers
     , unliftio
@@ -294,6 +301,7 @@ benchmark ants-bench
     , safe
     , temporary
     , text
+    , text-rope
     , time
     , transformers
     , unliftio

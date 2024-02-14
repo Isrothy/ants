@@ -1,61 +1,66 @@
+{-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Lsp.Server
-  ( handlers,
-    textDocumentHoverHandler,
-    initializedHandler,
-    textDocumentDefinitionHandler,
-  )
-where
+module Lsp.Server (run) where
 
+import Control.Concurrent.MVar qualified as MVar
 import Control.Monad.IO.Class
-import Data.Text qualified as T
-import Data.Text.IO qualified as Text
-import Language.LSP.Protocol.Message
-import Language.LSP.Protocol.Types
+import Control.Monad.Trans.Except qualified as Except
+import Control.Monad.Trans.State.Strict qualified as State
+import Data.Text qualified as Text
 import Language.LSP.Server
-import System.IO (stderr)
+import Language.LSP.Server qualified as LSP
+import Lsp.Handlers
+import Lsp.State
 
-debug :: (MonadIO m) => T.Text -> m ()
-debug msg = liftIO $ Text.hPutStrLn stderr $ "[ants-lsp] " <> msg
+run :: IO Int
+run = do
+  state <- MVar.newMVar initialState
+  let interpreter :: LanguageContextEnv ServerConfig -> HandlerM <~> IO
+      interpreter environment = Iso {..}
+        where
+          forward :: HandlerM a -> IO a
+          forward handler =
+            MVar.modifyMVar state \oldState -> do
+              LSP.runLspT environment do
+                (e, newState) <- State.runStateT (Except.runExceptT handler) oldState
+                result <- case e of
+                  Left (Log, _message) -> do
+                    -- let _xtype = MtLog
 
-textDocumentHoverHandler ::
-  forall {f :: MessageDirection} {m :: Method f Request} {a} {b} {t}.
-  (MessageParams m ~ HoverParams) =>
-  TRequestMessage m ->
-  (Either a (Hover |? b) -> t) ->
-  t
-textDocumentHoverHandler req responder = do
-  let TRequestMessage _ _ _ (HoverParams _doc pos _workDone) = req
-      Position _l _c' = pos
-      rsp = Hover (InL ms) (Just range)
-      ms = mkMarkdown "Hello world"
-      range = Range pos pos
-  responder (Right $ InL rsp)
+                    -- LSP.sendNotification SWindowLogMessage LogMessageParams {..}
 
-initializedHandler :: (MonadIO m) => p -> m ()
-initializedHandler _not = do
-  debug "Initialized"
+                    liftIO (fail (Text.unpack _message))
+                  Left (severity_, _message) -> do
+                    -- let _xtype = case severity_ of
+                    --       Error -> MtError
+                    --       Warning -> MtWarning
+                    --       Info -> MtInfo
+                    --       Log -> MtLog
 
-textDocumentDefinitionHandler ::
-  forall {f :: MessageDirection} {m :: Method f Request} {a} {b} {t}.
-  (MessageParams m ~ DefinitionParams) =>
-  TRequestMessage m ->
-  (Either a (Definition |? b) -> t) ->
-  t
-textDocumentDefinitionHandler req responder = do
-  let TRequestMessage _ _ _ (DefinitionParams (TextDocumentIdentifier doc) pos _ _) = req
-  responder (Right $ InL $ Definition $ InL $ Location doc $ Range pos pos)
+                    -- LSP.sendNotification SWindowShowMessage ShowMessageParams {..}
+                    liftIO (fail (Text.unpack _message))
+                  Right a -> do
+                    return a
 
-handlers :: Handlers (LspM ())
-handlers =
-  mconcat
-    [ notificationHandler SMethod_Initialized initializedHandler,
-      requestHandler SMethod_TextDocumentHover textDocumentHoverHandler,
-      requestHandler SMethod_TextDocumentDefinition textDocumentDefinitionHandler
-    ]
+                return (newState, result)
+          backward = liftIO
+  runServer $
+    ServerDefinition
+      { parseConfig = const $ const $ Right ServerConfig,
+        onConfigChange = const $ pure (),
+        defaultConfig = ServerConfig,
+        configSection = "demo",
+        doInitialize = \env _req -> pure $ Right env,
+        staticHandlers = \_caps -> handlers,
+        interpretHandler = interpreter,
+        options = defaultOptions
+      }

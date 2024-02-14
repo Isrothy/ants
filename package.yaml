@@ -50,6 +50,7 @@ dependencies:
   - safe
   - temporary
   - text
+  - text-rope
   - time
   - transformers
   - unliftio

@@ -1,26 +1,34 @@
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE ExtendedDefaultRules #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 
 module Model.Config
   ( Config (..),
-    Template (..)
+    Template (..),
+    getSyntaxSpec,
   )
 where
 
+import Commonmark
 import Control.Applicative ((<|>))
 import Data.Aeson
+import Data.Aeson.Extra
 import Data.Aeson.Key (fromString, fromText)
-import Data.Maybe
+import Data.Data
 import Data.Default
+import Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Vector as Vector
 import GHC.Generics
-import Data.Aeson.Extra
+import Model.MarkdownAst
+import Parser.Markdown
+
 data Config where
   Config ::
     { template :: !Template,
@@ -38,7 +46,11 @@ instance FromJSON Config where
 instance ToJSON Config
 
 instance Default Config where
-  def = Config def []
+  def =
+    Config
+      { template = def,
+        extensions = ["gfm"]
+      }
 
 data Template where
   Template ::
@@ -50,10 +62,7 @@ data Template where
       variables :: ![(T.Text, T.Text)]
     } ->
     Template
-  deriving (Show, Generic, Eq)
-
-instance Default Template where
-  def = Template Nothing Nothing Nothing Nothing Nothing []
+  deriving (Show, Generic, Eq, Default)
 
 instance FromJSON Template where
   parseJSON = withObject "template" $ \o ->
@@ -79,3 +88,6 @@ instance ToJSON Template where
           (fromString "dateTimeFormat" .=) <$> dateTimeFormat',
           Just (fromString "variables" .= variablesToJson variables')
         ]
+
+getSyntaxSpec :: (Monad m, Typeable m) => Config -> SyntaxSpec m MarkdownAst MarkdownAst
+getSyntaxSpec config = lookupSyntax $ map T.unpack (extensions config)

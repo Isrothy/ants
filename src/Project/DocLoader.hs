@@ -8,7 +8,7 @@ module Project.DocLoader
 where
 
 import Commonmark
-import Control.Monad.Identity (Identity)
+import Control.Lens
 import Data.Default
 import Data.Maybe (fromMaybe)
 import qualified Data.Text as T

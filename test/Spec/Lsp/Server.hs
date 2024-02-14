@@ -1,7 +1,13 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE ExtendedDefaultRules #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 {-# OPTIONS_GHC -Wno-unused-do-bind #-}
 
@@ -25,52 +31,31 @@ import Language.LSP.Protocol.Types
 import Language.LSP.Server
 import Language.LSP.Test
 import Lsp.Server
+import Path
+import Path.IO
 import System.Process
 import Test.Hspec
+import Text.RawString.QQ
 
-withDummyServer :: ((Handle, Handle) -> IO ()) -> IO ()
-withDummyServer f = do
-  (hinRead, hinWrite) <- createPipe
-  (houtRead, houtWrite) <- createPipe
+sampleMarkdownDoc :: String
+sampleMarkdownDoc =
+  [r|# Introduction
+  This is a sample document.
+  |]
 
-  handlerEnv <- HandlerEnv <$> newEmptyMVar <*> newEmptyMVar
-  let definition =
-        ServerDefinition
-          { doInitialize = \env _req -> pure $ Right env,
-            defaultConfig = 1 :: Int,
-            configSection = "dummy",
-            parseConfig = \_old new -> case fromJSON new of
-              J.Success v -> Right v
-              J.Error err -> Left $ T.pack err,
-            onConfigChange = const $ pure (),
-            staticHandlers = \_caps -> handlers',
-            interpretHandler = \env ->
-              Iso (\m -> runLspT env (runReaderT m handlerEnv)) liftIO,
-            options = defaultOptions {optExecuteCommandCommands = Just ["doAnEdit"]}
-          }
-
-  bracket
-    (forkIO $ void $ runServerWithHandles mempty mempty hinRead houtWrite definition)
-    killThread
-    (const $ f (hinWrite, houtRead))
-
-data HandlerEnv = HandlerEnv
-  { relRegToken :: MVar (RegistrationToken Method_WorkspaceDidChangeWatchedFiles),
-    absRegToken :: MVar (RegistrationToken Method_WorkspaceDidChangeWatchedFiles)
-  }
-
-handlers' :: Handlers (ReaderT HandlerEnv (LspM Int))
-handlers' =
-  mconcat
-    [ notificationHandler SMethod_Initialized initializedHandler,
-      requestHandler SMethod_TextDocumentHover textDocumentHoverHandler,
-      requestHandler SMethod_TextDocumentDefinition textDocumentDefinitionHandler
-    ]
+hoverSpec :: Spec
+hoverSpec = describe "Lsp Hover" $ do
+  it "works" $ do
+    withSystemTempDir "docLoader" $ \tmp -> do
+      writeFile (toFilePath (tmp </> $(mkRelFile "test.md"))) sampleMarkdownDoc
+      runSession "ants-ls" fullCaps (toFilePath tmp) $
+        do
+          docId <- openDoc "test.md" "markdown"
+          hover <- getHover docId (Position 0 5)
+          liftIO $ do
+            hover `shouldSatisfy` isJust
+            pure ()
 
 spec :: Spec
-spec = around withDummyServer $ do
-  describe "getHover" $
-    it "works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "test/Spec/Lsp/data/dummy" $ do
-      doc <- openDoc "dummy.md" "markdown"
-      hover <- getHover doc (Position 1 1)
-      liftIO $ hover `shouldSatisfy` isJust
+spec = sequential $ do
+  hoverSpec
