@@ -29,8 +29,8 @@ loadDocument spec anker relPath = do
   lastModified <- getModificationTime path
   text <- T.pack <$> readFile (toFilePath path)
   let fn = toFilePath (filename path)
-  let result = parse (markdownWithFrontmatter spec fn) fn text
-  let (metadata, ast) = fromRight (Nothing, Nothing) result
+  let result = markdownWithFrontmatter spec fn text
+  let (metadata, ast) = result
   return
     D.Document
       { D.relPath = relPath,
