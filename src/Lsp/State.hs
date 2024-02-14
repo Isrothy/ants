@@ -1,3 +1,4 @@
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -13,6 +14,7 @@ import Data.Aeson
 import Data.Default (Default (def))
 import qualified Data.Text as T
 import Language.LSP.Server
+import Path
 
 type HandlerM =
   ExceptT (Severity, T.Text) (StateT ServerState (LspT ServerConfig IO))
@@ -34,9 +36,10 @@ instance FromJSON ServerConfig where
   parseJSON = withObject "server-settings" $ \o -> do
     return def
 
-data ServerState = ServerState {}
+data ServerState where
+  ServerState :: ServerState
 
 makeLenses ''ServerState
 
 initialState :: ServerState
-initialState = ServerState {}
+initialState = ServerState

@@ -6,6 +6,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Lsp.Handlers
   ( handlers,
@@ -16,9 +17,15 @@ module Lsp.Handlers
   )
 where
 
+import Control.Applicative ((<|>))
 import Control.Concurrent.MVar qualified as MVar
+import Control.Conditional
+import Control.Lens (assign, modifying, use, (^.))
+import Control.Monad (forM, guard)
 import Control.Monad.IO.Class
 import Control.Monad.RWS
+import Control.Monad.Trans (lift, liftIO)
+import Control.Monad.Trans.Except (catchE, throwE)
 import Control.Monad.Trans.Except qualified as Except
 import Control.Monad.Trans.Maybe
 import Control.Monad.Trans.State.Strict qualified as State
@@ -26,6 +33,7 @@ import Data.Maybe
 import Data.Text qualified as Text
 import Data.Text.IO qualified as Text
 import Data.Text.Utf16.Rope qualified as Rope
+import Language.LSP.Protocol.Lens
 import Language.LSP.Protocol.Message
 import Language.LSP.Protocol.Types
 import Language.LSP.Protocol.Types qualified as LSP.Types
@@ -61,21 +69,32 @@ textDocumentHoverHandler =
         ms = mkMarkdown "Hello world"
         range = Range pos pos
         mpath = uriToFile uri
+    mroot <- liftLSP getRootPath
+    mfile <- liftLSP $ getVirtualFile (toNormalizedUri uri)
+    msg <- runMaybeT $ do
+      file <- MaybeT $ return mfile
+
+      path <- MaybeT $ return mpath
+      root <- MaybeT $ return $ mroot >>= parseAbsDir
+      rel <- MaybeT $ return $ stripProperPrefix root path
+      -- file <- getVirtualFile
+      return Nothing
     respond (Right $ InL rsp)
 
-initializedHandler :: (MonadIO m) => p -> m ()
-initializedHandler _not = do
-  return ()
+initializedHandler :: Handlers HandlerM
+initializedHandler =
+  LSP.notificationHandler SMethod_Initialized \_ -> return ()
 
 textDocumentDefinitionHandler :: Handlers HandlerM
 textDocumentDefinitionHandler =
-  LSP.requestHandler SMethod_TextDocumentDefinition \req responder -> do
-    let TRequestMessage _ _ _ (DefinitionParams (TextDocumentIdentifier doc) pos _ _) = req
+  LSP.requestHandler SMethod_TextDocumentDefinition \request responder -> do
+    let TRequestMessage _ _ _ (DefinitionParams (TextDocumentIdentifier doc) pos _ _) = request
     responder (Right $ InL $ Definition $ InL $ Location doc $ Range pos pos)
 
 handlers :: Handlers HandlerM
 handlers =
   mconcat
-    [ textDocumentHoverHandler,
+    [ initializedHandler,
+      textDocumentHoverHandler,
       textDocumentDefinitionHandler
     ]
