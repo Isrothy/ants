@@ -12,9 +12,6 @@ import Path.IO
 import Project.ProjectRoot
 import Test.Hspec
 
-configDir :: Path Rel Dir
-configDir = $(mkRelDir ".ants")
-
 spec :: Spec
 spec = describe "project root" $ sequential $ do
   it "finds the root directory when .ants is in the current directory" $
