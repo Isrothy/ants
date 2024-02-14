@@ -1,6 +1,7 @@
 {-# LANGUAGE ExtendedDefaultRules #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
 
 module Cli.NewNoteGen
@@ -18,7 +19,7 @@ import Data.Aeson (decode)
 import qualified Data.Bifunctor
 import Data.Char (isSpace)
 import Data.Functor.Identity
-import Data.List (elemIndex, sortBy)
+import Data.List (sortBy)
 import Data.Maybe (fromJust, fromMaybe, maybeToList)
 import Data.String (fromString)
 import qualified Data.Text as T
@@ -33,8 +34,10 @@ import qualified Model.Metadata as M
 import Parser.Markdown
 import Parser.Opts
 import Parser.Placeholder
+import Path (mkRelFile, parseRelFile, toFilePath, (</>))
+import Path.IO (resolveDir')
+import Project.ProjectRoot (configDir, configFileName, defaultTemplateFileName, findRoot, findTemplate, templateDir)
 import Safe
-import System.FilePath
 
 markdownAstWithPlaceholder ::
   (Monad m) =>
@@ -128,19 +131,35 @@ replaceTime tim s tab = (s, T.pack $ formatTime defaultTimeLocale (T.unpack $ fr
 
 newNote :: NewOptions -> IO ()
 newNote op = do
-  conf <- readFile "config.json"
+  pathToRoot <- findRoot
+  let configPath =
+        case pathToRoot of
+          Just x -> x </> configDir </> configFileName
+          Nothing -> error "Cannot find config"
+  conf <- readFile $ toFilePath configPath
   let config =
         case Data.Aeson.decode $ fromString conf of
           Just x -> x
           Nothing -> error "config: Decode failed"
   let tab = table op ++ fromConfig config
+  print tab
   tim <- getCurrentTime
   tz <- getTimeZone tim
   let localtim = utcToLocalTime tz tim
   let newtab = foldr (replaceTime localtim) tab ["date", "time", "dateTime"]
-  let filename = joinPath [dir op, "default.md"]
-  template <- readFile filename
-  let replacedContent = replacePlaceholders (foldMap (\x -> fromMaybe mempty $ lookup (T.unpack x) extensionLookup) (extensions config)) filename (T.pack template) newtab
+  actualPath <- resolveDir' $ dir op
+  pathToTemplate <- findTemplate actualPath
+  let templatePath =
+        case pathToTemplate of
+          Just x -> Just (x </> templateDir </> defaultTemplateFileName)
+          Nothing -> Nothing
+  templateString <- case templatePath of
+    Just x -> readFile $ toFilePath x
+    Nothing -> pure ""
+  let replacedContent =
+        case templatePath of
+          Just fn -> replacePlaceholders (foldMap (\x -> fromMaybe mempty $ lookup (T.unpack x) extensionLookup) (extensions config)) (toFilePath fn) (T.pack templateString) newtab
+          Nothing -> ""
   let mdata =
         M.Metadata
           { M.title = Just $ Parser.Opts.title op,
@@ -149,6 +168,7 @@ newNote op = do
             M.tags = [],
             M.description = ""
           }
-  let output = joinPath [dir op, T.unpack (T.map (\c -> if isSpace c then '-' else c) $ T.toLower $ Parser.Opts.title op) ++ ".md"]
-  writeFile output ("---\n" ++ T.unpack (T.decodeUtf8 (Y.encode mdata)) ++ "---\n" ++ T.unpack replacedContent)
-  putStrLn output
+  filename <- parseRelFile (T.unpack (T.map (\c -> if isSpace c then '-' else c) $ T.toLower $ Parser.Opts.title op) ++ ".md")
+  let output = actualPath </> filename
+  writeFile (toFilePath output) ("---\n" ++ T.unpack (T.decodeUtf8 (Y.encode mdata)) ++ "---\n" ++ T.unpack replacedContent)
+  putStrLn $ toFilePath output

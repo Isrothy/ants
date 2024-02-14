@@ -11,6 +11,9 @@ module Cli.InitNoteBook
 where
 
 import Parser.Opts
+import Path (toFilePath, (</>))
+import Path.IO (createDirIfMissing)
+import Project.ProjectRoot (configDir, configFileName, defaultTemplateFileName, templateDir)
 import Text.RawString.QQ
 
 initNotebook :: InitOptions -> IO ()
@@ -29,11 +32,13 @@ initNotebook _ = do
   },
   "extensions": ["math", "emoji", "footnotes"]
 }|]
-  writeFile "config.json" exampleConfig
+  createDirIfMissing True configDir
+  writeFile (toFilePath $ configDir </> configFileName) exampleConfig
   let exampleTemplate =
         [r|# {{title}}
 
 Today is {{date}} and it's {{time}} now.
 I'm writing about {{game}}.
 |]
-  writeFile "default.md" exampleTemplate
+  createDirIfMissing True templateDir
+  writeFile (toFilePath $ templateDir </> defaultTemplateFileName) exampleTemplate
