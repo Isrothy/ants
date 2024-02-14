@@ -46,9 +46,9 @@ This is a Markdown document with a YAML header.
                 tags = ["Haskell", "Parsing"],
                 description = "A sample document"
               }
-    let result = parse (markdownWithFrontmatter defaultSyntaxSpec "test.md") "" (T.pack input)
-    fst (fromRight (Nothing, Nothing) result) `shouldBe` expectedMetadata
-    snd (fromRight (Nothing, Nothing) result) `shouldSatisfy` isJust
+    let result = markdownWithFrontmatter defaultSyntaxSpec "test.md" (T.pack input)
+    fst result `shouldBe` expectedMetadata
+    snd result `shouldSatisfy` isJust
 
   it "handles documents without YAML header" $ do
     let input =
@@ -56,9 +56,9 @@ This is a Markdown document with a YAML header.
 # Heading
 This is a Markdown document without a YAML header.
 |]
-    let result = parse (markdownWithFrontmatter defaultSyntaxSpec "test.md") "" (T.pack input)
-    fst (fromRight (Nothing, Nothing) result) `shouldBe` Nothing
-    snd (fromRight (Nothing, Nothing) result) `shouldSatisfy` isJust
+    let result = markdownWithFrontmatter defaultSyntaxSpec "test.md" (T.pack input)
+    fst result `shouldBe` Nothing
+    snd result `shouldSatisfy` isJust
 
   it "handles malformed YAML headers" $ do
     let input =
@@ -68,9 +68,9 @@ This is not a valid YAML header
 # Heading
 Malformed YAML header above.
 |]
-    let result = parse (markdownWithFrontmatter defaultSyntaxSpec "test.md") "" (T.pack input)
-    fst (fromRight (Nothing, Nothing) result) `shouldBe` Nothing
-    snd (fromRight (Nothing, Nothing) result) `shouldSatisfy` isJust
+    let result = markdownWithFrontmatter defaultSyntaxSpec "test.md" (T.pack input)
+    fst result `shouldBe` Nothing
+    snd result `shouldSatisfy` isJust
 
 fromRight :: a -> Either b a -> a
 fromRight _ (Right x) = x

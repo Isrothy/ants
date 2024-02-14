@@ -32,8 +32,20 @@ markdownAstWith' ext file text = case markdownAstWith ext file text of
 markdownWithFrontmatter ::
   SyntaxSpec Identity MarkdownAst MarkdownAst ->
   String ->
-  Parser (Maybe Metadata, Maybe MarkdownAst)
-markdownWithFrontmatter ext file = do
-  metadata <- optionMaybe frontmatter
-  rest <- getInput
-  return (metadata >>= decodeMaybeMetadata, markdownAstWith' ext file rest)
+  T.Text ->
+  (Maybe Metadata, Maybe MarkdownAst)
+markdownWithFrontmatter ext file text =
+  case parse frontmatter file text of
+    Left _ -> (Nothing, markdownAstWith' ext file text)
+    Right metadata ->
+      let l = length $ T.lines metadata
+          mdtext = replaceFirstLinesWithEmpty (l + 2) text
+          ast = markdownAstWith' ext file mdtext
+       in (decodeMaybeMetadata metadata, ast)
+
+replaceFirstLinesWithEmpty :: Int -> T.Text -> T.Text
+replaceFirstLinesWithEmpty n text =
+  let lines = T.lines text
+      (toReplace, rest) = splitAt n lines
+      replaced = replicate (length toReplace) T.empty
+   in T.unlines $ replaced ++ rest
