@@ -5,7 +5,10 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 module Model.MarkdownAst
   ( MarkdownAst,
@@ -20,28 +23,47 @@ module Model.MarkdownAst
     firstNode,
     allNodes,
     nodeAt,
+    LinkData (..),
+    ImageData (..),
+    ReferenceLinkDefinationData (..),
+    attributes,
+    element,
+    sourceRange,
+    linkTarget,
+    linkTitle,
+    linkInline,
+    imageSource,
+    imageTitle,
+    imageInline,
+    listType,
+    listSpacing,
+    listItems,
+    referenceLinkDefinationLabel,
+    referenceLinkDefinationDestination,
+    referenceLinkDefinationTitle,
   )
 where
 
 import Commonmark
 import Commonmark.Extensions
+import Control.Lens ((^.))
+import Control.Lens.TH (makeLenses)
 import Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Text.Internal.Builder as TB
 import qualified Data.Text.Lazy as LT
 import Parser.Placeholder
 
-data MarkdownAstNode = MarkdownAstNode
-  { element :: MarkdownElement,
-    sourceRange :: Maybe SourceRange,
-    attributes :: Attributes
-  }
+data MarkdownAstNode where
+  MarkdownAstNode ::
+    { _element :: MarkdownElement,
+      _sourceRange :: Maybe SourceRange,
+      _attributes :: Attributes
+    } ->
+    MarkdownAstNode
   deriving (Show, Eq)
 
 type MarkdownAst = [MarkdownAstNode]
-
-rawNode :: MarkdownElement -> MarkdownAst
-rawNode x = [MarkdownAstNode x Nothing []]
 
 data MarkdownElement where
   Text :: T.Text -> MarkdownElement
@@ -52,8 +74,8 @@ data MarkdownElement where
   Code :: T.Text -> MarkdownElement
   Emphasis :: MarkdownAst -> MarkdownElement
   Strong :: MarkdownAst -> MarkdownElement
-  Link :: T.Text -> T.Text -> MarkdownAst -> MarkdownElement
-  Image :: T.Text -> T.Text -> MarkdownAst -> MarkdownElement
+  Link :: LinkData -> MarkdownElement
+  Image :: ImageData -> MarkdownElement
   Strikethrough :: MarkdownAst -> MarkdownElement
   Highlight :: MarkdownAst -> MarkdownElement
   RawInline :: Format -> T.Text -> MarkdownElement
@@ -68,11 +90,7 @@ data MarkdownElement where
   Paragraph :: MarkdownAst -> MarkdownElement
   Plain :: MarkdownAst -> MarkdownElement
   Header :: Int -> MarkdownAst -> MarkdownElement
-  List ::
-    ListType ->
-    ListSpacing ->
-    [MarkdownAst] ->
-    MarkdownElement
+  List :: ListData -> MarkdownElement
   Blockquote :: MarkdownAst -> MarkdownElement
   CodeBlock :: T.Text -> T.Text -> MarkdownElement
   RawBlock :: Format -> T.Text -> MarkdownElement
@@ -82,7 +100,7 @@ data MarkdownElement where
     [MarkdownAst] ->
     [[MarkdownAst]] ->
     MarkdownElement
-  ReferenceLinkDefination :: T.Text -> (T.Text, T.Text) -> MarkdownElement
+  ReferenceLinkDefination :: ReferenceLinkDefinationData -> MarkdownElement
   DefinitionList ::
     ListSpacing ->
     [(MarkdownAst, [MarkdownAst])] ->
@@ -100,6 +118,55 @@ data MarkdownElement where
   Span :: MarkdownAst -> MarkdownElement
   deriving (Show, Eq)
 
+data LinkData where
+  LinkData ::
+    { _linkTarget :: T.Text,
+      _linkTitle :: T.Text,
+      _linkInline :: MarkdownAst
+    } ->
+    LinkData
+  deriving (Show, Eq)
+
+data ImageData where
+  ImageData ::
+    { _imageSource :: T.Text,
+      _imageTitle :: T.Text,
+      _imageInline :: MarkdownAst
+    } ->
+    ImageData
+  deriving (Show, Eq)
+
+data ListData where
+  ListData ::
+    { _listType :: ListType,
+      _listSpacing :: ListSpacing,
+      _listItems :: [MarkdownAst]
+    } ->
+    ListData
+  deriving (Show, Eq)
+
+data ReferenceLinkDefinationData where
+  ReferenceLinkDefinationData ::
+    { _referenceLinkDefinationLabel :: T.Text,
+      _referenceLinkDefinationDestination :: T.Text,
+      _referenceLinkDefinationTitle :: T.Text
+    } ->
+    ReferenceLinkDefinationData
+  deriving (Show, Eq)
+
+makeLenses ''MarkdownAstNode
+
+makeLenses ''LinkData
+
+makeLenses ''ImageData
+
+makeLenses ''ListData
+
+makeLenses ''ReferenceLinkDefinationData
+
+rawNode :: MarkdownElement -> MarkdownAst
+rawNode x = [MarkdownAstNode x Nothing []]
+
 instance HasAttributes MarkdownAst where
   addAttributes _ [] = []
   addAttributes attrs1 [MarkdownAstNode item sr attrs2] = [MarkdownAstNode item sr (attrs1 ++ attrs2)]
@@ -116,8 +183,8 @@ instance IsInline MarkdownAst where
   entity = rawNode . Entity
   emph = rawNode . Emphasis
   strong = rawNode . Strong
-  link target title inline = rawNode $ Link target title inline
-  image source title inline = rawNode $ Image source title inline
+  link target title inline = rawNode $ Link $ LinkData target title inline
+  image source title inline = rawNode $ Image $ ImageData source title inline
   code x = rawNode $ Code x
   rawInline format x = rawNode $ RawInline format x
   str = rawNode . Text
@@ -131,8 +198,8 @@ instance IsBlock MarkdownAst MarkdownAst where
   codeBlock info t = rawNode $ CodeBlock info t
   heading level il = rawNode $ Header level il
   rawBlock format t = rawNode $ RawBlock format t
-  list listtype spacing items = rawNode $ List listtype spacing items
-  referenceLinkDefinition label (dest, title) = rawNode (ReferenceLinkDefination label (dest, title))
+  list listtype spacing items = rawNode $ List $ ListData listtype spacing items
+  referenceLinkDefinition label (dest, title) = rawNode $ ReferenceLinkDefination $ ReferenceLinkDefinationData label dest title
 
 instance HasMath MarkdownAst where
   inlineMath x = rawNode $ InlineMath x
@@ -192,8 +259,8 @@ toPlainTextBuilder' (MarkdownAstNode ele _ _) = case ele of
   Code t -> TB.fromText t
   Emphasis ast -> toPlainTextBuilder ast
   Strong ast -> toPlainTextBuilder ast
-  Link _ _ ast -> toPlainTextBuilder ast
-  Image _ _ ast -> toPlainTextBuilder ast
+  Link link -> toPlainTextBuilder $ link ^. linkInline
+  Image image -> toPlainTextBuilder $ image ^. imageInline
   Strikethrough ast -> toPlainTextBuilder ast
   Highlight ast -> toPlainTextBuilder ast
   RawInline _ t -> TB.fromText t
@@ -208,7 +275,7 @@ toPlainTextBuilder' (MarkdownAstNode ele _ _) = case ele of
   Plain ast -> toPlainTextBuilder ast
   Alert a ast -> TB.fromText (alertName a) <> ": " <> toPlainTextBuilder ast
   Header _ ast -> toPlainTextBuilder ast <> "\n"
-  List _ _ asts -> mconcat $ map (\ast -> toPlainTextBuilder ast <> "\n") asts
+  List list -> mconcat $ map (\ast -> toPlainTextBuilder ast <> "\n") $ list ^. listItems
   Blockquote ast -> toPlainTextBuilder ast <> "\n"
   CodeBlock _ t -> TB.fromText t <> "\n"
   RawBlock _ t -> TB.fromText t <> "\n"
@@ -218,8 +285,7 @@ toPlainTextBuilder' (MarkdownAstNode ele _ _) = case ele of
       tableHelper [] = ""
       tableHelper (x : xs) =
         mconcat (map (\y -> toPlainTextBuilder y <> " ") x) <> "\n" <> tableHelper xs
-  ReferenceLinkDefination label (dest, title) ->
-    "[" <> TB.fromText label <> "] " <> TB.fromText dest <> " " <> TB.fromText title
+  ReferenceLinkDefination ref -> TB.fromText $ ref ^. referenceLinkDefinationLabel
   DefinitionList _ asts ->
     mconcat
       ( map
@@ -256,13 +322,13 @@ children (Strong ast) = [ast]
 children (Strikethrough ast) = [ast]
 children (Superscript ast) = [ast]
 children (Subscript ast) = [ast]
-children (Link _ _ ast) = [ast]
-children (Image _ _ ast) = [ast]
+children (Link link) = [link ^. linkInline]
+children (Image image) = [image ^. imageInline]
 children (Span asts) = [asts]
 children (Paragraph ast) = [ast]
 children (Plain ast) = [ast]
 children (Header _ ast) = [ast]
-children (List _ _ asts) = asts
+children (List list) = list ^. listItems
 children (Blockquote ast) = [ast]
 children (PipeTable _ title rows) = concat (title : rows)
 children (DefinitionList _ asts) = map fst asts ++ concatMap snd asts
@@ -281,7 +347,7 @@ findPlaceholders = concatMap \case
 
 findLinks :: MarkdownAst -> [(T.Text, T.Text)]
 findLinks = concatMap \case
-  (MarkdownAstNode (Link target title _) _ _) -> [(target, title)]
+  (MarkdownAstNode (Link (LinkData target title _)) _ _) -> [(target, title)]
   (MarkdownAstNode ele _ _) -> concatMap findLinks (children ele)
 
 findTasks :: MarkdownAst -> [(Bool, MarkdownAst)]
@@ -300,27 +366,29 @@ findAlerts = concatMap \case
   (MarkdownAstNode (Alert t ast) _ _) -> [(t, ast)]
   (MarkdownAstNode ele _ _) -> concatMap findAlerts (children ele)
 
-betweenPos :: Int -> Int -> (SourcePos, SourcePos) -> Bool
-betweenPos row col (s1, s2)
+betweenPos :: (Integral a) => a -> a -> (SourcePos, SourcePos) -> Bool
+betweenPos r c (s1, s2)
   | row == r1 && row == r2 = c1 <= col && col < c2
   | row == r1 = c1 <= col
   | row == r2 = col < c2
   | r1 < row && row < r2 = True
   | otherwise = False
   where
+    row = fromIntegral r
+    col = fromIntegral c
     r1 = sourceLine s1
     c1 = sourceColumn s1
     r2 = sourceLine s2
     c2 = sourceColumn s2
 
-inRange :: Int -> Int -> SourceRange -> Bool
+inRange :: (Integral a) => a -> a -> SourceRange -> Bool
 inRange row col sr = any (betweenPos row col) (unSourceRange sr)
 
 allNodes' :: (MarkdownAstNode -> Bool) -> MarkdownAstNode -> [MarkdownAstNode]
 allNodes' f node =
   if f node
     then [node]
-    else concatMap (allNodes f) $ children $ element node
+    else concatMap (allNodes f) $ children $ node ^. element
 
 allNodes :: (MarkdownAstNode -> Bool) -> MarkdownAst -> [MarkdownAstNode]
 allNodes f = concatMap (allNodes' f)
@@ -328,8 +396,8 @@ allNodes f = concatMap (allNodes' f)
 firstNode :: (MarkdownAstNode -> Bool) -> MarkdownAst -> Maybe MarkdownAstNode
 firstNode f ast = listToMaybe (allNodes f ast)
 
-nodeAt :: (MarkdownAstNode -> Bool) -> Int -> Int -> MarkdownAst -> Maybe MarkdownAstNode
+nodeAt :: (Integral a) => (MarkdownAstNode -> Bool) -> a -> a -> MarkdownAst -> Maybe MarkdownAstNode
 nodeAt f row col =
-  firstNode \node -> case sourceRange node of
+  firstNode \node -> case node ^. sourceRange of
     Just sr -> inRange row col sr && f node
     _ -> False
