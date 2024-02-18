@@ -4,6 +4,8 @@
 module Project.Link
   ( resolveLinkInFile,
     gotoLinkedElement,
+    parseLink,
+    findHeaderWithId,
   )
 where
 
