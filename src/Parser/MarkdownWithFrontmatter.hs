@@ -1,5 +1,6 @@
 module Parser.MarkdownWithFrontmatter
   ( markdownWithFrontmatter,
+    frontMatterLines,
   )
 where
 
@@ -42,6 +43,12 @@ markdownWithFrontmatter ext file text =
           mdtext = replaceFirstLinesWithEmpty (l + 2) text
           ast = markdownAstWith' ext file mdtext
        in (decodeMaybeMetadata metadata, ast)
+
+frontMatterLines :: T.Text -> Int
+frontMatterLines text =
+  case parse frontmatter "" text of
+    Left _ -> 0
+    Right metadata -> 2 + length (T.lines metadata)
 
 replaceFirstLinesWithEmpty :: Int -> T.Text -> T.Text
 replaceFirstLinesWithEmpty n text =

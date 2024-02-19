@@ -57,32 +57,23 @@ import Path
 import Project.Link
 import Text.RawString.QQ
 
-formatHover :: Path Abs File -> Maybe Metadata -> Either T.Text (Maybe (Int, T.Text)) -> T.Text
-formatHover path frontMatter lineContent =
-  TL.toStrict . B.toLazyText $
-    ( "In "
-        <> (B.fromText . T.pack . toFilePath) path
-        <> "\n\n"
-        <> "FrontMatter:\n\n"
-        <> "```yaml\n"
-        <> maybe
-          ""
-          (B.fromText . TE.decodeUtf8With TEE.lenientDecode . encodePretty defConfig)
-          frontMatter
-        <> "```\n"
-        <> ( case lineContent of
-               Left err -> "Error:" <> B.fromText err
-               Right Nothing -> ""
-               Right (Just (l, txt)) ->
-                 "In line"
-                   <> (B.fromText . T.pack . show) l
-                   <> ":\n\n"
-                   <> "```markdown\n"
-                   <> B.fromText txt
-                   <> "\n```"
-           )
-        <> "\n"
-    )
+formatHover :: Path Abs File -> Maybe Metadata -> Either T.Text (Maybe Int, [T.Text]) -> T.Text
+formatHover path mfrontMatter preview =
+  TL.toStrict . B.toLazyText $ displayFilepath <> displayFrontMatter <> displayContent
+  where
+    lineCount = 10
+    displayFilepath = "In `" <> (B.fromText . T.pack . toFilePath) path <> "` :\n\n"
+    displayFrontMatter = case mfrontMatter of
+      Nothing -> ""
+      Just frontMatter -> "```yaml\n" <> B.fromText (TE.decodeUtf8With TEE.lenientDecode (encodePretty defConfig frontMatter)) <> "```\n\n"
+    displayContent = case preview of
+      Left err -> "**ERROR**: " <> B.fromText err <> "\n\n"
+      Right (Nothing, text) -> B.fromText (T.unlines (take lineCount text))
+      Right (Just l, txt) ->
+        "Line "
+          <> (B.fromText . T.pack . show) l
+          <> ":\n\n"
+          <> B.fromText (T.unlines (take lineCount txt))
 
 textDocumentHoverHandler :: Handlers HandlerM
 textDocumentHoverHandler =
@@ -146,12 +137,12 @@ textDocumentHoverHandler =
                     Nothing -> liftIO $ readFileSafe $ toFilePath targetPath
           let (mtargetFrontmatter, mtargetAst) = parseFile targetPath targetText
 
-          let lineContent = case mtag of
-                Nothing -> Right Nothing
+          let preview = case mtag of
+                Nothing -> Right (Nothing, drop (frontMatterLines targetText) (T.lines targetText))
                 Just tag -> case mtargetAst >>= getLineNr tag of
                   Nothing -> Left "bookmark not found"
-                  Just ln -> Right (Just (ln, T.lines targetText !! (ln - 1)))
-          return $ formatHover targetPath mtargetFrontmatter lineContent
+                  Just ln -> Right (Just ln, drop (ln - 1) (T.lines targetText))
+          return $ formatHover targetPath mtargetFrontmatter preview
         respond
           ( case target of
               Nothing -> Right $ InL $ Hover (InL (mkMarkdown "target not found")) rg
