@@ -16,10 +16,28 @@ import Control.Monad.IO.Class
 import Control.Monad.Trans.Except qualified as Except
 import Control.Monad.Trans.State.Strict qualified as State
 import Data.Text qualified as Text
+import Language.LSP.Protocol.Types
 import Language.LSP.Server
 import Language.LSP.Server qualified as LSP
 import Lsp.Handlers
 import Lsp.State
+
+syncOptions :: TextDocumentSyncOptions
+syncOptions =
+  TextDocumentSyncOptions
+    { _openClose = Just True,
+      _change = Just TextDocumentSyncKind_Incremental,
+      _willSave = Just False,
+      _willSaveWaitUntil = Just False,
+      _save = Just $ InR $ SaveOptions $ Just False
+    }
+
+lspOptions :: Options
+lspOptions =
+  defaultOptions
+    { optTextDocumentSync = Just syncOptions,
+      optExecuteCommandCommands = Just ["ants-ls"]
+    }
 
 run :: IO Int
 run = do
@@ -62,5 +80,5 @@ run = do
         doInitialize = \env _req -> pure $ Right env,
         staticHandlers = \_caps -> handlers,
         interpretHandler = interpreter,
-        options = defaultOptions
+        options = lspOptions
       }

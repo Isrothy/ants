@@ -51,6 +51,7 @@ import Lsp.Util
 import Model.MarkdownAst
 import Model.Metadata
 import Network.URI qualified as URI
+import Parser.Markdown
 import Parser.MarkdownWithFrontmatter
 import Path
 import Project.Link
@@ -86,13 +87,10 @@ textDocumentHoverHandler =
         l = _l + 1
         c = _c + 1
         TextDocumentIdentifier uri = _doc
-        rsp = Hover (InL ms) (Just range)
-        ms = mkMarkdown "Hello world"
-        range = Range pos pos
         mpath = uriToFile uri
     let isLink :: MarkdownAstNode -> Bool
         isLink (MarkdownAstNode (Link {}) _ _) = True
-        isLink _ = True
+        isLink _ = False
     let fromLink :: MarkdownAstNode -> Maybe LinkData
         fromLink (MarkdownAstNode (Link ldata) _ _) = Just ldata
         fromLink _ = Nothing
@@ -107,7 +105,7 @@ textDocumentHoverHandler =
     mfile <- liftLSP $ getVirtualFile (toNormalizedUri uri)
     ret <- runMaybeT $ do
       let parseFile :: Path Abs File -> T.Text -> (Maybe Metadata, Maybe MarkdownAst)
-          parseFile path = markdownWithFrontmatter defaultSyntaxSpec (toFilePath path)
+          parseFile path = markdownWithFrontmatter allSpecExtensions (toFilePath path)
       let getAst path file = snd $ parseFile path file
 
       root <- MaybeT $ return $ mroot >>= parseAbsDir
@@ -137,18 +135,40 @@ textDocumentHoverHandler =
             Just tag -> case mtargetAst >>= getLineNr tag of
               Nothing -> Left "bookmark not found"
               Just ln -> Right (Just (ln, T.lines targetText !! ln))
-
       return (rg, formatHover targetPath mtargetFrontmatter lineContent)
-    -- respond (Right $ InL rsp)
     respond
       ( case ret of
-          Nothing -> Right $ InL rsp
+          Nothing -> Right $ InR Null
           Just (rg, msg) -> Right $ InL $ Hover (InL (mkMarkdown msg)) rg
       )
 
 initializedHandler :: Handlers HandlerM
 initializedHandler =
   LSP.notificationHandler SMethod_Initialized \_ -> return ()
+
+workspaceChangeConfigurationHandler :: Handlers HandlerM
+workspaceChangeConfigurationHandler =
+  LSP.notificationHandler SMethod_WorkspaceDidChangeConfiguration \_ -> return ()
+
+textDocumentChangeHandler :: Handlers HandlerM
+textDocumentChangeHandler =
+  LSP.notificationHandler SMethod_TextDocumentDidChange \_ -> return ()
+
+cancelationHandler :: Handlers HandlerM
+cancelationHandler =
+  LSP.notificationHandler SMethod_CancelRequest \_ -> return ()
+
+didOpenTextDocumentNotificationHandler :: Handlers HandlerM
+didOpenTextDocumentNotificationHandler =
+  LSP.notificationHandler SMethod_TextDocumentDidOpen \_ -> return ()
+
+didSaveTextDocumentNotificationHandler :: Handlers HandlerM
+didSaveTextDocumentNotificationHandler =
+  LSP.notificationHandler SMethod_TextDocumentDidSave \_ -> return ()
+
+didCloseTextDocumentNotificationHandler :: Handlers HandlerM
+didCloseTextDocumentNotificationHandler =
+  LSP.notificationHandler SMethod_TextDocumentDidClose \_ -> return ()
 
 textDocumentDefinitionHandler :: Handlers HandlerM
 textDocumentDefinitionHandler =
@@ -161,5 +181,11 @@ handlers =
   mconcat
     [ initializedHandler,
       textDocumentHoverHandler,
-      textDocumentDefinitionHandler
+      textDocumentDefinitionHandler,
+      workspaceChangeConfigurationHandler,
+      textDocumentChangeHandler,
+      cancelationHandler,
+      didOpenTextDocumentNotificationHandler,
+      didSaveTextDocumentNotificationHandler,
+      didCloseTextDocumentNotificationHandler
     ]
