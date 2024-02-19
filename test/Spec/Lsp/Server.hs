@@ -40,18 +40,30 @@ import Text.RawString.QQ
 sampleMarkdownDoc :: String
 sampleMarkdownDoc =
   [r|# Introduction
-  This is a sample document.
+This is a sample document.
+[this is a link](target.md#tag)
   |]
 
 hoverSpec :: Spec
-hoverSpec = describe "Lsp Hover" $ do
-  it "works" $ do
+hoverSpec = describe "Lsp Hover" $ sequential $ do
+  it "do not hover on none link" $ do
     withSystemTempDir "docLoader" $ \tmp -> do
       writeFile (toFilePath (tmp </> $(mkRelFile "test.md"))) sampleMarkdownDoc
       runSession "ants-ls" fullCaps (toFilePath tmp) $
         do
           docId <- openDoc "test.md" "markdown"
           hover <- getHover docId (Position 0 5)
+          liftIO $ do
+            hover `shouldSatisfy` isNothing
+            pure ()
+
+  it "hover on link" $ do
+    withSystemTempDir "docLoader" $ \tmp -> do
+      writeFile (toFilePath (tmp </> $(mkRelFile "test.md"))) sampleMarkdownDoc
+      runSession "ants-ls" fullCaps (toFilePath tmp) $
+        do
+          docId <- openDoc "test.md" "markdown"
+          hover <- getHover docId (Position 2 5)
           liftIO $ do
             hover `shouldSatisfy` isJust
             pure ()
