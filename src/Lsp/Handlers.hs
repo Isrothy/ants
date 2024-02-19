@@ -74,9 +74,8 @@ formatHover path frontMatter lineContent =
                Left err -> "Error:" <> B.fromText err
                Right Nothing -> ""
                Right (Just (l, txt)) ->
-                 ( "In line "
-                     <> (B.fromText . T.pack . show) l
-                 )
+                 "In line"
+                   <> (B.fromText . T.pack . show) l
                    <> ":\n\n"
                    <> "```markdown\n"
                    <> B.fromText txt
