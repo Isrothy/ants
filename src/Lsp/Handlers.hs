@@ -17,45 +17,30 @@ module Lsp.Handlers
   )
 where
 
-import Commonmark
-import Control.Concurrent.MVar qualified as MVar
-import Control.Conditional
-import Control.Lens (assign, modifying, use, (^.))
-import Control.Monad (forM)
-import Control.Monad.IO.Class
-import Control.Monad.RWS
-import Control.Monad.Trans (lift, liftIO)
-import Control.Monad.Trans.Except (catchE, throwE)
-import Control.Monad.Trans.Except qualified as Except
-import Control.Monad.Trans.Maybe
-import Control.Monad.Trans.State.Strict qualified as State
-import Data.ByteString qualified as B
-import Data.Maybe
+import Commonmark (SourceRange (unSourceRange), sourceLine)
+import Control.Conditional (guard)
+import Control.Lens ((^.))
+import Control.Monad.IO.Class (MonadIO (liftIO))
+import Control.Monad.Trans.Maybe (MaybeT (MaybeT, runMaybeT))
+import Data.Maybe (listToMaybe)
 import Data.Text qualified as T
-import Data.Text qualified as Text
 import Data.Text.Encoding qualified as TE
 import Data.Text.Encoding.Error qualified as TEE
 import Data.Text.Lazy qualified as TL
 import Data.Text.Lazy.Builder qualified as B
-import Data.Text.Utf16.Rope qualified as Rope
-import Data.Yaml.Pretty
-import Language.LSP.Protocol.Message
-import Language.LSP.Protocol.Types
-import Language.LSP.Protocol.Types qualified as LSP.Types
-import Language.LSP.Server
+import Data.Yaml.Pretty (defConfig, encodePretty)
+import Language.LSP.Protocol.Message qualified as LSP
+import Language.LSP.Protocol.Types qualified as LSP
 import Language.LSP.Server qualified as LSP
-import Language.LSP.VFS
-import Language.LSP.VFS qualified as LSP
+import Language.LSP.VFS qualified as VFS
 import Lsp.State
 import Lsp.Util
 import Model.MarkdownAst
 import Model.Metadata
-import Network.URI qualified as URI
 import Parser.Markdown
 import Parser.MarkdownWithFrontmatter
 import Path
 import Project.Link
-import Text.RawString.QQ
 
 formatHover :: Path Abs File -> Maybe Metadata -> Either T.Text (Maybe Int, [T.Text]) -> T.Text
 formatHover path mfrontMatter preview =
@@ -75,14 +60,14 @@ formatHover path mfrontMatter preview =
           <> ":\n\n"
           <> B.fromText (T.unlines (take lineCount txt))
 
-textDocumentHoverHandler :: Handlers HandlerM
+textDocumentHoverHandler :: LSP.Handlers HandlerM
 textDocumentHoverHandler =
-  LSP.requestHandler SMethod_TextDocumentHover \request respond -> do
-    let TRequestMessage _ _ _ (HoverParams _doc pos _workDone) = request
-        Position _l _c = pos
+  LSP.requestHandler LSP.SMethod_TextDocumentHover \request respond -> do
+    let LSP.TRequestMessage _ _ _ (LSP.HoverParams _doc pos _workDone) = request
+        LSP.Position _l _c = pos
         l = _l + 1
         c = _c + 1
-        TextDocumentIdentifier uri = _doc
+        LSP.TextDocumentIdentifier uri = _doc
         mpath = uriToFile uri
     let isLink :: MarkdownAstNode -> Bool
         isLink (MarkdownAstNode (Link {}) _ _) = True
@@ -100,13 +85,13 @@ textDocumentHoverHandler =
     let parseFile :: Path Abs File -> T.Text -> (Maybe Metadata, Maybe MarkdownAst)
         parseFile path = markdownWithFrontmatter allSpecExtensions (toFilePath path)
     let getAst path file = snd $ parseFile path file
-    mroot <- liftLSP getRootPath
-    mfile <- liftLSP $ getVirtualFile (toNormalizedUri uri)
+    mroot <- liftLSP LSP.getRootPath
+    mfile <- liftLSP $ LSP.getVirtualFile (LSP.toNormalizedUri uri)
     let linkAtPlace = do
           root <- mroot >>= parseAbsDir
           origFile <- mfile
           origPath <- mpath
-          origAst <- getAst origPath (virtualFileText origFile)
+          origAst <- getAst origPath (VFS.virtualFileText origFile)
           ele <- nodeAt isLink l c origAst
           link <- fromLink ele
           (filepath, mtag) <- parseLink (link ^. linkTarget)
@@ -116,7 +101,7 @@ textDocumentHoverHandler =
           return (rg, root, origPath, origFile, filepath, mtag)
 
     case linkAtPlace of
-      Nothing -> respond $ Right $ InR Null
+      Nothing -> respond $ Right $ LSP.InR LSP.Null
       Just (rg, root, origPath, origFile, filepath, mtag) -> do
         target <- runMaybeT $ do
           targetPath <- MaybeT $ liftIO $ resolveLinkInFile origPath (T.unpack filepath)
@@ -124,16 +109,11 @@ textDocumentHoverHandler =
           targetText <-
             MaybeT $
               if targetPath == origPath
-                then return $ Just $ virtualFileText origFile
+                then return $ Just $ VFS.virtualFileText origFile
                 else do
-                  mvf <-
-                    liftLSP $
-                      getVirtualFile $
-                        toNormalizedUri $
-                          filePathToUri $
-                            toFilePath targetPath
+                  mvf <- liftLSP $ LSP.getVirtualFile $ LSP.toNormalizedUri $ LSP.filePathToUri $ toFilePath targetPath
                   case mvf of
-                    Just vf -> return $ Just $ virtualFileText vf
+                    Just vf -> return $ Just $ VFS.virtualFileText vf
                     Nothing -> liftIO $ readFileSafe $ toFilePath targetPath
           let (mtargetFrontmatter, mtargetAst) = parseFile targetPath targetText
 
@@ -145,45 +125,45 @@ textDocumentHoverHandler =
           return $ formatHover targetPath mtargetFrontmatter preview
         respond
           ( case target of
-              Nothing -> Right $ InL $ Hover (InL (mkMarkdown "target not found")) rg
-              Just msg -> Right $ InL $ Hover (InL (mkMarkdown msg)) rg
+              Nothing -> Right $ LSP.InL $ LSP.Hover (LSP.InL (LSP.mkMarkdown "target not found")) rg
+              Just msg -> Right $ LSP.InL $ LSP.Hover (LSP.InL (LSP.mkMarkdown msg)) rg
           )
 
-initializedHandler :: Handlers HandlerM
+initializedHandler :: LSP.Handlers HandlerM
 initializedHandler =
-  LSP.notificationHandler SMethod_Initialized \_ -> return ()
+  LSP.notificationHandler LSP.SMethod_Initialized \_ -> return ()
 
-workspaceChangeConfigurationHandler :: Handlers HandlerM
+workspaceChangeConfigurationHandler :: LSP.Handlers HandlerM
 workspaceChangeConfigurationHandler =
-  LSP.notificationHandler SMethod_WorkspaceDidChangeConfiguration \_ -> return ()
+  LSP.notificationHandler LSP.SMethod_WorkspaceDidChangeConfiguration \_ -> return ()
 
-textDocumentChangeHandler :: Handlers HandlerM
+textDocumentChangeHandler :: LSP.Handlers HandlerM
 textDocumentChangeHandler =
-  LSP.notificationHandler SMethod_TextDocumentDidChange \_ -> return ()
+  LSP.notificationHandler LSP.SMethod_TextDocumentDidChange \_ -> return ()
 
-cancelationHandler :: Handlers HandlerM
+cancelationHandler :: LSP.Handlers HandlerM
 cancelationHandler =
-  LSP.notificationHandler SMethod_CancelRequest \_ -> return ()
+  LSP.notificationHandler LSP.SMethod_CancelRequest \_ -> return ()
 
-didOpenTextDocumentNotificationHandler :: Handlers HandlerM
+didOpenTextDocumentNotificationHandler :: LSP.Handlers HandlerM
 didOpenTextDocumentNotificationHandler =
-  LSP.notificationHandler SMethod_TextDocumentDidOpen \_ -> return ()
+  LSP.notificationHandler LSP.SMethod_TextDocumentDidOpen \_ -> return ()
 
-didSaveTextDocumentNotificationHandler :: Handlers HandlerM
+didSaveTextDocumentNotificationHandler :: LSP.Handlers HandlerM
 didSaveTextDocumentNotificationHandler =
-  LSP.notificationHandler SMethod_TextDocumentDidSave \_ -> return ()
+  LSP.notificationHandler LSP.SMethod_TextDocumentDidSave \_ -> return ()
 
-didCloseTextDocumentNotificationHandler :: Handlers HandlerM
+didCloseTextDocumentNotificationHandler :: LSP.Handlers HandlerM
 didCloseTextDocumentNotificationHandler =
-  LSP.notificationHandler SMethod_TextDocumentDidClose \_ -> return ()
+  LSP.notificationHandler LSP.SMethod_TextDocumentDidClose \_ -> return ()
 
-textDocumentDefinitionHandler :: Handlers HandlerM
+textDocumentDefinitionHandler :: LSP.Handlers HandlerM
 textDocumentDefinitionHandler =
-  LSP.requestHandler SMethod_TextDocumentDefinition \request responder -> do
-    let TRequestMessage _ _ _ (DefinitionParams (TextDocumentIdentifier doc) pos _ _) = request
-    responder (Right $ InL $ Definition $ InL $ Location doc $ Range pos pos)
+  LSP.requestHandler LSP.SMethod_TextDocumentDefinition \request responder -> do
+    let LSP.TRequestMessage _ _ _ (LSP.DefinitionParams (LSP.TextDocumentIdentifier doc) pos _ _) = request
+    responder (Right $ LSP.InL $ LSP.Definition $ LSP.InL $ LSP.Location doc $ LSP.Range pos pos)
 
-handlers :: Handlers HandlerM
+handlers :: LSP.Handlers HandlerM
 handlers =
   mconcat
     [ initializedHandler,

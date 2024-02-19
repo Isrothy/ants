@@ -13,11 +13,10 @@ import Data.Aeson
   )
 import Data.Default (Default (def))
 import qualified Data.Text as T
-import Language.LSP.Server
-import Path
+import qualified Language.LSP.Server as LSP
 
 type HandlerM =
-  ExceptT (Severity, T.Text) (StateT ServerState (LspT ServerConfig IO))
+  ExceptT (Severity, T.Text) (StateT ServerState (LSP.LspT ServerConfig IO))
 
 data Severity
   = Error
