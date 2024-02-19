@@ -57,36 +57,33 @@ import Path
 import Project.Link
 import Text.RawString.QQ
 
-concatTexts :: [T.Text] -> T.Text
-concatTexts texts = TL.toStrict . B.toLazyText $ mconcat (map B.fromText texts)
-
 formatHover :: Path Abs File -> Maybe Metadata -> Either T.Text (Maybe (Int, T.Text)) -> T.Text
 formatHover path frontMatter lineContent =
-  concatTexts
-    [ "In ",
-      T.pack (toFilePath path),
-      "\n\n",
-      "FrontMatter:\n\n",
-      "```yaml\n",
-      maybe
-        ""
-        (TE.decodeUtf8With TEE.lenientDecode . encodePretty defConfig)
-        frontMatter,
-      "```\n",
-      case lineContent of
-        Left err -> "Error:" <> err
-        Right Nothing -> ""
-        Right (Just (l, txt)) ->
-          concatTexts
-            [ "In line ",
-              T.pack (show l),
-              ":\n\n",
-              "```markdown\n",
-              txt,
-              "\n```"
-            ],
-      "\n"
-    ]
+  TL.toStrict . B.toLazyText $
+    ( "In "
+        <> (B.fromText . T.pack . toFilePath) path
+        <> "\n\n"
+        <> "FrontMatter:\n\n"
+        <> "```yaml\n"
+        <> maybe
+          ""
+          (B.fromText . TE.decodeUtf8With TEE.lenientDecode . encodePretty defConfig)
+          frontMatter
+        <> "```\n"
+        <> ( case lineContent of
+               Left err -> "Error:" <> B.fromText err
+               Right Nothing -> ""
+               Right (Just (l, txt)) ->
+                 ( "In line "
+                     <> (B.fromText . T.pack . show) l
+                 )
+                   <> ":\n\n"
+                   <> "```markdown\n"
+                   <> B.fromText txt
+                   <> "\n```"
+           )
+        <> "\n"
+    )
 
 textDocumentHoverHandler :: Handlers HandlerM
 textDocumentHoverHandler =
