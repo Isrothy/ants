@@ -110,46 +110,57 @@ textDocumentHoverHandler =
           case unSourceRange sr of
             (begin, _) : _ -> Just $ sourceLine begin
             _ -> Nothing
+    let parseFile :: Path Abs File -> T.Text -> (Maybe Metadata, Maybe MarkdownAst)
+        parseFile path = markdownWithFrontmatter allSpecExtensions (toFilePath path)
+    let getAst path file = snd $ parseFile path file
     mroot <- liftLSP getRootPath
     mfile <- liftLSP $ getVirtualFile (toNormalizedUri uri)
-    ret <- runMaybeT $ do
-      let parseFile :: Path Abs File -> T.Text -> (Maybe Metadata, Maybe MarkdownAst)
-          parseFile path = markdownWithFrontmatter allSpecExtensions (toFilePath path)
-      let getAst path file = snd $ parseFile path file
+    let linkAtPlace = do
+          root <- mroot >>= parseAbsDir
+          origFile <- mfile
+          origPath <- mpath
+          origAst <- getAst origPath (virtualFileText origFile)
+          ele <- nodeAt isLink l c origAst
+          link <- fromLink ele
+          (filepath, mtag) <- parseLink (link ^. linkTarget)
+          let rg = do
+                sr <- ele ^. sourceRange
+                listToMaybe $ sourceRangeToRange sr
+          return (rg, root, origPath, origFile, filepath, mtag)
 
-      root <- MaybeT $ return $ mroot >>= parseAbsDir
-      origFile <- MaybeT $ return mfile
-      origPath <- MaybeT $ return mpath
-      origAst <- MaybeT $ return $ getAst origPath (virtualFileText origFile)
-      ele <- MaybeT $ return $ nodeAt isLink l c origAst
-      link <- MaybeT $ return $ fromLink ele
-      (filepath, mtag) <- MaybeT $ return $ parseLink (link ^. linkTarget)
+    case linkAtPlace of
+      Nothing -> respond $ Right $ InR Null
+      Just (rg, root, origPath, origFile, filepath, mtag) -> do
+        target <- runMaybeT $ do
+          targetPath <- MaybeT $ liftIO $ resolveLinkInFile origPath (T.unpack filepath)
+          guard $ root `isProperPrefixOf` targetPath
+          targetText <-
+            MaybeT $
+              if targetPath == origPath
+                then return $ Just $ virtualFileText origFile
+                else do
+                  mvf <-
+                    liftLSP $
+                      getVirtualFile $
+                        toNormalizedUri $
+                          filePathToUri $
+                            toFilePath targetPath
+                  case mvf of
+                    Just vf -> return $ Just $ virtualFileText vf
+                    Nothing -> liftIO $ readFileSafe $ toFilePath targetPath
+          let (mtargetFrontmatter, mtargetAst) = parseFile targetPath targetText
 
-      let rg = do
-            sr <- ele ^. sourceRange
-            listToMaybe $ sourceRangeToRange sr
-
-      targetPath <- MaybeT $ liftIO $ resolveLinkInFile origPath (T.unpack filepath)
-      guard $ root `isProperPrefixOf` targetPath
-      targetFile <-
-        MaybeT $
-          if targetPath == origPath
-            then return $ Just origFile
-            else liftLSP $ getVirtualFile $ toNormalizedUri $ filePathToUri $ toFilePath targetPath
-      let targetText = virtualFileText targetFile
-      let (mtargetFrontmatter, mtargetAst) = parseFile targetPath targetText
-
-      let lineContent = case mtag of
-            Nothing -> Right Nothing
-            Just tag -> case mtargetAst >>= getLineNr tag of
-              Nothing -> Left "bookmark not found"
-              Just ln -> Right (Just (ln, T.lines targetText !! (ln - 1)))
-      return (rg, formatHover targetPath mtargetFrontmatter lineContent)
-    respond
-      ( case ret of
-          Nothing -> Right $ InR Null
-          Just (rg, msg) -> Right $ InL $ Hover (InL (mkMarkdown msg)) rg
-      )
+          let lineContent = case mtag of
+                Nothing -> Right Nothing
+                Just tag -> case mtargetAst >>= getLineNr tag of
+                  Nothing -> Left "bookmark not found"
+                  Just ln -> Right (Just (ln, T.lines targetText !! (ln - 1)))
+          return $ formatHover targetPath mtargetFrontmatter lineContent
+        respond
+          ( case target of
+              Nothing -> Right $ InL $ Hover (InL (mkMarkdown "target not found")) rg
+              Just msg -> Right $ InL $ Hover (InL (mkMarkdown msg)) rg
+          )
 
 initializedHandler :: Handlers HandlerM
 initializedHandler =

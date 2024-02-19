@@ -7,28 +7,25 @@ module Lsp.Util
     readUri,
     liftLSP,
     sourceRangeToRange,
+    readFileSafe,
   )
 where
 
 import Commonmark
+import Control.Exception
 import Control.Monad.RWS
 import Control.Monad.Trans.Except qualified as Except
 import Data.Text qualified as T
 import Data.Text qualified as Text
-import Data.Text.Encoding qualified as TE
-import Data.Text.Encoding.Error qualified as TEE
+import Data.Text.IO qualified as TIO
 import Data.Text.Utf16.Rope qualified as Rope
-import Data.Yaml.Pretty
-import Language.LSP.Protocol.Message
 import Language.LSP.Protocol.Types
 import Language.LSP.Protocol.Types qualified as LSP.Types
 import Language.LSP.Server
 import Language.LSP.Server qualified as LSP
-import Language.LSP.VFS
 import Language.LSP.VFS qualified as LSP
 import Lsp.State
 import Path
-import Text.RawString.QQ
 
 uriToDir :: Uri -> Maybe (Path Abs Dir)
 uriToDir uriStr = uriToFilePath uriStr >>= parseAbsDir
@@ -45,6 +42,13 @@ readUri uri_ = do
   case mVirtualFile of
     Just (LSP.VirtualFile _ _ rope) -> return (Rope.toText rope)
     Nothing -> Except.throwE (Error, "Could not find " <> Text.pack (show uri_) <> " in VFS.")
+
+readFileSafe :: FilePath -> IO (Maybe T.Text)
+readFileSafe filePath = do
+  result <- try (TIO.readFile filePath) :: IO (Either IOException T.Text)
+  case result of
+    Left _ -> return Nothing
+    Right content -> return (Just content)
 
 sourceRangeToRange :: SourceRange -> [Range]
 sourceRangeToRange sr = map helper (unSourceRange sr)
