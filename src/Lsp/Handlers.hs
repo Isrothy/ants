@@ -65,17 +65,26 @@ formatHover path frontMatter lineContent =
   concatTexts
     [ "In ",
       T.pack (toFilePath path),
-      "\n",
-      "FrontMatter: ",
+      "\n\n",
+      "FrontMatter:\n\n",
+      "```yaml\n",
       maybe
         ""
         (TE.decodeUtf8With TEE.lenientDecode . encodePretty defConfig)
         frontMatter,
-      "\n",
+      "```\n",
       case lineContent of
         Left err -> "Error:" <> err
         Right Nothing -> ""
-        Right (Just (l, txt)) -> "In line " <> T.pack (show l) <> "\n" <> txt,
+        Right (Just (l, txt)) ->
+          concatTexts
+            [ "In line ",
+              T.pack (show l),
+              ":\n\n",
+              "```markdown\n",
+              txt,
+              "\n```"
+            ],
       "\n"
     ]
 
@@ -134,7 +143,7 @@ textDocumentHoverHandler =
             Nothing -> Right Nothing
             Just tag -> case mtargetAst >>= getLineNr tag of
               Nothing -> Left "bookmark not found"
-              Just ln -> Right (Just (ln, T.lines targetText !! ln))
+              Just ln -> Right (Just (ln, T.lines targetText !! (ln - 1)))
       return (rg, formatHover targetPath mtargetFrontmatter lineContent)
     respond
       ( case ret of
