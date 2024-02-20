@@ -41,6 +41,8 @@ module Model.MarkdownAst
     referenceLinkDefinationLabel,
     referenceLinkDefinationDestination,
     referenceLinkDefinationTitle,
+    wikiLinkTarget,
+    wikiLinkInline,
   )
 where
 
@@ -110,7 +112,7 @@ data MarkdownElement where
     ListSpacing ->
     [(Bool, MarkdownAst)] ->
     MarkdownElement
-  WikiLink :: T.Text -> MarkdownAst -> MarkdownElement
+  WikiLink :: WikiLinkData -> MarkdownElement
   Footnote :: Int -> T.Text -> MarkdownAst -> MarkdownElement
   FootnoteList :: [MarkdownAst] -> MarkdownElement
   FootnoteRef :: T.Text -> T.Text -> MarkdownAst -> MarkdownElement
@@ -136,6 +138,14 @@ data ImageData where
     ImageData
   deriving (Show, Eq)
 
+data WikiLinkData where
+  WikiLinkData ::
+    { _wikiLinkTarget :: T.Text,
+      _wikiLinkInline :: MarkdownAst
+    } ->
+    WikiLinkData
+  deriving (Show, Eq)
+
 data ListData where
   ListData ::
     { _listType :: ListType,
@@ -157,6 +167,8 @@ data ReferenceLinkDefinationData where
 makeLenses ''MarkdownAstNode
 
 makeLenses ''LinkData
+
+makeLenses ''WikiLinkData
 
 makeLenses ''ImageData
 
@@ -230,7 +242,7 @@ instance HasAlerts MarkdownAst MarkdownAst where
   alert a = rawNode . Alert a
 
 instance HasWikilinks MarkdownAst where
-  wikilink target = rawNode . WikiLink target
+  wikilink target inline = rawNode $ WikiLink $ WikiLinkData target inline
 
 instance HasFootnote MarkdownAst MarkdownAst where
   footnote num label bl = rawNode $ Footnote num label bl
@@ -299,7 +311,7 @@ toPlainTextBuilder' (MarkdownAstNode ele _ _) = case ele of
           asts
       )
   TaskList _ _ items -> mconcat $ map (\(_, ast) -> toPlainTextBuilder ast <> "\n") items
-  WikiLink txt ast -> TB.fromText txt <> toPlainTextBuilder ast
+  WikiLink wiki -> toPlainTextBuilder (wiki ^. wikiLinkInline)
   Footnote num txt ast ->
     "[" <> TB.fromString (show num) <> "] " <> TB.fromText txt <> toPlainTextBuilder ast
   FootnoteList items -> mconcat $ map (\item -> toPlainTextBuilder item <> "\n") items
@@ -333,7 +345,7 @@ children (Blockquote ast) = [ast]
 children (PipeTable _ title rows) = concat (title : rows)
 children (DefinitionList _ asts) = map fst asts ++ concatMap snd asts
 children (TaskList _ _ items) = map snd items
-children (WikiLink _ ast) = [ast]
+children (WikiLink wiki) = [wiki ^. wikiLinkInline]
 children (Footnote _ _ ast) = [ast]
 children (FootnoteList items) = items
 children (FootnoteRef _ _ ast) = [ast]

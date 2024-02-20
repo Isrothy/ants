@@ -21,6 +21,7 @@ import Commonmark (SourceRange (unSourceRange), sourceLine)
 import Control.Conditional (guard)
 import Control.Lens ((^.))
 import Control.Monad.IO.Class (MonadIO (liftIO))
+import Control.Monad.Trans.Except (catchE)
 import Control.Monad.Trans.Maybe (MaybeT (MaybeT, runMaybeT))
 import Data.Maybe (listToMaybe)
 import Data.Text qualified as T
@@ -42,6 +43,24 @@ import Parser.MarkdownWithFrontmatter
 import Path
 import Project.Link
 
+handleErrorWithDefault ::
+  (Either a1 b -> HandlerM a2) ->
+  b ->
+  HandlerM a2 ->
+  HandlerM a2
+handleErrorWithDefault respond _default = flip catchE handler
+  where
+    handler (Log, _message) = do
+      liftLSP $ LSP.sendNotification LSP.SMethod_WindowLogMessage (LSP.LogMessageParams LSP.MessageType_Log _message)
+      respond (Right _default)
+    handler (severity_, _message) = do
+      let _xtype = case severity_ of
+            Error -> LSP.MessageType_Error
+            Warning -> LSP.MessageType_Warning
+            Info -> LSP.MessageType_Info
+      liftLSP $ LSP.sendNotification LSP.SMethod_WindowShowMessage (LSP.ShowMessageParams _xtype _message)
+      respond (Right _default)
+
 formatHover :: Path Abs File -> Maybe Metadata -> Either T.Text (Maybe Int, [T.Text]) -> T.Text
 formatHover path mfrontMatter preview =
   TL.toStrict . B.toLazyText $ displayFilepath <> displayFrontMatter <> displayContent
@@ -62,18 +81,20 @@ formatHover path mfrontMatter preview =
 
 textDocumentHoverHandler :: LSP.Handlers HandlerM
 textDocumentHoverHandler =
-  LSP.requestHandler LSP.SMethod_TextDocumentHover \request respond -> do
-    let LSP.TRequestMessage _ _ _ (LSP.HoverParams _doc pos _workDone) = request
+  LSP.requestHandler LSP.SMethod_TextDocumentHover \request respond -> handleErrorWithDefault respond (LSP.InR LSP.Null) do
+    let LSP.TRequestMessage _ _ _ (LSP.HoverParams doc pos _) = request
         LSP.Position _l _c = pos
         l = _l + 1
         c = _c + 1
-        LSP.TextDocumentIdentifier uri = _doc
+        LSP.TextDocumentIdentifier uri = doc
         mpath = uriToFile uri
     let isLink :: MarkdownAstNode -> Bool
         isLink (MarkdownAstNode (Link {}) _ _) = True
+        isLink (MarkdownAstNode (WikiLink {}) _ _) = True
         isLink _ = False
-    let fromLink :: MarkdownAstNode -> Maybe LinkData
-        fromLink (MarkdownAstNode (Link ldata) _ _) = Just ldata
+    let fromLink :: MarkdownAstNode -> Maybe T.Text
+        fromLink (MarkdownAstNode (Link ldata) _ _) = Just (ldata ^. linkTarget)
+        fromLink (MarkdownAstNode (WikiLink ldata) _ _) = Just (ldata ^. wikiLinkTarget)
         fromLink _ = Nothing
     let getLineNr :: T.Text -> MarkdownAst -> Maybe Int
         getLineNr tag ast = do
@@ -94,7 +115,7 @@ textDocumentHoverHandler =
           origAst <- getAst origPath (VFS.virtualFileText origFile)
           ele <- nodeAt isLink l c origAst
           link <- fromLink ele
-          (filepath, mtag) <- parseLink (link ^. linkTarget)
+          (filepath, mtag) <- parseLink link
           let rg = do
                 sr <- ele ^. sourceRange
                 listToMaybe $ sourceRangeToRange sr
