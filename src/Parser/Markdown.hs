@@ -3,6 +3,7 @@ module Parser.Markdown
     extensionLookup,
     allSpecExtensions,
     markdownAstWith,
+    getExtensionsFromConfig
   )
 where
 
@@ -11,6 +12,8 @@ import Commonmark.Extensions
 import Data.Data
 import qualified Data.Text as T
 import Model.MarkdownAst
+import Model.Config
+import Data.Maybe (fromMaybe)
 
 markdownAst :: String -> T.Text -> Either ParseError MarkdownAst
 markdownAst = commonmark
@@ -75,3 +78,6 @@ markdownAstWith ::
   T.Text ->
   m (Either ParseError MarkdownAst)
 markdownAstWith = commonmarkWith
+
+getExtensionsFromConfig :: (Monad m, Typeable m) => Config -> SyntaxSpec m MarkdownAst MarkdownAst
+getExtensionsFromConfig conf = foldMap (\x -> fromMaybe mempty $ lookup (T.unpack x) extensionLookup) (extensions conf)

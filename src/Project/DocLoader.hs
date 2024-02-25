@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Project.DocLoader
   ( loadDocument,
@@ -11,41 +12,38 @@ import Control.Monad.Identity (Identity)
 import Data.Default
 import Data.Either
 import qualified Data.Text as T
-import qualified Model.Document as D
+import Model.Document
 import Model.MarkdownAst
 import Parser.MarkdownWithFrontmatter
 import Path
 import Path.IO
 import Text.Parsec (parse)
+import Data.Maybe (fromMaybe)
 
 loadDocument ::
   SyntaxSpec Identity MarkdownAst MarkdownAst ->
   Path b Dir ->
   Path Rel File ->
-  IO D.Document
+  IO Document
 loadDocument spec anker relPath = do
   let path = anker </> relPath
   timeCreated <- getModificationTime path
   lastModified <- getModificationTime path
   text <- T.pack <$> readFile (toFilePath path)
-  let fn = toFilePath (filename path)
-  let result = markdownWithFrontmatter spec fn text
-  let (metadata, ast) = result
+  let filename = toFilePath (Path.filename path)
+  let result = markdownWithFrontmatter spec filename text
+  let (meta, ast) = result
+  let metadata = fromMaybe (def metadata) meta
   return
-    D.Document
-      { D.relPath = relPath,
-        D.timeCreated = timeCreated,
-        D.lastModified = lastModified,
-        D.filename = fn,
-        D.metadata = def metadata,
-        D.ast = ast,
-        D.text = text
+    Document
+      {
+        ..
       }
 
 loadAllFromDirectory ::
   SyntaxSpec Identity MarkdownAst MarkdownAst ->
   Path b Dir ->
-  IO [D.Document]
+  IO [Document]
 loadAllFromDirectory spec dir = do
   (_, files) <- listDirRecurRel dir
   let mdFiles = filter ((== Just ".md") . fileExtension) files

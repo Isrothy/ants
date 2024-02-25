@@ -1,10 +1,13 @@
 {-# LANGUAGE TemplateHaskell #-}
 
-module Project.ProjectRoot (findRoot, findTemplate, configDir, templateDir, configFileName, defaultTemplateFileName) where
+module Project.ProjectRoot (findRoot, findTemplate, configDir, templateDir, configFileName, defaultTemplateFileName, readConfig) where
 
 import Control.Conditional
 import Path
 import Path.IO
+import Model.Config (Config)
+import qualified Data.Aeson
+import Data.String (fromString)
 
 configDir :: Path Rel Dir
 configDir = $(mkRelDir ".ants")
@@ -38,3 +41,9 @@ findRoot = do
 
 findTemplate :: Path Abs Dir -> IO (Maybe (Path Abs Dir))
 findTemplate dir = findDir dir templateDir
+
+readConfig :: Path Abs Dir -> IO (Maybe Config)
+readConfig pathToRoot = do
+  let configPath = pathToRoot </> configDir </> configFileName
+  conf <- readFile $ toFilePath configPath
+  return $ Data.Aeson.decode $ fromString conf 
