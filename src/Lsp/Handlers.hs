@@ -2,6 +2,8 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ExplicitNamespaces #-}
+{-# LANGUAGE ExtendedDefaultRules #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
@@ -20,11 +22,10 @@ where
 import Commonmark (SourceRange (unSourceRange), sourceLine)
 import Commonmark.Syntax (SyntaxSpec)
 import Control.Conditional (guard)
-import Control.Lens ((^.))
+import Control.Lens (modifying, use, (.=), (^.))
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Control.Monad.Trans.Except (catchE)
 import Control.Monad.Trans.Maybe (MaybeT (MaybeT, runMaybeT))
-import Data.Data (Typeable)
 import Data.Default
 import Data.Functor.Identity
 import Data.Maybe
@@ -34,6 +35,8 @@ import Data.Text.Encoding.Error qualified as TEE
 import Data.Text.Lazy qualified as TL
 import Data.Text.Lazy.Builder qualified as B
 import Data.Yaml.Pretty (defConfig, encodePretty)
+import Language.LSP.Protocol.Lens
+import Language.LSP.Protocol.Lens qualified as LSP
 import Language.LSP.Protocol.Message qualified as LSP
 import Language.LSP.Protocol.Types qualified as LSP
 import Language.LSP.Server qualified as LSP
@@ -48,6 +51,7 @@ import Parser.MarkdownWithFrontmatter
 import Path
 import Project.Link
 import Project.ProjectRoot (readConfig)
+import Text.RawString.QQ
 import Util.IO (readFileSafe)
 
 handleErrorWithDefault ::
@@ -116,24 +120,25 @@ textDocumentHoverHandler =
       let getAst spec path file = snd $ parseFile spec path file
       mroot <- liftLSP LSP.getRootPath
       mfile <- liftLSP $ LSP.getVirtualFile (LSP.toNormalizedUri uri)
+
+      spec <- use markdownSyntaxSpec
+
       linkAtPlace <- runMaybeT do
         root <- MaybeT $ return $ mroot >>= parseAbsDir
-        mconfig <- liftIO $ readConfig root
-        let config = fromMaybe def mconfig
         origFile <- MaybeT $ return mfile
         origPath <- MaybeT $ return mpath
-        origAst <- MaybeT $ return $ getAst (getSyntaxSpec config) origPath (VFS.virtualFileText origFile)
+        origAst <- MaybeT $ return $ getAst spec origPath (VFS.virtualFileText origFile)
         ele <- MaybeT $ return $ nodeAt isLink l c origAst
         link <- MaybeT $ return $ fromLink ele
         (filepath, mtag) <- MaybeT $ return $ parseLink link
         let rg = do
               sr <- ele ^. sourceRange
               listToMaybe $ sourceRangeToRange sr
-        return (rg, root, config, origPath, origFile, filepath, mtag)
+        return (rg, root, origPath, origFile, filepath, mtag)
 
       case linkAtPlace of
         Nothing -> respond $ Right $ LSP.InR LSP.Null
-        Just (rg, root, config, origPath, origFile, filepath, mtag) -> do
+        Just (rg, root, origPath, origFile, filepath, mtag) -> do
           target <- runMaybeT $ do
             targetPath <- MaybeT $ liftIO $ resolveLinkInFile origPath (T.unpack filepath)
             guard $ root `isProperPrefixOf` targetPath
@@ -146,7 +151,7 @@ textDocumentHoverHandler =
                     case mvf of
                       Just vf -> return $ Just $ VFS.virtualFileText vf
                       Nothing -> liftIO $ readFileSafe $ toFilePath targetPath
-            let (mtargetFrontmatter, mtargetAst) = parseFile (getSyntaxSpec config) targetPath targetText
+            let (mtargetFrontmatter, mtargetAst) = parseFile spec targetPath targetText
 
             let preview = case mtag of
                   Nothing -> Right (Nothing, drop (frontMatterLines targetText) (T.lines targetText))
@@ -162,7 +167,13 @@ textDocumentHoverHandler =
 
 initializedHandler :: LSP.Handlers HandlerM
 initializedHandler =
-  LSP.notificationHandler LSP.SMethod_Initialized \_ -> return ()
+  LSP.notificationHandler LSP.SMethod_Initialized \_ -> do
+    mconfig <- runMaybeT $ do
+      mroot <- MaybeT $ liftLSP LSP.getRootPath
+      root <- MaybeT $ return $ parseAbsDir mroot
+      MaybeT $ liftIO $ readConfig root
+    markdownSyntaxSpec .= getSyntaxSpec (fromMaybe def mconfig)
+    return ()
 
 workspaceChangeConfigurationHandler :: LSP.Handlers HandlerM
 workspaceChangeConfigurationHandler =

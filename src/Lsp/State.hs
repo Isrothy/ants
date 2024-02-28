@@ -4,6 +4,8 @@
 
 module Lsp.State where
 
+import Commonmark (SyntaxSpec)
+import Commonmark.Syntax (defaultSyntaxSpec)
 import Control.Lens.TH (makeLenses)
 import Control.Monad.Trans.Except (ExceptT)
 import Control.Monad.Trans.State.Strict (StateT)
@@ -12,8 +14,10 @@ import Data.Aeson
     withObject,
   )
 import Data.Default (Default (def))
+import Data.Functor.Identity (Identity)
 import qualified Data.Text as T
 import qualified Language.LSP.Server as LSP
+import Model.MarkdownAst (MarkdownAst)
 
 type HandlerM =
   ExceptT (Severity, T.Text) (StateT ServerState (LSP.LspT ServerConfig IO))
@@ -24,21 +28,26 @@ data Severity
   | Info
   | Log
 
-data ServerConfig = ServerConfig
-  {
-  }
+data ServerConfig where
+  ServerConfig :: {} -> ServerConfig
 
 instance Default ServerConfig where
   def = ServerConfig
 
 instance FromJSON ServerConfig where
-  parseJSON = withObject "server-settings" $ \o -> do
+  parseJSON = withObject "settings" $ \o -> do
     return def
 
 data ServerState where
-  ServerState :: ServerState
+  ServerState ::
+    { _markdownSyntaxSpec :: SyntaxSpec Identity MarkdownAst MarkdownAst
+    } ->
+    ServerState
 
 makeLenses ''ServerState
 
 initialState :: ServerState
-initialState = ServerState
+initialState =
+  ServerState
+    { _markdownSyntaxSpec = defaultSyntaxSpec
+    }

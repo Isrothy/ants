@@ -99,10 +99,10 @@ hoverSpec = describe "Lsp Hover" $ sequential $ do
       let setup = do
             setCurrentDir tmp
             initNotebook InitOptions
+            writeFile (toFilePath (tmp </> $(mkRelFile "test.md"))) sampleMarkdownDoc
           cleanup = do
             setCurrentDir cur
       bracket_ setup cleanup $ do
-        writeFile (toFilePath (tmp </> $(mkRelFile "test.md"))) sampleMarkdownDoc
         runSession "ants-ls" fullCaps (toFilePath tmp) $
           do
             docId <- openDoc "test.md" "markdown"
@@ -117,10 +117,10 @@ hoverSpec = describe "Lsp Hover" $ sequential $ do
       let setup = do
             setCurrentDir tmp
             initNotebook InitOptions
+            writeFile (toFilePath (tmp </> $(mkRelFile "test.md"))) sampleMarkdownDoc
           cleanup = do
             setCurrentDir cur
       bracket_ setup cleanup $ do
-        writeFile (toFilePath (tmp </> $(mkRelFile "test.md"))) sampleMarkdownDoc
         runSession "ants-ls" fullCaps (toFilePath tmp) $
           do
             docId <- openDoc "test.md" "markdown"
@@ -129,17 +129,17 @@ hoverSpec = describe "Lsp Hover" $ sequential $ do
               hover `shouldSatisfy` isJust
               pure ()
 
-  it "respects config hover on link" $ do
+  it "respects config" $ do
     withSystemTempDir "docLoader" $ \tmp -> do
       cur <- getCurrentDir
       let setup = do
             setCurrentDir tmp
             initNotebook InitOptions
             writeFile (toFilePath $ tmp </> configDir </> configFileName) configWithoutWikilink
+            writeFile (toFilePath (tmp </> $(mkRelFile "test.md"))) sampleMarkdownDoc
           cleanup = do
             setCurrentDir cur
       bracket_ setup cleanup $ do
-        writeFile (toFilePath (tmp </> $(mkRelFile "test.md"))) sampleMarkdownDoc
         runSession "ants-ls" fullCaps (toFilePath tmp) $
           do
             docId <- openDoc "test.md" "markdown"
@@ -155,10 +155,10 @@ hoverSpec = describe "Lsp Hover" $ sequential $ do
             setCurrentDir tmp
             initNotebook InitOptions
             writeFile (toFilePath $ tmp </> configDir </> configFileName) configWithWikilink
+            writeFile (toFilePath (tmp </> $(mkRelFile "test.md"))) sampleMarkdownDoc
           cleanup = do
             setCurrentDir cur
       bracket_ setup cleanup $ do
-        writeFile (toFilePath (tmp </> $(mkRelFile "test.md"))) sampleMarkdownDoc
         runSession "ants-ls" fullCaps (toFilePath tmp) $
           do
             docId <- openDoc "test.md" "markdown"

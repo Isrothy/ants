@@ -68,10 +68,10 @@ run = do
           backward = liftIO
   LSP.runServer $
     LSP.ServerDefinition
-      { parseConfig = const $ const $ Right ServerConfig,
+      { parseConfig = const $ const $ Right ServerConfig {},
         onConfigChange = const $ pure (),
-        defaultConfig = ServerConfig,
-        configSection = "demo",
+        defaultConfig = ServerConfig {},
+        configSection = "ants",
         doInitialize = \env _req -> pure $ Right env,
         staticHandlers = \_caps -> handlers,
         interpretHandler = interpreter,
