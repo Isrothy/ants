@@ -8,7 +8,7 @@
 
 module Model.Config
   ( Config (..),
-    Template (..),
+    Template (..)
   )
 where
 
@@ -21,7 +21,6 @@ import qualified Data.Text as T
 import qualified Data.Vector as Vector
 import GHC.Generics
 import Data.Aeson.Extra
-
 data Config where
   Config ::
     { template :: !Template,

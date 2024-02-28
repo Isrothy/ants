@@ -9,6 +9,7 @@ module Parser.Opts
     Command (..),
     InitOptions (..),
     NewOptions (..),
+    FilterOptions (..),
     LookupTable,
   )
 where
@@ -30,7 +31,9 @@ data NewOptions = NewOptions
 data InitOptions = InitOptions
   {
   }
-
+data FilterOptions = FilterOptions
+  { queryString :: T.Text
+  }
 newtype Options = Options
   { optCommand :: Command
   }
@@ -38,7 +41,7 @@ newtype Options = Options
 data Command
   = New NewOptions
   | Init InitOptions
-
+  | Filter FilterOptions
 parsePair :: ReadM (T.Text, T.Text)
 parsePair = eitherReader $ \s ->
   case elemIndex '=' s of
@@ -69,12 +72,16 @@ newCommand = do
 initCommand :: Parser Command
 initCommand = do
   pure $ Init $ InitOptions {}
-
+filterCommand :: Parser Command
+filterCommand = do
+  queryString <- strArgument (metavar "QUERY" <> help "Query to be used for filtering")
+  pure $ Filter $ FilterOptions {..}
 opts :: Parser Options
 opts = do
   optCommand <-
     hsubparser
-      ( command "init" (info initCommand $ progDesc "init the notebook")
-          <> command "new" (info newCommand $ progDesc "create a new note")
+      ( command "init" (info initCommand $ progDesc "Init the notebook")
+          <> command "new" (info newCommand $ progDesc "Create a new note")
+          <> command "filter" (info filterCommand $ progDesc "Filter notes")
       )
   pure $ Options {..}

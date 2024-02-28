@@ -15,29 +15,27 @@ where
 
 import Commonmark
 import Control.Monad
-import Data.Aeson (decode)
 import qualified Data.Bifunctor
 import Data.Char (isSpace)
 import Data.Functor.Identity
 import Data.List (sortBy)
 import Data.Maybe (fromJust, fromMaybe, maybeToList)
-import Data.String (fromString)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import qualified Data.Text.Lazy as TL
 import Data.Time
 import qualified Data.Yaml as Y
-import Model.Config
 import qualified Model.Config as Config
 import Model.MarkdownAst
 import qualified Model.Metadata as M
 import Parser.Markdown
 import Parser.Opts
 import Parser.Placeholder
-import Path (mkRelFile, parseRelFile, toFilePath, (</>))
+import Path (parseRelFile, toFilePath, (</>))
 import Path.IO (resolveDir')
-import Project.ProjectRoot (configDir, configFileName, defaultTemplateFileName, findRoot, findTemplate, templateDir)
+import Project.ProjectRoot (defaultTemplateFileName, findRoot, findTemplate, templateDir, readConfig)
 import Safe
+import Control.Monad.Extra (fromMaybeM)
 
 markdownAstWithPlaceholder ::
   (Monad m) =>
@@ -45,17 +43,16 @@ markdownAstWithPlaceholder ::
   String ->
   T.Text ->
   m (Either Commonmark.ParseError MarkdownAst)
-markdownAstWithPlaceholder extensions =
-  markdownAstWith (placeholderSpec <> extensions <> defaultSyntaxSpec)
+markdownAstWithPlaceholder exts =
+  markdownAstWith (placeholderSpec <> exts <> defaultSyntaxSpec)
 
 replacePlaceholders ::
   SyntaxSpec Identity MarkdownAst MarkdownAst ->
-  String ->
   T.Text ->
   [(T.Text, T.Text)] ->
   T.Text
-replacePlaceholders extensions filename text lookupTable =
-  case runIdentity $ markdownAstWithPlaceholder extensions filename text of
+replacePlaceholders exts text lookupTable =
+  case runIdentity $ markdownAstWithPlaceholder exts "" text of
     Left _ -> text
     Right ast ->
       replacePlaceholders'
@@ -118,48 +115,31 @@ fromConfig :: Config.Config -> LookupTable
 fromConfig = fromTemplate . Config.template
   where
     fromTemplate :: Config.Template -> LookupTable
-    fromTemplate template =
-      maybeToList (("name",) <$> Config.name template)
-        <> maybeToList (("email",) <$> Config.email template)
-        <> [("date", fromMaybe "%Y-%m-%d" $ Config.dateFormat template)]
-        <> [("time", fromMaybe "%H:%M:%S" $ Config.timeFormat template)]
-        <> [("dateTime", fromMaybe "%Y-%m-%dT%H:%M:%S" $ Config.dateTimeFormat template)]
-        <> Config.variables template
+    fromTemplate tl =
+      maybeToList (("name",) <$> Config.name tl)
+        <> maybeToList (("email",) <$> Config.email tl)
+        <> [("date", fromMaybe "%Y-%m-%d" $ Config.dateFormat tl)]
+        <> [("time", fromMaybe "%H:%M:%S" $ Config.timeFormat tl)]
+        <> [("dateTime", fromMaybe "%Y-%m-%dT%H:%M:%S" $ Config.dateTimeFormat tl)]
+        <> Config.variables tl
 
 replaceTime :: LocalTime -> T.Text -> LookupTable -> LookupTable
 replaceTime tim s tab = (s, T.pack $ formatTime defaultTimeLocale (T.unpack $ fromJust (lookup s tab)) tim) : tab
 
 newNote :: NewOptions -> IO ()
 newNote op = do
-  pathToRoot <- findRoot
-  let configPath =
-        case pathToRoot of
-          Just x -> x </> configDir </> configFileName
-          Nothing -> error "Cannot find config"
-  conf <- readFile $ toFilePath configPath
-  let config =
-        case Data.Aeson.decode $ fromString conf of
-          Just x -> x
-          Nothing -> error "config: Decode failed"
+  pathToRoot <- fromMaybeM (error "Cannot find config") findRoot
+  config <- fromMaybeM (error "config: Decode failed") $ readConfig pathToRoot
   let tab = table op ++ fromConfig config
-  print tab
   tim <- getCurrentTime
   tz <- getTimeZone tim
   let localtim = utcToLocalTime tz tim
   let newtab = foldr (replaceTime localtim) tab ["date", "time", "dateTime"]
   actualPath <- resolveDir' $ dir op
   pathToTemplate <- findTemplate actualPath
-  let templatePath =
-        case pathToTemplate of
-          Just x -> Just (x </> templateDir </> defaultTemplateFileName)
-          Nothing -> Nothing
-  templateString <- case templatePath of
-    Just x -> readFile $ toFilePath x
-    Nothing -> pure ""
-  let replacedContent =
-        case templatePath of
-          Just fn -> replacePlaceholders (foldMap (\x -> fromMaybe mempty $ lookup (T.unpack x) extensionLookup) (extensions config)) (toFilePath fn) (T.pack templateString) newtab
-          Nothing -> ""
+  let templatePath = fmap (</> templateDir </> defaultTemplateFileName) pathToTemplate
+  templateString <- maybe (pure "") (readFile . toFilePath) templatePath
+  let replacedContent = replacePlaceholders (getExtensionsFromConfig config) (T.pack templateString) newtab
   let mdata =
         M.Metadata
           { M.title = Just $ Parser.Opts.title op,
