@@ -52,6 +52,7 @@ library
       Project.Link
       Project.ProjectRoot
       Util.Fuzzy
+      Util.IO
   other-modules:
       Paths_ants
   hs-source-dirs:

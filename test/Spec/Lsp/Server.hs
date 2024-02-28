@@ -13,6 +13,7 @@
 
 module Spec.Lsp.Server (spec) where
 
+import Cli.InitNoteBook (initNotebook)
 import Control.Concurrent
 import Control.Exception
 import Control.Lens ((^.))
@@ -31,8 +32,10 @@ import Language.LSP.Protocol.Types
 import Language.LSP.Server
 import Language.LSP.Test
 import Lsp.Server
+import Parser.Opts
 import Path
 import Path.IO
+import Project.ProjectRoot
 import System.Process
 import Test.Hspec
 import Text.RawString.QQ
@@ -40,33 +43,129 @@ import Text.RawString.QQ
 sampleMarkdownDoc :: String
 sampleMarkdownDoc =
   [r|# Introduction
+
 This is a sample document.
+
 [this is a link](target.md#tag)
+
+[[target.md#tag]]
   |]
+
+configWithoutWikilink :: String
+configWithoutWikilink =
+  [r|
+{
+  "template":{
+    "name": "John",
+    "email": "john@example.com",
+    "dateFormat": "%Y-%m-%d",
+    "timeFormat": "%H:%M:%S",
+    "dateTimeFormat": "%Y-%m-%dT%H:%M:%S",
+    "variables": {
+      "game": "League of Legends"
+    }
+  },
+  "extensions": [
+    "gfm", "attributes", "auto_identifiers"
+  ]
+}
+|]
+
+configWithWikilink :: String
+configWithWikilink =
+  [r|
+{
+  "template":{
+    "name": "John",
+    "email": "john@example.com",
+    "dateFormat": "%Y-%m-%d",
+    "timeFormat": "%H:%M:%S",
+    "dateTimeFormat": "%Y-%m-%dT%H:%M:%S",
+    "variables": {
+      "game": "League of Legends"
+    }
+  },
+  "extensions": [
+    "gfm", "attributes", "auto_identifiers", "wikilinks_title_after_pipe"
+  ]
+}
+|]
 
 hoverSpec :: Spec
 hoverSpec = describe "Lsp Hover" $ sequential $ do
   it "do not hover on none link" $ do
     withSystemTempDir "docLoader" $ \tmp -> do
-      writeFile (toFilePath (tmp </> $(mkRelFile "test.md"))) sampleMarkdownDoc
-      runSession "ants-ls" fullCaps (toFilePath tmp) $
-        do
-          docId <- openDoc "test.md" "markdown"
-          hover <- getHover docId (Position 0 5)
-          liftIO $ do
-            hover `shouldSatisfy` isNothing
-            pure ()
+      cur <- getCurrentDir
+      let setup = do
+            setCurrentDir tmp
+            initNotebook InitOptions
+          cleanup = do
+            setCurrentDir cur
+      bracket_ setup cleanup $ do
+        writeFile (toFilePath (tmp </> $(mkRelFile "test.md"))) sampleMarkdownDoc
+        runSession "ants-ls" fullCaps (toFilePath tmp) $
+          do
+            docId <- openDoc "test.md" "markdown"
+            hover <- getHover docId (Position 0 5)
+            liftIO $ do
+              hover `shouldSatisfy` isNothing
+              pure ()
 
   it "hover on link" $ do
     withSystemTempDir "docLoader" $ \tmp -> do
-      writeFile (toFilePath (tmp </> $(mkRelFile "test.md"))) sampleMarkdownDoc
-      runSession "ants-ls" fullCaps (toFilePath tmp) $
-        do
-          docId <- openDoc "test.md" "markdown"
-          hover <- getHover docId (Position 2 5)
-          liftIO $ do
-            hover `shouldSatisfy` isJust
-            pure ()
+      cur <- getCurrentDir
+      let setup = do
+            setCurrentDir tmp
+            initNotebook InitOptions
+          cleanup = do
+            setCurrentDir cur
+      bracket_ setup cleanup $ do
+        writeFile (toFilePath (tmp </> $(mkRelFile "test.md"))) sampleMarkdownDoc
+        runSession "ants-ls" fullCaps (toFilePath tmp) $
+          do
+            docId <- openDoc "test.md" "markdown"
+            hover <- getHover docId (Position 4 5)
+            liftIO $ do
+              hover `shouldSatisfy` isJust
+              pure ()
+
+  it "respects config hover on link" $ do
+    withSystemTempDir "docLoader" $ \tmp -> do
+      cur <- getCurrentDir
+      let setup = do
+            setCurrentDir tmp
+            initNotebook InitOptions
+            writeFile (toFilePath $ tmp </> configDir </> configFileName) configWithoutWikilink
+          cleanup = do
+            setCurrentDir cur
+      bracket_ setup cleanup $ do
+        writeFile (toFilePath (tmp </> $(mkRelFile "test.md"))) sampleMarkdownDoc
+        runSession "ants-ls" fullCaps (toFilePath tmp) $
+          do
+            docId <- openDoc "test.md" "markdown"
+            hover <- getHover docId (Position 6 5)
+            liftIO $ do
+              hover `shouldSatisfy` isNothing
+              pure ()
+
+  it "hover on wiki-link" $ do
+    withSystemTempDir "docLoader" $ \tmp -> do
+      cur <- getCurrentDir
+      let setup = do
+            setCurrentDir tmp
+            initNotebook InitOptions
+            writeFile (toFilePath $ tmp </> configDir </> configFileName) configWithWikilink
+          cleanup = do
+            setCurrentDir cur
+      bracket_ setup cleanup $ do
+        writeFile (toFilePath (tmp </> $(mkRelFile "test.md"))) sampleMarkdownDoc
+        runSession "ants-ls" fullCaps (toFilePath tmp) $
+          do
+            docId <- openDoc "test.md" "markdown"
+            hover <- getHover docId (Position 6 5)
+            liftIO $ do
+              hover `shouldSatisfy` isJust
+              pure ()
 
 spec :: Spec
 spec = sequential $ do

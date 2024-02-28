@@ -26,8 +26,8 @@ markdownAstWith' ::
   String ->
   T.Text ->
   Maybe MarkdownAst
-markdownAstWith' ext file text = case markdownAstWith ext file text of
-  Identity (Right ast) -> Just ast
+markdownAstWith' ext file text = case runIdentity $ markdownAstWith ext file text of
+  (Right ast) -> Just ast
   _ -> Nothing
 
 markdownWithFrontmatter ::

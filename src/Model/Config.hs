@@ -35,7 +35,7 @@ data Config where
       extensions :: ![T.Text]
     } ->
     Config
-  deriving (Show, Generic, Eq)
+  deriving (Show, Generic, Default, Eq)
 
 instance FromJSON Config where
   parseJSON = withObject "config" $ \o ->
@@ -44,13 +44,6 @@ instance FromJSON Config where
       <*> (parseList . fromMaybe Null <$> (o .:? "extensions") <|> pure [])
 
 instance ToJSON Config
-
-instance Default Config where
-  def =
-    Config
-      { template = def,
-        extensions = ["gfm"]
-      }
 
 data Template where
   Template ::
