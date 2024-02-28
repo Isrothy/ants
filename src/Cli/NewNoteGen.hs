@@ -1,7 +1,6 @@
 {-# LANGUAGE ExtendedDefaultRules #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
 
 module Cli.NewNoteGen
@@ -15,6 +14,7 @@ where
 
 import Commonmark
 import Control.Monad
+import Control.Monad.Extra (fromMaybeM)
 import qualified Data.Bifunctor
 import Data.Char (isSpace)
 import Data.Functor.Identity
@@ -25,6 +25,7 @@ import qualified Data.Text.Encoding as T
 import qualified Data.Text.Lazy as TL
 import Data.Time
 import qualified Data.Yaml as Y
+import Model.Config (getSyntaxSpec)
 import qualified Model.Config as Config
 import Model.MarkdownAst
 import qualified Model.Metadata as M
@@ -33,9 +34,8 @@ import Parser.Opts
 import Parser.Placeholder
 import Path (parseRelFile, toFilePath, (</>))
 import Path.IO (resolveDir')
-import Project.ProjectRoot (defaultTemplateFileName, findRoot, findTemplate, templateDir, readConfig)
+import Project.ProjectRoot (defaultTemplateFileName, findRoot, findTemplate, readConfig, templateDir)
 import Safe
-import Control.Monad.Extra (fromMaybeM)
 
 markdownAstWithPlaceholder ::
   (Monad m) =>
@@ -139,7 +139,7 @@ newNote op = do
   pathToTemplate <- findTemplate actualPath
   let templatePath = fmap (</> templateDir </> defaultTemplateFileName) pathToTemplate
   templateString <- maybe (pure "") (readFile . toFilePath) templatePath
-  let replacedContent = replacePlaceholders (getExtensionsFromConfig config) (T.pack templateString) newtab
+  let replacedContent = replacePlaceholders (getSyntaxSpec config) (T.pack templateString) newtab
   let mdata =
         M.Metadata
           { M.title = Just $ Parser.Opts.title op,
