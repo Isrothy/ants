@@ -25,7 +25,7 @@ loadDocument ::
   IO Document
 loadDocument spec root relPath = do
   let path = root </> relPath
-  timeCreated <- getModificationTime path
+  lastAccessed <- getAccessTime path
   lastModified <- getModificationTime path
   text <- T.pack <$> readFile (toFilePath path)
   let filename = toFilePath (Path.filename path)

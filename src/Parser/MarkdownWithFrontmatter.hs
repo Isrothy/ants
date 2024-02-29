@@ -1,6 +1,7 @@
 module Parser.MarkdownWithFrontmatter
   ( markdownWithFrontmatter,
     frontMatterLines,
+    MarkdownSyntax,
   )
 where
 
@@ -21,20 +22,12 @@ decodeMaybeMetadata input = case Y.decodeEither' (TE.encodeUtf8 input) of
   Left _ -> Nothing
   Right metadata -> Just metadata
 
-markdownAstWith' ::
-  SyntaxSpec Identity MarkdownAst MarkdownAst ->
-  String ->
-  T.Text ->
-  Maybe MarkdownAst
+markdownAstWith' :: MarkdownSyntax -> String -> T.Text -> Maybe MarkdownAst
 markdownAstWith' ext file text = case runIdentity $ markdownAstWith ext file text of
   (Right ast) -> Just ast
   _ -> Nothing
 
-markdownWithFrontmatter ::
-  SyntaxSpec Identity MarkdownAst MarkdownAst ->
-  String ->
-  T.Text ->
-  (Maybe Metadata, Maybe MarkdownAst)
+markdownWithFrontmatter :: MarkdownSyntax -> String -> T.Text -> (Maybe Metadata, Maybe MarkdownAst)
 markdownWithFrontmatter ext file text =
   case parse frontmatter file text of
     Left _ -> (Nothing, markdownAstWith' ext file text)

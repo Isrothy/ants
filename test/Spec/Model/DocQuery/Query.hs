@@ -78,7 +78,7 @@ sampleDoc :: Document
 sampleDoc =
   Document
     { relPath = samplePath,
-      timeCreated = UTCTime (fromGregorian 2024 1 1) 0,
+      lastAccessed = UTCTime (fromGregorian 2024 1 1) 0,
       lastModified = UTCTime (fromGregorian 2024 1 1) 0,
       filename = "sample.md",
       metadata = sampleMetadata,

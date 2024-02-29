@@ -4,6 +4,9 @@
 module Project.Link
   ( resolveLinkInFile,
     gotoLinkedElement,
+    isLink,
+    Bookmark,
+    findBookmarkLine,
     parseLink,
     findHeaderWithId,
   )
@@ -17,6 +20,7 @@ import Control.Monad.Trans.Maybe
 import qualified Data.Text as T
 import qualified Model.Document as D
 import Model.MarkdownAst
+import Parser.MarkdownWithFrontmatter (MarkdownSyntax, markdownWithFrontmatter)
 import Path
 import Path.IO
 import Project.DocLoader
@@ -29,11 +33,14 @@ isHeaderWithId _ _ = False
 findHeaderWithId :: T.Text -> MarkdownAst -> Maybe MarkdownAstNode
 findHeaderWithId id = firstNode (isHeaderWithId id)
 
+type Bookmark = T.Text
+
 isLink :: MarkdownAstNode -> Bool
 isLink (MarkdownAstNode (Link {}) _ _) = True
-isLink _ = True
+isLink (MarkdownAstNode (WikiLink {}) _ _) = True
+isLink _ = False
 
-parseLink :: T.Text -> Maybe (T.Text, Maybe T.Text)
+parseLink :: T.Text -> Maybe (T.Text, Maybe Bookmark)
 parseLink input = case T.splitOn "#" input of
   [] -> Nothing
   [link] -> Just (link, Nothing)
@@ -47,7 +54,7 @@ resolveLinkInFile orig link
   | otherwise = Just <$> resolveFile (parent orig) link
 
 gotoLinkedElement ::
-  SyntaxSpec Identity MarkdownAst MarkdownAst ->
+  MarkdownSyntax ->
   Path Abs Dir ->
   Path Abs File ->
   T.Text ->
@@ -62,3 +69,11 @@ gotoLinkedElement spec root orig txt =
     doc <- MaybeT $ Just <$> loadDocument spec root rel
     ast <- MaybeT $ loadDocument spec root rel <&> D.ast
     return (doc, tag >>= (`findHeaderWithId` ast))
+
+findBookmarkLine :: Bookmark -> MarkdownAst -> Maybe Int
+findBookmarkLine bookmark ast = do
+  ele <- findHeaderWithId bookmark ast
+  sr <- ele ^. sourceRange
+  case unSourceRange sr of
+    (begin, _) : _ -> Just $ sourceLine begin
+    _ -> Nothing

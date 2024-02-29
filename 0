@@ -9,7 +9,6 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Lsp.Handlers
   ( handlers,
@@ -24,7 +23,6 @@ import Commonmark (SourceRange (unSourceRange), sourceLine)
 import Commonmark.Syntax (SyntaxSpec)
 import Control.Conditional (guard)
 import Control.Lens (modifying, use, (.=), (^.))
-import Control.Lens.TH (makeLenses)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Control.Monad.RWS
 import Control.Monad.Trans.Except
@@ -75,22 +73,8 @@ handleErrorWithDefault respond _default = flip catchE handler
       liftLSP $ LSP.sendNotification LSP.SMethod_WindowShowMessage (LSP.ShowMessageParams _xtype _message)
       respond (Right _default)
 
-data BookmarkResult = NoBookmark | BookmarkNotFound | BookmarkFound Int
-
-data LinkResult
-  = TargetNotFound
-  | TargetFound
-      { _path :: Path Abs File,
-        _frontMatter :: Maybe Metadata,
-        _targetText :: T.Text,
-        _bookmarkResult :: BookmarkResult
-      }
-
-data CursourAnalysisResult = NotHover | IsLink LSP.Range LinkResult
-
-formatLinkResult :: LinkResult -> T.Text
-formatLinkResult TargetNotFound = "**ERROR**: target not found"
-formatLinkResult (TargetFound path mfrontMatter targetText bookmarkResult) =
+formatHover :: Path Abs File -> Maybe Metadata -> Either T.Text (Maybe Int, [T.Text]) -> T.Text
+formatHover path mfrontMatter preview =
   TL.toStrict . B.toLazyText $ displayFilepath <> displayFrontMatter <> displayContent
   where
     lineCount = 10
@@ -98,24 +82,28 @@ formatLinkResult (TargetFound path mfrontMatter targetText bookmarkResult) =
     displayFrontMatter = case mfrontMatter of
       Nothing -> ""
       Just frontMatter -> "```yaml\n" <> B.fromText (TE.decodeUtf8With TEE.lenientDecode (encodePretty defConfig frontMatter)) <> "```\n\n"
-    displayContent = case bookmarkResult of
-      NoBookmark -> B.fromText (T.unlines (take lineCount (T.lines targetText)))
-      BookmarkNotFound -> "**ERROR**: Bookmark Not Found \n"
-      BookmarkFound ln ->
+    displayContent = case preview of
+      Left err -> "**ERROR**: " <> B.fromText err <> "\n\n"
+      Right (Nothing, text) -> B.fromText (T.unlines (take lineCount text))
+      Right (Just l, txt) ->
         "Line "
-          <> (B.fromText . T.pack . show) ln
+          <> (B.fromText . T.pack . show) l
           <> ":\n\n"
-          <> B.fromText (T.unlines (take lineCount (T.lines targetText)))
+          <> B.fromText (T.unlines (take lineCount txt))
 
 parseFile :: MarkdownSyntax -> Path Abs File -> T.Text -> (Maybe Metadata, Maybe MarkdownAst)
 parseFile spec path = markdownWithFrontmatter spec (toFilePath path)
 
+getAst :: MarkdownSyntax -> Path Abs File -> T.Text -> Maybe MarkdownAst
+getAst spec path file = snd $ parseFile spec path file
+
 linkFromUriFile ::
   MarkdownSyntax ->
+  Path Abs Dir ->
   LSP.Uri ->
   LSP.Position ->
   LSP.LspT ServerConfig IO (Maybe (LSP.Range, FilePath, Maybe Bookmark))
-linkFromUriFile spec origUri pos = do
+linkFromUriFile spec root origUri pos = do
   let fromLink :: MarkdownAstNode -> Maybe T.Text
       fromLink (MarkdownAstNode (Link ldata) _ _) = Just (ldata ^. linkTarget)
       fromLink (MarkdownAstNode (WikiLink ldata) _ _) = Just (ldata ^. wikiLinkTarget)
@@ -128,7 +116,7 @@ linkFromUriFile spec origUri pos = do
   runMaybeT $ do
     origFile <- MaybeT $ return mfile
     origPath <- MaybeT $ return mpath
-    origAst <- MaybeT $ return $ snd $ parseFile spec origPath (VFS.virtualFileText origFile)
+    origAst <- MaybeT $ return $ getAst spec origPath (VFS.virtualFileText origFile)
     ele <- MaybeT $ return $ nodeAt isLink l c origAst
     link <- MaybeT $ return $ fromLink ele
     (filePath, mtag) <- MaybeT $ return $ parseLink link
@@ -137,54 +125,106 @@ linkFromUriFile spec origUri pos = do
       listToMaybe $ sourceRangeToRange sr
     return (rg, T.unpack filePath, mtag)
 
-linkedFile ::
-  MarkdownSyntax ->
-  Path Abs Dir ->
-  Path Abs File ->
-  FilePath ->
-  LSP.LspT ServerConfig IO (Maybe (T.Text, Maybe Metadata, Maybe MarkdownAst))
-linkedFile spec root origPath linkPath = runMaybeT $ do
-  targetPath <- MaybeT $ liftIO $ resolveLinkInFile origPath linkPath
-  guard $ root `isProperPrefixOf` targetPath
-  targetText <- MaybeT $ readLocalOrVFS targetPath
-  let (mfrontMatter, mAst) = parseFile spec targetPath targetText
-  return (targetText, mfrontMatter, mAst)
-
-cursorAnalysis ::
-  MarkdownSyntax ->
-  LSP.Uri ->
-  LSP.Position ->
-  LSP.LspT ServerConfig IO CursourAnalysisResult
-cursorAnalysis spec origUri pos = do
-  mroot <- LSP.getRootPath
-  link <- linkFromUriFile spec origUri pos
-  case link of
-    Nothing -> return NotHover
-    Just (rg, filepath, mbookmark) -> do
-      let path = fromJust (uriToFile origUri)
-      tar <- runMaybeT $ do
-        root <- MaybeT $ return (mroot >>= parseAbsDir)
-        MaybeT $ linkedFile spec root path filepath
-      case tar of
-        Nothing -> return $ IsLink rg TargetNotFound
-        Just (targetText, mfrontMatter, mtargetAst) ->
-          case mbookmark of
-            Nothing -> return $ IsLink rg (TargetFound path mfrontMatter targetText NoBookmark)
-            Just bookmark -> case mtargetAst >>= findBookmarkLine bookmark of
-              Nothing -> return $ IsLink rg (TargetFound path mfrontMatter targetText BookmarkNotFound)
-              Just ln -> return $ IsLink rg (TargetFound path mfrontMatter targetText (BookmarkFound ln))
+-- followLink ::
+--   MarkdownSyntax ->
+--   Path Abs Dir ->
+--   LSP.Uri ->
+--   LSP.Position ->
+--   LSP.LspT ServerConfig IO (Maybe (LSP.Range, FilePath, Bookmark, Maybe T.Text))
+-- followLink spec root origUri pos = do
+--   let isLink :: MarkdownAstNode -> Bool
+--       isLink (MarkdownAstNode (Link {}) _ _) = True
+--       isLink (MarkdownAstNode (WikiLink {}) _ _) = True
+--       isLink _ = False
+--   let fromLink :: MarkdownAstNode -> Maybe T.Text
+--       fromLink (MarkdownAstNode (Link ldata) _ _) = Just (ldata ^. linkTarget)
+--       fromLink (MarkdownAstNode (WikiLink ldata) _ _) = Just (ldata ^. wikiLinkTarget)
+--       fromLink _ = Nothing
+--
+--   let LSP.Position _l _c = pos
+--       l = _l + 1
+--       c = _c + 1
+--   let mpath = uriToFile origUri
+--   mfile <- LSP.getVirtualFile (LSP.toNormalizedUri origUri)
+--
+--   runMaybeT $ do
+--     origFile <- MaybeT $ return mfile
+--     origPath <- MaybeT $ return mpath
+--     origAst <- MaybeT $ return $ getAst spec origPath (VFS.virtualFileText origFile)
+--     ele <- MaybeT $ return $ nodeAt isLink l c origAst
+--     link <- MaybeT $ return $ fromLink ele
+--     (filepath, mtag) <- MaybeT $ return $ parseLink link
+--     rg <- MaybeT $ return $ do
+--       sr <- ele ^. sourceRange
+--       listToMaybe $ sourceRangeToRange sr
+--     targetText <- runMaybeT $ do
+--       targetPath <- MaybeT $ liftIO $ resolveLinkInFile origPath (T.unpack filepath)
+--       guard $ root `isProperPrefixOf` targetPath
+--       MaybeT $ lift $ readLocalOrVFS targetPath
+--     return (rg, T.unpack filepath, mtag, targetText)
 
 textDocumentHoverHandler :: LSP.Handlers HandlerM
 textDocumentHoverHandler =
   LSP.requestHandler LSP.SMethod_TextDocumentHover \request respond ->
     handleErrorWithDefault respond (LSP.InR LSP.Null) do
       let LSP.TRequestMessage _ _ _ (LSP.HoverParams doc pos _) = request
-          LSP.TextDocumentIdentifier origUri = doc
+          LSP.TextDocumentIdentifier uri = doc
+      mroot <- liftLSP LSP.getRootPath
       spec <- use markdownSyntaxSpec
-      ret <- liftLSP $ cursorAnalysis spec origUri pos
-      case ret of
-        NotHover -> respond $ Right $ LSP.InR LSP.Null
-        IsLink rg msg -> respond $ Right $ LSP.InL $ LSP.Hover (LSP.InL (LSP.mkMarkdown (formatLinkResult msg))) (Just rg)
+
+      link <- liftLSP $ runMaybeT $ do
+        root <- MaybeT $ return $ mroot >>= parseAbsDir
+        MaybeT $ linkFromUriFile spec root uri pos
+
+      case link of
+        Nothing -> respond $ Right $ LSP.InR LSP.Null
+        Just (rg, filepath, mtag) -> do
+          targetText <- liftLSP $ runMaybeT $ do
+            targetPath <- MaybeT $ liftIO $ resolveLinkInFile filepath (T.unpack filepath)
+            guard $ root `isProperPrefixOf` targetPath
+            MaybeT $ lift $ readLocalOrVFS targetPath
+          respond $ Right $ LSP.InL $ LSP.Hover $ LSP.InL $ LSP.HoverContent LSP.MkHoverContent {..}
+
+      undefined
+
+-- let linkAtPlace = do
+--       root <- mroot >>= parseAbsDir
+--       origFile <- mfile
+--       origPath <- mpath
+--       origAst <- getAst spec origPath (VFS.virtualFileText origFile)
+--       ele <- nodeAt isLink l c origAst
+--       link <- fromLink ele
+--       (filepath, mtag) <- parseLink link
+--       let rg = do
+--             sr <- ele ^. sourceRange
+--             listToMaybe $ sourceRangeToRange sr
+--       return (rg, root, origPath, filepath, mtag)
+--
+-- case linkFromUriFile spec root uri pos of
+--   Nothing -> respond $ Right $ LSP.InR LSP.Null
+--   Just (rg, root, origPath, filepath, mtag) -> do
+--     target <- runMaybeT $ do
+--       targetPath <- MaybeT $ liftIO $ resolveLinkInFile origPath (T.unpack filepath)
+--       guard $ root `isProperPrefixOf` targetPath
+--       targetText <-
+--         MaybeT $ do
+--           mvf <- liftLSP $ LSP.getVirtualFile $ LSP.toNormalizedUri $ LSP.filePathToUri $ toFilePath targetPath
+--           case mvf of
+--             Just vf -> return $ Just $ VFS.virtualFileText vf
+--             Nothing -> liftIO $ readFileSafe $ toFilePath targetPath
+--       let (mtargetFrontmatter, mtargetAst) = parseFile spec targetPath targetText
+--
+--       let preview = case mtag of
+--             Nothing -> Right (Nothing, drop (frontMatterLines targetText) (T.lines targetText))
+--             Just tag -> case mtargetAst >>= getLineNr tag of
+--               Nothing -> Left "bookmark not found"
+--               Just ln -> Right (Just ln, drop (ln - 1) (T.lines targetText))
+--       return $ formatHover targetPath mtargetFrontmatter preview
+--     respond
+--       ( case target of
+--           Nothing -> Right $ LSP.InL $ LSP.Hover (LSP.InL (LSP.mkMarkdown "target not found")) rg
+--           Just msg -> Right $ LSP.InL $ LSP.Hover (LSP.InL (LSP.mkMarkdown msg)) rg
+--       )
 
 initializedHandler :: LSP.Handlers HandlerM
 initializedHandler =

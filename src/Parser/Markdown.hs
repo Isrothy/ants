@@ -4,12 +4,14 @@ module Parser.Markdown
     allSpecExtensions,
     markdownAstWith,
     lookupSyntax,
+    MarkdownSyntax,
   )
 where
 
 import Commonmark
 import Commonmark.Extensions
 import Data.Data
+import Data.Functor.Identity (Identity)
 import Data.Maybe (fromMaybe)
 import qualified Data.Text as T
 import Model.MarkdownAst
@@ -85,3 +87,5 @@ lookupSyntax ext =
     else
       defaultSyntaxSpec
         <> mconcat (map (\ext' -> fromMaybe mempty (lookup ext' extensionLookup)) ext)
+
+type MarkdownSyntax = SyntaxSpec Identity MarkdownAst MarkdownAst

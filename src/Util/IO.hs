@@ -4,7 +4,10 @@
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Util.IO where
+module Util.IO
+  ( readFileSafe,
+  )
+where
 
 import Control.Exception (IOException)
 import Control.Exception.Base (try)
