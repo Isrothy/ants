@@ -9,7 +9,6 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell #-}
 
 module Lsp.Handlers
   ( handlers,
@@ -20,17 +19,12 @@ module Lsp.Handlers
   )
 where
 
-import Commonmark (SourceRange (unSourceRange), sourceLine)
-import Commonmark.Syntax (SyntaxSpec)
 import Control.Conditional (guard)
 import Control.Lens (modifying, use, (.=), (^.))
-import Control.Lens.TH (makeLenses)
-import Control.Monad.IO.Class (MonadIO (liftIO))
 import Control.Monad.RWS
 import Control.Monad.Trans.Except
 import Control.Monad.Trans.Maybe (MaybeT (MaybeT, runMaybeT))
 import Data.Default
-import Data.Functor.Identity
 import Data.Maybe
 import Data.Text qualified as T
 import Data.Text.Encoding qualified as TE
@@ -38,7 +32,6 @@ import Data.Text.Encoding.Error qualified as TEE
 import Data.Text.Lazy qualified as TL
 import Data.Text.Lazy.Builder qualified as B
 import Data.Yaml.Pretty (defConfig, encodePretty)
-import Language.LSP.Protocol.Lens
 import Language.LSP.Protocol.Lens qualified as LSP
 import Language.LSP.Protocol.Message qualified as LSP
 import Language.LSP.Protocol.Types qualified as LSP
@@ -55,7 +48,6 @@ import Path
 import Project.Link
 import Project.ProjectRoot (readConfig)
 import Text.RawString.QQ
-import Util.IO (readFileSafe)
 
 handleErrorWithDefault ::
   (Either a1 b -> HandlerM a2) ->
@@ -75,7 +67,7 @@ handleErrorWithDefault respond _default = flip catchE handler
       liftLSP $ LSP.sendNotification LSP.SMethod_WindowShowMessage (LSP.ShowMessageParams _xtype _message)
       respond (Right _default)
 
-data BookmarkResult = NoBookmark | BookmarkNotFound | BookmarkFound Int
+data BookmarkResult = NoBookmark Int | BookmarkNotFound | BookmarkFound Int
 
 data LinkResult
   = TargetNotFound
@@ -99,13 +91,13 @@ formatLinkResult (TargetFound path mfrontMatter targetText bookmarkResult) =
       Nothing -> ""
       Just frontMatter -> "```yaml\n" <> B.fromText (TE.decodeUtf8With TEE.lenientDecode (encodePretty defConfig frontMatter)) <> "```\n\n"
     displayContent = case bookmarkResult of
-      NoBookmark -> B.fromText (T.unlines (take lineCount (T.lines targetText)))
+      NoBookmark ln -> B.fromText (T.unlines $ take lineCount $ drop (ln - 1) $ T.lines targetText)
       BookmarkNotFound -> "**ERROR**: Bookmark Not Found \n"
       BookmarkFound ln ->
         "Line "
           <> (B.fromText . T.pack . show) ln
           <> ":\n\n"
-          <> B.fromText (T.unlines (take lineCount (T.lines targetText)))
+          <> B.fromText (T.unlines $ take lineCount $ drop (ln - 1) $ T.lines targetText)
 
 parseFile :: MarkdownSyntax -> Path Abs File -> T.Text -> (Maybe Metadata, Maybe MarkdownAst)
 parseFile spec path = markdownWithFrontmatter spec (toFilePath path)
@@ -142,13 +134,13 @@ linkedFile ::
   Path Abs Dir ->
   Path Abs File ->
   FilePath ->
-  LSP.LspT ServerConfig IO (Maybe (T.Text, Maybe Metadata, Maybe MarkdownAst))
+  LSP.LspT ServerConfig IO (Maybe (Path Abs File, T.Text, Maybe Metadata, Maybe MarkdownAst))
 linkedFile spec root origPath linkPath = runMaybeT $ do
   targetPath <- MaybeT $ liftIO $ resolveLinkInFile origPath linkPath
   guard $ root `isProperPrefixOf` targetPath
   targetText <- MaybeT $ readLocalOrVFS targetPath
   let (mfrontMatter, mAst) = parseFile spec targetPath targetText
-  return (targetText, mfrontMatter, mAst)
+  return (targetPath, targetText, mfrontMatter, mAst)
 
 cursorAnalysis ::
   MarkdownSyntax ->
@@ -160,19 +152,19 @@ cursorAnalysis spec origUri pos = do
   link <- linkFromUriFile spec origUri pos
   case link of
     Nothing -> return NotHover
-    Just (rg, filepath, mbookmark) -> do
+    Just (rg, targetFilePath, mbookmark) -> do
       let path = fromJust (uriToFile origUri)
       tar <- runMaybeT $ do
         root <- MaybeT $ return (mroot >>= parseAbsDir)
-        MaybeT $ linkedFile spec root path filepath
+        MaybeT $ linkedFile spec root path targetFilePath
       case tar of
         Nothing -> return $ IsLink rg TargetNotFound
-        Just (targetText, mfrontMatter, mtargetAst) ->
+        Just (targetPath, targetText, mfrontMatter, mtargetAst) ->
           case mbookmark of
-            Nothing -> return $ IsLink rg (TargetFound path mfrontMatter targetText NoBookmark)
+            Nothing -> return $ IsLink rg $ TargetFound targetPath mfrontMatter targetText $ NoBookmark $ frontMatterLines targetText + 1
             Just bookmark -> case mtargetAst >>= findBookmarkLine bookmark of
-              Nothing -> return $ IsLink rg (TargetFound path mfrontMatter targetText BookmarkNotFound)
-              Just ln -> return $ IsLink rg (TargetFound path mfrontMatter targetText (BookmarkFound ln))
+              Nothing -> return $ IsLink rg $ TargetFound targetPath mfrontMatter targetText BookmarkNotFound
+              Just ln -> return $ IsLink rg $ TargetFound targetPath mfrontMatter targetText $ BookmarkFound ln
 
 textDocumentHoverHandler :: LSP.Handlers HandlerM
 textDocumentHoverHandler =
@@ -184,7 +176,26 @@ textDocumentHoverHandler =
       ret <- liftLSP $ cursorAnalysis spec origUri pos
       case ret of
         NotHover -> respond $ Right $ LSP.InR LSP.Null
-        IsLink rg msg -> respond $ Right $ LSP.InL $ LSP.Hover (LSP.InL (LSP.mkMarkdown (formatLinkResult msg))) (Just rg)
+        IsLink rg linkResult -> respond $ Right $ LSP.InL $ LSP.Hover (LSP.InL $ LSP.mkMarkdown $ formatLinkResult linkResult) (Just rg)
+
+textDocumentDefinitionHandler :: LSP.Handlers HandlerM
+textDocumentDefinitionHandler =
+  LSP.requestHandler LSP.SMethod_TextDocumentDefinition \request respond -> do
+    handleErrorWithDefault respond (LSP.InR $ LSP.InR LSP.Null) do
+      let LSP.TRequestMessage _ _ _ (LSP.DefinitionParams doc pos _ _) = request
+          LSP.TextDocumentIdentifier origUri = doc
+      spec <- use markdownSyntaxSpec
+      ret <- liftLSP $ cursorAnalysis spec origUri pos
+      case ret of
+        NotHover -> respond $ Right $ LSP.InR $ LSP.InR LSP.Null
+        IsLink _ linkResult -> case linkResult of
+          TargetNotFound -> respond $ Right $ LSP.InR $ LSP.InR LSP.Null
+          TargetFound path _ _ bookmarkResult ->
+            let uri = LSP.filePathToUri (toFilePath path)
+             in case bookmarkResult of
+                  NoBookmark ln -> respond $ Right $ LSP.InL $ LSP.Definition $ LSP.InL $ LSP.Location uri $ LSP.mkRange (fromIntegral ln - 1) 0 (fromIntegral ln) 0
+                  BookmarkNotFound -> respond $ Right $ LSP.InL $ LSP.Definition $ LSP.InL $ LSP.Location uri $ LSP.mkRange 0 0 1 0
+                  BookmarkFound ln -> respond $ Right $ LSP.InL $ LSP.Definition $ LSP.InL $ LSP.Location uri $ LSP.mkRange (fromIntegral ln - 1) 0 (fromIntegral ln) 0
 
 initializedHandler :: LSP.Handlers HandlerM
 initializedHandler =
@@ -219,12 +230,6 @@ didSaveTextDocumentNotificationHandler =
 didCloseTextDocumentNotificationHandler :: LSP.Handlers HandlerM
 didCloseTextDocumentNotificationHandler =
   LSP.notificationHandler LSP.SMethod_TextDocumentDidClose \_ -> return ()
-
-textDocumentDefinitionHandler :: LSP.Handlers HandlerM
-textDocumentDefinitionHandler =
-  LSP.requestHandler LSP.SMethod_TextDocumentDefinition \request responder -> do
-    let LSP.TRequestMessage _ _ _ (LSP.DefinitionParams (LSP.TextDocumentIdentifier doc) pos _ _) = request
-    responder (Right $ LSP.InL $ LSP.Definition $ LSP.InL $ LSP.Location doc $ LSP.Range pos pos)
 
 handlers :: LSP.Handlers HandlerM
 handlers =
