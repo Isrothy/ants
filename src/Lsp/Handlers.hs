@@ -1,5 +1,4 @@
 {-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE CPP #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ExplicitNamespaces #-}
 {-# LANGUAGE ExtendedDefaultRules #-}
@@ -112,21 +111,21 @@ linkFromUriFile spec origUri pos = do
       fromLink (MarkdownAstNode (Link ldata) _ _) = Just (ldata ^. linkTarget)
       fromLink (MarkdownAstNode (WikiLink ldata) _ _) = Just (ldata ^. wikiLinkTarget)
       fromLink _ = Nothing
-  let LSP.Position _l _c = pos
-      l = _l + 1
-      c = _c + 1
   let mpath = uriToFile origUri
   mfile <- LSP.getVirtualFile (LSP.toNormalizedUri origUri)
   runMaybeT $ do
     origFile <- MaybeT $ return mfile
     origPath <- MaybeT $ return mpath
+    dataPointPos <- MaybeT $ return $ VFS.positionToCodePointPosition origFile pos
+    let l = dataPointPos ^. VFS.line + 1
+        c = dataPointPos ^. VFS.character + 1
     origAst <- MaybeT $ return $ snd $ parseFile spec origPath (VFS.virtualFileText origFile)
     ele <- MaybeT $ return $ nodeAt isLink l c origAst
     link <- MaybeT $ return $ fromLink ele
     (filePath, mtag) <- MaybeT $ return $ parseLink link
     rg <- MaybeT $ return $ do
       sr <- ele ^. sourceRange
-      listToMaybe $ sourceRangeToRange sr
+      listToMaybe $ sourceRangeToRange origFile sr
     return (rg, T.unpack filePath, mtag)
 
 linkedFile ::
@@ -192,10 +191,11 @@ textDocumentDefinitionHandler =
           TargetNotFound -> respond $ Right $ LSP.InR $ LSP.InR LSP.Null
           TargetFound path _ _ bookmarkResult ->
             let uri = LSP.filePathToUri (toFilePath path)
-             in case bookmarkResult of
-                  NoBookmark ln -> respond $ Right $ LSP.InL $ LSP.Definition $ LSP.InL $ LSP.Location uri $ LSP.mkRange (fromIntegral ln - 1) 0 (fromIntegral ln) 0
-                  BookmarkNotFound -> respond $ Right $ LSP.InL $ LSP.Definition $ LSP.InL $ LSP.Location uri $ LSP.mkRange 0 0 1 0
-                  BookmarkFound ln -> respond $ Right $ LSP.InL $ LSP.Definition $ LSP.InL $ LSP.Location uri $ LSP.mkRange (fromIntegral ln - 1) 0 (fromIntegral ln) 0
+                rg = case bookmarkResult of
+                  NoBookmark ln -> LSP.mkRange (fromIntegral ln - 1) 0 (fromIntegral ln) 0
+                  BookmarkFound ln -> LSP.mkRange (fromIntegral ln - 1) 0 (fromIntegral ln) 0
+                  BookmarkNotFound -> LSP.mkRange 0 0 1 0
+             in respond $ Right $ LSP.InL $ LSP.Definition $ LSP.InL $ LSP.Location uri rg
 
 initializedHandler :: LSP.Handlers HandlerM
 initializedHandler =

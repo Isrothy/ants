@@ -4,19 +4,24 @@ module Lsp.Util
   ( uriToDir,
     uriToFile,
     liftLSP,
-    sourceRangeToRange,
     readLocalOrVFS,
+    sourceRangeToRange,
+    sourcePosToPosition,
+    sourceRangeToCodePointRange,
+    sourcePosToCodePointPosition,
   )
 where
 
 import Commonmark
 import Control.Monad.RWS
+import Data.Maybe
 import Data.Text qualified as T
 import Language.LSP.Protocol.Types qualified as LSP
 import Language.LSP.Server qualified as LSP
 import Language.LSP.VFS qualified as VFS
 import Lsp.State
 import Path
+import Text.Parsec.Pos
 import Util.IO (readFileSafe)
 
 uriToDir :: LSP.Uri -> Maybe (Path Abs Dir)
@@ -35,16 +40,22 @@ readLocalOrVFS path = do
     Nothing -> liftIO $ readFileSafe (toFilePath path)
     Just vf -> return $ Just $ VFS.virtualFileText vf
 
-sourceRangeToRange :: SourceRange -> [LSP.Range]
-sourceRangeToRange sr = map helper (unSourceRange sr)
+sourcePosToCodePointPosition :: SourcePos -> VFS.CodePointPosition
+sourcePosToCodePointPosition sp =
+  VFS.CodePointPosition
+    (fromIntegral $ sourceLine sp - 1)
+    (fromIntegral $ sourceColumn sp - 1)
+
+sourcePosToPosition :: VFS.VirtualFile -> SourcePos -> Maybe LSP.Position
+sourcePosToPosition vf sp = VFS.codePointPositionToPosition vf (sourcePosToCodePointPosition sp)
+
+sourceRangeToCodePointRange :: SourceRange -> [VFS.CodePointRange]
+sourceRangeToCodePointRange sr = map helper (unSourceRange sr)
   where
     helper (begin, end) =
-      LSP.Range
-        ( LSP.Position
-            (fromIntegral $ sourceLine begin - 1)
-            (fromIntegral $ sourceColumn begin - 1)
-        )
-        ( LSP.Position
-            (fromIntegral $ sourceLine end - 1)
-            (fromIntegral $ sourceColumn end - 1)
-        )
+      VFS.CodePointRange
+        (sourcePosToCodePointPosition begin)
+        (sourcePosToCodePointPosition end)
+
+sourceRangeToRange :: VFS.VirtualFile -> SourceRange -> [LSP.Range]
+sourceRangeToRange vf sr = mapMaybe (VFS.codePointRangeToRange vf) (sourceRangeToCodePointRange sr)
