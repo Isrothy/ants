@@ -30,6 +30,7 @@ import Data.Text.Encoding qualified as TE
 import Data.Text.Encoding.Error qualified as TEE
 import Data.Text.Lazy qualified as TL
 import Data.Text.Lazy.Builder qualified as B
+import Data.Text.LineBreaker qualified as T
 import Data.Yaml.Pretty (defConfig, encodePretty)
 import Language.LSP.Protocol.Lens qualified as LSP
 import Language.LSP.Protocol.Message qualified as LSP
@@ -90,13 +91,13 @@ formatLinkResult (TargetFound path mfrontMatter targetText bookmarkResult) =
       Nothing -> ""
       Just frontMatter -> "```yaml\n" <> B.fromText (TE.decodeUtf8With TEE.lenientDecode (encodePretty defConfig frontMatter)) <> "```\n\n"
     displayContent = case bookmarkResult of
-      NoBookmark ln -> B.fromText (T.unlines $ take lineCount $ drop (ln - 1) $ T.lines targetText)
+      NoBookmark ln -> B.fromText (T.joinLines $ take lineCount $ drop (ln - 1) $ T.splitLines targetText)
       BookmarkNotFound -> "**ERROR**: Bookmark Not Found \n"
       BookmarkFound ln ->
         "Line "
           <> (B.fromText . T.pack . show) ln
           <> ":\n\n"
-          <> B.fromText (T.unlines $ take lineCount $ drop (ln - 1) $ T.lines targetText)
+          <> B.fromText (T.joinLines $ take lineCount $ drop (ln - 1) $ T.splitLines targetText)
 
 parseFile :: MarkdownSyntax -> Path Abs File -> T.Text -> (Maybe Metadata, Maybe MarkdownAst)
 parseFile spec path = markdownWithFrontmatter spec (toFilePath path)
