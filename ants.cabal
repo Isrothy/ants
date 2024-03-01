@@ -29,6 +29,7 @@ library
       Cli.InitNoteBook
       Cli.NewNoteGen
       Data.Aeson.Extra
+      Data.Text.LineBreaker
       Lib
       Lsp.Handlers
       Lsp.Server
@@ -199,6 +200,7 @@ test-suite ants-test
   main-is: Main.hs
   other-modules:
       Spec.Cli.NewNoteGen
+      Spec.Data.Text.LineBreaker
       Spec.Lsp.Server
       Spec.Model.Config
       Spec.Model.DocQuery.Query

@@ -1,4 +1,5 @@
 import qualified Spec.Cli.NewNoteGen
+import qualified Spec.Data.Text.LineBreaker
 import qualified Spec.Lsp.Server
 import qualified Spec.Model.Config
 import qualified Spec.Model.DocQuery.Query
@@ -19,6 +20,7 @@ import Test.Hspec
 main :: IO ()
 main = hspec $ parallel $ do
   Spec.Cli.NewNoteGen.spec
+  Spec.Data.Text.LineBreaker.spec
   Spec.Model.Config.spec
   Spec.Model.Metadata.spec
   Spec.Model.MarkdownAst.spec
