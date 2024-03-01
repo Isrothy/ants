@@ -57,14 +57,20 @@ handleErrorWithDefault ::
 handleErrorWithDefault respond _default = flip catchE handler
   where
     handler (Log, _message) = do
-      liftLSP $ LSP.sendNotification LSP.SMethod_WindowLogMessage (LSP.LogMessageParams LSP.MessageType_Log _message)
+      liftLSP $
+        LSP.sendNotification
+          LSP.SMethod_WindowLogMessage
+          (LSP.LogMessageParams LSP.MessageType_Log _message)
       respond (Right _default)
     handler (severity_, _message) = do
       let _xtype = case severity_ of
             Error -> LSP.MessageType_Error
             Warning -> LSP.MessageType_Warning
             Info -> LSP.MessageType_Info
-      liftLSP $ LSP.sendNotification LSP.SMethod_WindowShowMessage (LSP.ShowMessageParams _xtype _message)
+      liftLSP $
+        LSP.sendNotification
+          LSP.SMethod_WindowShowMessage
+          (LSP.ShowMessageParams _xtype _message)
       respond (Right _default)
 
 data BookmarkResult = NoBookmark Int | BookmarkNotFound | BookmarkFound Int
@@ -89,9 +95,14 @@ formatLinkResult (TargetFound path mfrontMatter targetText bookmarkResult) =
     displayFilepath = "In `" <> (B.fromText . T.pack . toFilePath) path <> "` :\n\n"
     displayFrontMatter = case mfrontMatter of
       Nothing -> ""
-      Just frontMatter -> "```yaml\n" <> B.fromText (TE.decodeUtf8With TEE.lenientDecode (encodePretty defConfig frontMatter)) <> "```\n\n"
+      Just frontMatter ->
+        "```yaml\n"
+          <> B.fromText (TE.decodeUtf8With TEE.lenientDecode (encodePretty defConfig frontMatter))
+          <> "```\n\n"
     displayContent = case bookmarkResult of
-      NoBookmark ln -> B.fromText (T.joinLines $ take lineCount $ drop (ln - 1) $ T.splitLines targetText)
+      NoBookmark ln ->
+        B.fromText
+          (T.joinLines $ take lineCount $ drop (ln - 1) $ T.splitLines targetText)
       BookmarkNotFound -> "**ERROR**: Bookmark Not Found \n"
       BookmarkFound ln ->
         "Line "
@@ -114,17 +125,17 @@ linkFromUriFile spec origUri pos = do
       fromLink _ = Nothing
   let mpath = uriToFile origUri
   mfile <- LSP.getVirtualFile (LSP.toNormalizedUri origUri)
-  runMaybeT $ do
-    origFile <- MaybeT $ return mfile
-    origPath <- MaybeT $ return mpath
-    dataPointPos <- MaybeT $ return $ VFS.positionToCodePointPosition origFile pos
+  return $ do
+    origFile <- mfile
+    origPath <- mpath
+    dataPointPos <- VFS.positionToCodePointPosition origFile pos
     let l = dataPointPos ^. VFS.line + 1
         c = dataPointPos ^. VFS.character + 1
-    origAst <- MaybeT $ return $ snd $ parseFile spec origPath (VFS.virtualFileText origFile)
-    ele <- MaybeT $ return $ nodeAt isLink l c origAst
-    link <- MaybeT $ return $ fromLink ele
-    (filePath, mtag) <- MaybeT $ return $ parseLink link
-    rg <- MaybeT $ return $ do
+    origAst <- snd $ parseFile spec origPath (VFS.virtualFileText origFile)
+    ele <- nodeAt isLink l c origAst
+    link <- fromLink ele
+    (filePath, mtag) <- parseLink link
+    rg <- do
       sr <- ele ^. sourceRange
       listToMaybe $ sourceRangeToRange origFile sr
     return (rg, T.unpack filePath, mtag)
@@ -160,11 +171,16 @@ cursorAnalysis spec origUri pos = do
       case tar of
         Nothing -> return $ IsLink rg TargetNotFound
         Just (targetPath, targetText, mfrontMatter, mtargetAst) ->
-          case mbookmark of
-            Nothing -> return $ IsLink rg $ TargetFound targetPath mfrontMatter targetText $ NoBookmark $ frontMatterLines targetText + 1
-            Just bookmark -> case mtargetAst >>= findBookmarkLine bookmark of
-              Nothing -> return $ IsLink rg $ TargetFound targetPath mfrontMatter targetText BookmarkNotFound
-              Just ln -> return $ IsLink rg $ TargetFound targetPath mfrontMatter targetText $ BookmarkFound ln
+          return $
+            IsLink rg $
+              TargetFound targetPath mfrontMatter targetText $
+                case mbookmark of
+                  Nothing -> NoBookmark $ frontMatterLines targetText + 1
+                  Just bookmark ->
+                    maybe
+                      BookmarkNotFound
+                      BookmarkFound
+                      (mtargetAst >>= findBookmarkLine bookmark)
 
 textDocumentHoverHandler :: LSP.Handlers HandlerM
 textDocumentHoverHandler =
@@ -176,7 +192,13 @@ textDocumentHoverHandler =
       ret <- liftLSP $ cursorAnalysis spec origUri pos
       case ret of
         NotHover -> respond $ Right $ LSP.InR LSP.Null
-        IsLink rg linkResult -> respond $ Right $ LSP.InL $ LSP.Hover (LSP.InL $ LSP.mkMarkdown $ formatLinkResult linkResult) (Just rg)
+        IsLink rg linkResult ->
+          respond $
+            Right $
+              LSP.InL $
+                LSP.Hover
+                  (LSP.InL $ LSP.mkMarkdown $ formatLinkResult linkResult)
+                  (Just rg)
 
 textDocumentDefinitionHandler :: LSP.Handlers HandlerM
 textDocumentDefinitionHandler =

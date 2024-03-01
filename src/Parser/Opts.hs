@@ -31,9 +31,11 @@ data NewOptions = NewOptions
 data InitOptions = InitOptions
   {
   }
+
 data FilterOptions = FilterOptions
   { queryString :: T.Text
   }
+
 newtype Options = Options
   { optCommand :: Command
   }
@@ -42,6 +44,7 @@ data Command
   = New NewOptions
   | Init InitOptions
   | Filter FilterOptions
+
 parsePair :: ReadM (T.Text, T.Text)
 parsePair = eitherReader $ \s ->
   case elemIndex '=' s of
@@ -51,20 +54,38 @@ parsePair = eitherReader $ \s ->
 newCommand :: Parser Command
 newCommand = do
   title <- strOption (long "title" <> short 't' <> metavar "TITLE" <> help "title of note")
-  name :: Maybe T.Text <- optional $ strOption (long "name" <> short 'n' <> metavar "NAME" <> help "name of author")
-  email :: Maybe T.Text <- optional $ strOption (long "email" <> short 'e' <> metavar "admin@example.com" <> help "email of author")
+  name :: Maybe T.Text <-
+    optional $
+      strOption $
+        long "name" <> short 'n' <> metavar "NAME" <> help "name of author"
+  email :: Maybe T.Text <-
+    optional $
+      strOption $
+        long "email" <> short 'e' <> metavar "admin@example.com" <> help "email of author"
   dateFormat :: Maybe T.Text <- optional $ strOption (long "dateFormat" <> metavar "FORMAT")
   timeFormat :: Maybe T.Text <- optional $ strOption (long "timeFormat" <> metavar "FORMAT")
   dateTimeFormat :: Maybe T.Text <- optional $ strOption (long "dateTimeFormat" <> metavar "FORMAT")
   dir <- strArgument (metavar "DIR" <> help "Directory to create the note" <> action "directory")
-  vars :: LookupTable <- many (argument parsePair (metavar "VARNAME=VALUE" <> help "Variables that take precedence over the ones in the config file"))
+  vars :: LookupTable <-
+    many $
+      argument
+        parsePair
+        ( metavar "VARNAME=VALUE"
+            <> help "Variables that take precedence over the ones in the config file"
+        )
   pure $
     New $
       NewOptions
         { table =
             concatMap
               (\(a, b) -> zip [a] (maybeToList b))
-              [("title", Just title), ("name", name), ("email", email), ("date", dateFormat), ("time", timeFormat), ("dateTime", dateTimeFormat)]
+              [ ("title", Just title),
+                ("name", name),
+                ("email", email),
+                ("date", dateFormat),
+                ("time", timeFormat),
+                ("dateTime", dateTimeFormat)
+              ]
               ++ vars,
           ..
         }
@@ -72,10 +93,12 @@ newCommand = do
 initCommand :: Parser Command
 initCommand = do
   pure $ Init $ InitOptions {}
+
 filterCommand :: Parser Command
 filterCommand = do
   queryString <- strArgument (metavar "QUERY" <> help "Query to be used for filtering")
   pure $ Filter $ FilterOptions {..}
+
 opts :: Parser Options
 opts = do
   optCommand <-

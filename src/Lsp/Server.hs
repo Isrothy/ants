@@ -52,14 +52,18 @@ run = do
                 (e, newState) <- State.runStateT (Except.runExceptT handler) oldState
                 result <- case e of
                   Left (Log, _message) -> do
-                    LSP.sendNotification LSP.SMethod_WindowLogMessage (LSP.LogMessageParams LSP.MessageType_Log _message)
+                    LSP.sendNotification
+                      LSP.SMethod_WindowLogMessage
+                      (LSP.LogMessageParams LSP.MessageType_Log _message)
                     liftIO (fail (Text.unpack _message))
                   Left (severity_, _message) -> do
                     let xtype = case severity_ of
                           Error -> LSP.MessageType_Error
                           Warning -> LSP.MessageType_Warning
                           Info -> LSP.MessageType_Info
-                    LSP.sendNotification LSP.SMethod_WindowShowMessage (LSP.ShowMessageParams xtype _message)
+                    LSP.sendNotification
+                      LSP.SMethod_WindowShowMessage
+                      (LSP.ShowMessageParams xtype _message)
                     liftIO (fail (Text.unpack _message))
                   Right a -> do
                     return a

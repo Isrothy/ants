@@ -27,9 +27,16 @@ benchmark = do
     [ bgroup
         "editDistance"
         [ bench "short strings" $ nf (uncurry minEditDistanceSubstring) ("kitten", "sitting"),
-          bench "medium strings" $ nf (uncurry minEditDistanceSubstring) (replicate 100 'a', replicate 1000 'b'),
-          bench "long strings" $ nf (uncurry minEditDistanceSubstring) (replicate 100 'a', replicate 10000 'b'),
-          bench "complex random strings" $ nf (uncurry minEditDistanceSubstring) (randomStr1, randomStr2)
+          bench "medium strings" $
+            nf
+              (uncurry minEditDistanceSubstring)
+              (replicate 100 'a', replicate 1000 'b'),
+          bench "long strings" $
+            nf
+              (uncurry minEditDistanceSubstring)
+              (replicate 100 'a', replicate 10000 'b'),
+          bench "complex random strings" $
+            nf (uncurry minEditDistanceSubstring) (randomStr1, randomStr2)
         ],
       bgroup
         "isInfixOfT"
