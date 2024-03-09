@@ -44,7 +44,8 @@ parseLink :: T.Text -> Maybe (T.Text, Maybe Bookmark)
 parseLink input = case T.splitOn "#" input of
   [] -> Nothing
   [link] -> Just (link, Nothing)
-  link : bookmark : _ -> Just (link, Just bookmark)
+  [link, bookmark] -> Just (link, Just bookmark)
+  _ -> Nothing
 
 resolveLinkInFile :: Path Abs File -> FilePath -> IO (Maybe (Path Abs File))
 resolveLinkInFile orig link

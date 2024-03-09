@@ -8,6 +8,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Lsp.Handlers
@@ -25,7 +26,7 @@ import Control.Lens.TH (makeLenses)
 import Control.Monad (unless)
 import Control.Monad.RWS
 import Control.Monad.Trans.Except
-import Control.Monad.Trans.Maybe (MaybeT (MaybeT, runMaybeT), maybeToExceptT)
+import Control.Monad.Trans.Maybe (MaybeT (MaybeT, runMaybeT), exceptToMaybeT, maybeToExceptT)
 import Data.Default
 import Data.Maybe
 import Data.Text qualified as T
@@ -239,6 +240,49 @@ initializedHandler =
     markdownSyntaxSpec .= getSyntaxSpec (fromMaybe def mconfig)
     return ()
 
+completionHandler :: LSP.Handlers HandlerM
+completionHandler =
+  LSP.requestHandler LSP.SMethod_TextDocumentCompletion \request respond -> do
+    handleErrorWithDefault respond (LSP.InR $ LSP.InL (LSP.CompletionList True Nothing [])) do
+      let LSP.TRequestMessage _ _ _ (LSP.CompletionParams doc pos _ _ _) = request
+          LSP.TextDocumentIdentifier origUri = doc
+      spec <- use markdownSyntaxSpec
+      items <- runMaybeT $ do
+        (_, filepath, bookmark) <- MaybeT $ liftLSP $ linkFromUriFile spec origUri pos
+        guard $ bookmark == Just ""
+        let path = fromJust (uriToFile origUri)
+        (targetPath, targetText, mfrontMatter, mtargetAst) <-
+          exceptToMaybeT $ ExceptT $ liftLSP $ linkedFile spec path filepath
+        targetAst <- MaybeT $ return mtargetAst
+        let headerToItem :: MarkdownAstNode -> Maybe LSP.CompletionItem
+            headerToItem (MarkdownAstNode (Header _ ast) rg attrs) = do
+              label <- lookup "id" attrs
+              return
+                LSP.CompletionItem
+                  { _label = label,
+                    _labelDetails = Nothing,
+                    _kind = Just LSP.CompletionItemKind_Reference,
+                    _tags = Nothing,
+                    _detail = Nothing,
+                    _documentation = Nothing,
+                    _deprecated = Nothing,
+                    _preselect = Nothing,
+                    _sortText = Nothing,
+                    _filterText = Nothing,
+                    _insertText = Nothing,
+                    _insertTextFormat = Nothing,
+                    _insertTextMode = Nothing,
+                    _textEdit = Nothing,
+                    _textEditText = Nothing,
+                    _additionalTextEdits = Nothing,
+                    _commitCharacters = Nothing,
+                    _command = Nothing,
+                    _data_ = Nothing
+                  }
+            headerToItem _ = Nothing
+        return $ allNodes' headerToItem targetAst
+      respond $ Right $ LSP.InR $ LSP.InL $ LSP.CompletionList False Nothing $ fromMaybe [] items
+
 workspaceChangeConfigurationHandler :: LSP.Handlers HandlerM
 workspaceChangeConfigurationHandler =
   LSP.notificationHandler LSP.SMethod_WorkspaceDidChangeConfiguration \_ -> return ()
@@ -274,5 +318,6 @@ handlers =
       cancelationHandler,
       didOpenTextDocumentNotificationHandler,
       didSaveTextDocumentNotificationHandler,
-      didCloseTextDocumentNotificationHandler
+      didCloseTextDocumentNotificationHandler,
+      completionHandler
     ]

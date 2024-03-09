@@ -23,6 +23,9 @@ module Model.MarkdownAst
     firstNode,
     allNodes,
     nodeAt,
+    firstNode',
+    allNodes',
+    nodeAt',
     LinkData (..),
     ImageData (..),
     ReferenceLinkDefinationData (..),
@@ -50,6 +53,7 @@ import Commonmark
 import Commonmark.Extensions
 import Control.Lens ((^.))
 import Control.Lens.TH (makeLenses)
+import Control.Monad
 import Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Text.Internal.Builder as TB
@@ -396,20 +400,33 @@ betweenPos r c (s1, s2)
 inRange :: (Integral a) => a -> a -> SourceRange -> Bool
 inRange row col sr = any (betweenPos row col) (unSourceRange sr)
 
-allNodes' :: (MarkdownAstNode -> Bool) -> MarkdownAstNode -> [MarkdownAstNode]
-allNodes' f node =
-  if f node
-    then [node]
-    else concatMap (allNodes f) $ children $ node ^. element
+allNodes' :: (MarkdownAstNode -> Maybe a) -> MarkdownAst -> [a]
+allNodes' f = concatMap (helper f)
+  where
+    helper f node =
+      case f node of
+        Just x -> [x]
+        Nothing -> concatMap (allNodes' f) $ children $ node ^. element
 
 allNodes :: (MarkdownAstNode -> Bool) -> MarkdownAst -> [MarkdownAstNode]
-allNodes f = concatMap (allNodes' f)
+allNodes f = concatMap (helper f)
+  where
+    helper f node = if f node then [node] else concatMap (allNodes f) (children $ node ^. element)
 
 firstNode :: (MarkdownAstNode -> Bool) -> MarkdownAst -> Maybe MarkdownAstNode
 firstNode f ast = listToMaybe (allNodes f ast)
 
-nodeAt :: (Integral a) => (MarkdownAstNode -> Bool) -> a -> a -> MarkdownAst -> Maybe MarkdownAstNode
+firstNode' :: (MarkdownAstNode -> Maybe a) -> MarkdownAst -> Maybe a
+firstNode' f = listToMaybe . allNodes' f
+
+nodeAt :: (Integral i) => (MarkdownAstNode -> Bool) -> i -> i -> MarkdownAst -> Maybe MarkdownAstNode
 nodeAt f row col =
   firstNode \node -> case node ^. sourceRange of
     Just sr -> inRange row col sr && f node
     _ -> False
+
+nodeAt' :: (Integral i) => (MarkdownAstNode -> Maybe a) -> i -> i -> MarkdownAst -> Maybe a
+nodeAt' f row col = firstNode' \node -> do
+  sr <- node ^. sourceRange
+  guard $ inRange row col sr
+  f node

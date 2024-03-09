@@ -36,7 +36,8 @@ lspOptions :: LSP.Options
 lspOptions =
   LSP.defaultOptions
     { LSP.optTextDocumentSync = Just syncOptions,
-      LSP.optExecuteCommandCommands = Just ["ants-ls"]
+      LSP.optExecuteCommandCommands = Just ["ants-ls"],
+      LSP.optCompletionTriggerCharacters = Just ['#']
     }
 
 run :: IO Int
