@@ -3,6 +3,7 @@
 {-# LANGUAGE ExplicitNamespaces #-}
 {-# LANGUAGE ExtendedDefaultRules #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
@@ -20,9 +21,11 @@ where
 
 import Control.Conditional (guard)
 import Control.Lens (modifying, use, (.=), (^.))
+import Control.Lens.TH (makeLenses)
+import Control.Monad (unless)
 import Control.Monad.RWS
 import Control.Monad.Trans.Except
-import Control.Monad.Trans.Maybe (MaybeT (MaybeT, runMaybeT))
+import Control.Monad.Trans.Maybe (MaybeT (MaybeT, runMaybeT), maybeToExceptT)
 import Data.Default
 import Data.Maybe
 import Data.Text qualified as T
@@ -75,20 +78,29 @@ handleErrorWithDefault respond _default = flip catchE handler
 
 data BookmarkResult = NoBookmark Int | BookmarkNotFound | BookmarkFound Int
 
-data LinkResult
+data LinkException
   = TargetNotFound
-  | TargetFound
-      { _path :: Path Abs File,
-        _frontMatter :: Maybe Metadata,
-        _targetText :: T.Text,
-        _bookmarkResult :: BookmarkResult
-      }
+  | OutOfRange
+  | FileFormatNotSupported
 
-data CursourAnalysisResult = NotHover | IsLink LSP.Range LinkResult
+data LinkResult where
+  LinkResult ::
+    { _path :: Path Abs File,
+      _frontMatter :: Maybe Metadata,
+      _targetText :: T.Text,
+      _bookmarkResult :: BookmarkResult
+    } ->
+    LinkResult
+
+data CursourAnalysisResult = NotHover | IsLink LSP.Range (Either LinkException LinkResult)
+
+formatLinkException :: LinkException -> T.Text
+formatLinkException TargetNotFound = "**ERROR**: Target Not Found"
+formatLinkException OutOfRange = "**WARNING**: Out Of Range"
+formatLinkException FileFormatNotSupported = "**INFO**: File Format Not Supported"
 
 formatLinkResult :: LinkResult -> T.Text
-formatLinkResult TargetNotFound = "**ERROR**: target not found"
-formatLinkResult (TargetFound path mfrontMatter targetText bookmarkResult) =
+formatLinkResult (LinkResult path mfrontMatter targetText bookmarkResult) =
   TL.toStrict . B.toLazyText $ displayFilepath <> displayFrontMatter <> displayContent
   where
     lineCount = 10
@@ -142,14 +154,16 @@ linkFromUriFile spec origUri pos = do
 
 linkedFile ::
   MarkdownSyntax ->
-  Path Abs Dir ->
   Path Abs File ->
   FilePath ->
-  LSP.LspT ServerConfig IO (Maybe (Path Abs File, T.Text, Maybe Metadata, Maybe MarkdownAst))
-linkedFile spec root origPath linkPath = runMaybeT $ do
-  targetPath <- MaybeT $ liftIO $ resolveLinkInFile origPath linkPath
-  guard $ root `isProperPrefixOf` targetPath
-  targetText <- MaybeT $ readLocalOrVFS targetPath
+  LSP.LspT ServerConfig IO (Either LinkException (Path Abs File, T.Text, Maybe Metadata, Maybe MarkdownAst))
+linkedFile spec origPath linkPath = runExceptT $ do
+  targetPath <- maybeToExceptT TargetNotFound $ MaybeT $ liftIO $ resolveLinkInFile origPath linkPath
+  targetText <- maybeToExceptT TargetNotFound $ MaybeT $ readLocalOrVFS targetPath
+  mroot <- lift LSP.getRootPath
+  let root = fromJust $ mroot >>= parseAbsDir
+  unless (root `isProperPrefixOf` targetPath) $ throwE OutOfRange
+  unless (fileExtension targetPath == Just ".md") $ throwE FileFormatNotSupported
   let (mfrontMatter, mAst) = parseFile spec targetPath targetText
   return (targetPath, targetText, mfrontMatter, mAst)
 
@@ -159,28 +173,23 @@ cursorAnalysis ::
   LSP.Position ->
   LSP.LspT ServerConfig IO CursourAnalysisResult
 cursorAnalysis spec origUri pos = do
-  mroot <- LSP.getRootPath
   link <- linkFromUriFile spec origUri pos
   case link of
     Nothing -> return NotHover
     Just (rg, targetFilePath, mbookmark) -> do
       let path = fromJust (uriToFile origUri)
-      tar <- runMaybeT $ do
-        root <- MaybeT $ return (mroot >>= parseAbsDir)
-        MaybeT $ linkedFile spec root path targetFilePath
-      case tar of
-        Nothing -> return $ IsLink rg TargetNotFound
-        Just (targetPath, targetText, mfrontMatter, mtargetAst) ->
-          return $
-            IsLink rg $
-              TargetFound targetPath mfrontMatter targetText $
-                case mbookmark of
-                  Nothing -> NoBookmark $ frontMatterLines targetText + 1
-                  Just bookmark ->
-                    maybe
-                      BookmarkNotFound
-                      BookmarkFound
-                      (mtargetAst >>= findBookmarkLine bookmark)
+      ret <- runExceptT $ do
+        (targetPath, targetText, mfrontMatter, mtargetAst) <- ExceptT $ linkedFile spec path targetFilePath
+        return $
+          LinkResult targetPath mfrontMatter targetText $
+            case mbookmark of
+              Nothing -> NoBookmark $ frontMatterLines targetText + 1
+              Just bookmark ->
+                maybe
+                  BookmarkNotFound
+                  BookmarkFound
+                  (mtargetAst >>= findBookmarkLine bookmark)
+      return $ IsLink rg ret
 
 textDocumentHoverHandler :: LSP.Handlers HandlerM
 textDocumentHoverHandler =
@@ -197,7 +206,7 @@ textDocumentHoverHandler =
             Right $
               LSP.InL $
                 LSP.Hover
-                  (LSP.InL $ LSP.mkMarkdown $ formatLinkResult linkResult)
+                  (LSP.InL $ LSP.mkMarkdown $ either formatLinkException formatLinkResult linkResult)
                   (Just rg)
 
 textDocumentDefinitionHandler :: LSP.Handlers HandlerM
@@ -211,14 +220,14 @@ textDocumentDefinitionHandler =
       case ret of
         NotHover -> respond $ Right $ LSP.InR $ LSP.InR LSP.Null
         IsLink _ linkResult -> case linkResult of
-          TargetNotFound -> respond $ Right $ LSP.InR $ LSP.InR LSP.Null
-          TargetFound path _ _ bookmarkResult ->
+          Right (LinkResult path _ _ bookmarkResult) ->
             let uri = LSP.filePathToUri (toFilePath path)
                 rg = case bookmarkResult of
                   NoBookmark ln -> LSP.mkRange (fromIntegral ln - 1) 0 (fromIntegral ln) 0
                   BookmarkFound ln -> LSP.mkRange (fromIntegral ln - 1) 0 (fromIntegral ln) 0
                   BookmarkNotFound -> LSP.mkRange 0 0 1 0
              in respond $ Right $ LSP.InL $ LSP.Definition $ LSP.InL $ LSP.Location uri rg
+          _ -> respond $ Right $ LSP.InR $ LSP.InR LSP.Null
 
 initializedHandler :: LSP.Handlers HandlerM
 initializedHandler =
