@@ -20,6 +20,8 @@ module Lsp.Handlers
   )
 where
 
+import Commonmark (SourceRange (..))
+import Commonmark.Types (sourceLine)
 import Control.Conditional (guard)
 import Control.Lens (modifying, use, (.=), (^.))
 import Control.Lens.TH (makeLenses)
@@ -36,6 +38,7 @@ import Data.Text.Lazy qualified as TL
 import Data.Text.Lazy.Builder qualified as B
 import Data.Text.LineBreaker qualified as T
 import Data.Yaml.Pretty (defConfig, encodePretty)
+import Fmt
 import Language.LSP.Protocol.Lens qualified as LSP
 import Language.LSP.Protocol.Message qualified as LSP
 import Language.LSP.Protocol.Types qualified as LSP
@@ -51,6 +54,7 @@ import Parser.MarkdownWithFrontmatter
 import Path
 import Project.Link
 import Project.ProjectRoot (readConfig)
+import Safe (atMay)
 import Text.RawString.QQ
 
 handleErrorWithDefault ::
@@ -254,17 +258,32 @@ completionHandler =
         (targetPath, targetText, mfrontMatter, mtargetAst) <-
           exceptToMaybeT $ ExceptT $ liftLSP $ linkedFile spec path filepath
         targetAst <- MaybeT $ return mtargetAst
+        let lines = T.splitLines targetText
+        let formatDetail :: Int -> T.Text -> T.Text
+            formatDetail lineNr line = fmt ("On line " +| lineNr |+ ": " +| line |+ "")
+        let formatDocumentation :: Int -> T.Text
+            formatDocumentation lineNr =
+              let lineCount = 10
+                  displayPath = fmtLn ("In file `" +| toFilePath targetPath |+ "'\n\n")
+                  displayFrontMatter = fmtLn ("```yaml\n" +| TE.decodeUtf8With TEE.lenientDecode (encodePretty defConfig mfrontMatter) |+ "\n```\n")
+                  displayContent = fmtLn ("Line: " +| lineNr |+ "\n\n" +| T.joinLines (take lineCount $ drop (lineNr - 1) lines) |+ "")
+               in displayPath <> displayFrontMatter <> displayContent
         let headerToItem :: MarkdownAstNode -> Maybe LSP.CompletionItem
-            headerToItem (MarkdownAstNode (Header _ ast) rg attrs) = do
+            headerToItem (MarkdownAstNode (Header _ ast) msr attrs) = do
               label <- lookup "id" attrs
+              sr <- msr
+              lineNr <- case unSourceRange sr of
+                (begin, _) : _ -> Just $ sourceLine begin
+                _ -> Nothing
+              line <- fmap fst (atMay lines (lineNr - 1))
               return
                 LSP.CompletionItem
                   { _label = label,
                     _labelDetails = Nothing,
                     _kind = Just LSP.CompletionItemKind_Reference,
                     _tags = Nothing,
-                    _detail = Nothing,
-                    _documentation = Nothing,
+                    _detail = Just $ formatDetail lineNr line,
+                    _documentation = Just $ LSP.InR $ LSP.mkMarkdown $ formatDocumentation lineNr,
                     _deprecated = Nothing,
                     _preselect = Nothing,
                     _sortText = Nothing,

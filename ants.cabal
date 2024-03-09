@@ -72,6 +72,7 @@ library
     , either
     , extra
     , filepath
+    , fmt
     , lens
     , loop
     , lsp
@@ -120,6 +121,7 @@ executable ants
     , either
     , extra
     , filepath
+    , fmt
     , lens
     , loop
     , lsp
@@ -168,6 +170,7 @@ executable ants-ls
     , either
     , extra
     , filepath
+    , fmt
     , lens
     , loop
     , lsp
@@ -234,6 +237,7 @@ test-suite ants-test
     , either
     , extra
     , filepath
+    , fmt
     , hspec
     , lens
     , loop
@@ -286,6 +290,7 @@ benchmark ants-bench
     , either
     , extra
     , filepath
+    , fmt
     , lens
     , loop
     , lsp
