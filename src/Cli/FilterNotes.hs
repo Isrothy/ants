@@ -14,7 +14,7 @@ where
 import Control.Monad.Extra
 import Model.Config (getSyntaxSpec)
 import Model.DocQuery (query)
-import Model.Document (Document (relPath))
+import Model.Document (Document (relPath, metadata))
 import Parser.DocQuery (completeQuery)
 import Parser.Opts (FilterOptions (..))
 import Path.IO (getCurrentDir)
@@ -23,7 +23,15 @@ import Project.DocLoader (loadAllFromDirectory)
 import Project.ProjectRoot (findRoot, readConfig)
 import Text.Parsec (parse)
 import Text.Parsec.Error (errorMessages, messageString)
-
+import Data.List (sortBy)
+import qualified Data.Text as T
+import Model.Metadata (Metadata(..))
+comparebyField :: Maybe T.Text -> Document -> Document -> Ordering
+comparebyField x a b = case x of
+  Just "title" -> compare (title $ metadata a) (title $ metadata b)
+  Just "author" -> compare (author $ metadata a) (author $ metadata b)
+  Just "time" -> compare (dateTime $ metadata a) (dateTime $ metadata b)
+  _ -> compare (relPath a) (relPath b)
 filterNotes :: FilterOptions -> IO ()
 filterNotes op = do
   let q = parse completeQuery "" $ queryString op
@@ -33,5 +41,6 @@ filterNotes op = do
   cwd <- getCurrentDir
   docs <- loadAllFromDirectory (getSyntaxSpec config) cwd
   let filt = query expr
-  let res = filter filt docs
+  let filtered = filter filt docs
+  let res = sortBy (comparebyField $ sortString op) filtered
   mapM_ (putStrLn . toFilePath . relPath) res

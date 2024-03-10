@@ -33,7 +33,8 @@ data InitOptions = InitOptions
   }
 
 data FilterOptions = FilterOptions
-  { queryString :: T.Text
+  { queryString :: T.Text,
+    sortString :: Maybe T.Text
   }
 
 newtype Options = Options
@@ -96,6 +97,10 @@ initCommand = do
 
 filterCommand :: Parser Command
 filterCommand = do
+  sortString <-
+    optional $
+      strOption $
+        long "sort" <> short 's' <> metavar "FIELD" <> help "Field of metadata used for sorting" <> completeWith ["title", "author", "time"]
   queryString <- strArgument (metavar "QUERY" <> help "Query to be used for filtering")
   pure $ Filter $ FilterOptions {..}
 
