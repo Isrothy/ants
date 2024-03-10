@@ -11,10 +11,11 @@ module Cli.FilterNotes
   )
 where
 
+import Control.Monad.Extra
+import Model.Config (getSyntaxSpec)
 import Model.DocQuery (query)
 import Model.Document (Document (relPath))
 import Parser.DocQuery (completeQuery)
-import Parser.Markdown (getExtensionsFromConfig)
 import Parser.Opts (FilterOptions (..))
 import Path.IO (getCurrentDir)
 import Path.Posix (toFilePath)
@@ -22,7 +23,6 @@ import Project.DocLoader (loadAllFromDirectory)
 import Project.ProjectRoot (findRoot, readConfig)
 import Text.Parsec (parse)
 import Text.Parsec.Error (errorMessages, messageString)
-import Control.Monad.Extra
 
 filterNotes :: FilterOptions -> IO ()
 filterNotes op = do
@@ -31,7 +31,7 @@ filterNotes op = do
   pathToRoot <- fromMaybeM (error "Cannot find config") findRoot
   config <- fromMaybeM (error "config: Decode failed") $ readConfig pathToRoot
   cwd <- getCurrentDir
-  docs <- loadAllFromDirectory (getExtensionsFromConfig config) cwd
+  docs <- loadAllFromDirectory (getSyntaxSpec config) cwd
   let filt = query expr
   let res = filter filt docs
   mapM_ (putStrLn . toFilePath . relPath) res

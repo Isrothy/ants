@@ -30,7 +30,7 @@ initNotebook _ = do
       "game": "League of Legends"
     }
   },
-  "extensions": ["math", "emoji", "footnotes"]
+  "extensions": ["gfm"]
 }|]
   createDirIfMissing True configDir
   writeFile (toFilePath $ configDir </> configFileName) exampleConfig

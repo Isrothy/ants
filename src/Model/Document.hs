@@ -11,8 +11,8 @@ import qualified Path as P
 
 data Document = Document
   { relPath :: P.Path P.Rel P.File,
-    timeCreated :: !UTCTime,
-    lastModified :: !UTCTime,
+    lastAccessed :: UTCTime,
+    lastModified :: UTCTime,
     filename :: String,
     metadata :: M.Metadata,
     ast :: Maybe MarkdownAst,

@@ -29,8 +29,12 @@ library
       Cli.InitNoteBook
       Cli.NewNoteGen
       Data.Aeson.Extra
+      Data.Text.LineBreaker
       Lib
+      Lsp.Handlers
       Lsp.Server
+      Lsp.State
+      Lsp.Util
       Model.Config
       Model.DocQuery
       Model.DocQuery.BoolExpr
@@ -46,8 +50,10 @@ library
       Parser.Opts
       Parser.Placeholder
       Project.DocLoader
+      Project.Link
       Project.ProjectRoot
       Util.Fuzzy
+      Util.IO
   other-modules:
       Paths_ants
   hs-source-dirs:
@@ -66,12 +72,14 @@ library
     , either
     , extra
     , filepath
+    , fmt
     , lens
     , loop
     , lsp
     , lsp-test
     , lsp-types
     , mtl
+    , network-uri
     , optparse-applicative
     , parsec
     , path
@@ -83,7 +91,9 @@ library
     , safe
     , temporary
     , text
+    , text-rope
     , time
+    , transformers
     , unliftio
     , unordered-containers
     , vector
@@ -111,12 +121,14 @@ executable ants
     , either
     , extra
     , filepath
+    , fmt
     , lens
     , loop
     , lsp
     , lsp-test
     , lsp-types
     , mtl
+    , network-uri
     , optparse-applicative
     , parsec
     , path
@@ -128,7 +140,9 @@ executable ants
     , safe
     , temporary
     , text
+    , text-rope
     , time
+    , transformers
     , unliftio
     , unordered-containers
     , vector
@@ -156,12 +170,14 @@ executable ants-ls
     , either
     , extra
     , filepath
+    , fmt
     , lens
     , loop
     , lsp
     , lsp-test
     , lsp-types
     , mtl
+    , network-uri
     , optparse-applicative
     , parsec
     , path
@@ -173,7 +189,9 @@ executable ants-ls
     , safe
     , temporary
     , text
+    , text-rope
     , time
+    , transformers
     , unliftio
     , unordered-containers
     , vector
@@ -185,10 +203,12 @@ test-suite ants-test
   main-is: Main.hs
   other-modules:
       Spec.Cli.NewNoteGen
+      Spec.Data.Text.LineBreaker
       Spec.Lsp.Server
       Spec.Model.Config
       Spec.Model.DocQuery.Query
       Spec.Model.DocQuery.Term
+      Spec.Model.MarkdownAst
       Spec.Model.Metadata
       Spec.Parser.DocQuery
       Spec.Parser.Frontmatter
@@ -196,6 +216,7 @@ test-suite ants-test
       Spec.Parser.MarkdownWithFrontmatter
       Spec.Parser.Placeholder
       Spec.Project.DocLoader
+      Spec.Project.Link
       Spec.Project.ProjectRoot
       Spec.Util.Fuzzy
       Paths_ants
@@ -216,6 +237,7 @@ test-suite ants-test
     , either
     , extra
     , filepath
+    , fmt
     , hspec
     , lens
     , loop
@@ -223,6 +245,7 @@ test-suite ants-test
     , lsp-test
     , lsp-types
     , mtl
+    , network-uri
     , optparse-applicative
     , parsec
     , path
@@ -234,7 +257,9 @@ test-suite ants-test
     , safe
     , temporary
     , text
+    , text-rope
     , time
+    , transformers
     , unliftio
     , unordered-containers
     , vector
@@ -265,12 +290,14 @@ benchmark ants-bench
     , either
     , extra
     , filepath
+    , fmt
     , lens
     , loop
     , lsp
     , lsp-test
     , lsp-types
     , mtl
+    , network-uri
     , optparse-applicative
     , parsec
     , path
@@ -282,7 +309,9 @@ benchmark ants-bench
     , safe
     , temporary
     , text
+    , text-rope
     , time
+    , transformers
     , unliftio
     , unordered-containers
     , vector

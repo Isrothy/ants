@@ -11,13 +11,6 @@ import Cli.NewNoteGen
 import qualified Model.Config as Config
 import Test.Hspec
 
-splitLinesSpec :: Spec
-splitLinesSpec = describe "splitLines" $ do
-  it "split lines correctly" $ do
-    splitLines "Hello, world!" `shouldBe` ["Hello, world!"]
-    splitLines "Hello, world!\nHow are you today?\nI'm fine, thank you!" `shouldBe` ["Hello, world!\n", "How are you today?\n", "I'm fine, thank you!"]
-    splitLines "Hello, world!\r\nHow are you today?\rI'm fine, thank you!" `shouldBe` ["Hello, world!\r\n", "How are you today?\r", "I'm fine, thank you!"]
-
 findPositionSpec :: Spec
 findPositionSpec = describe "find position" $ parallel $ do
   it "finds position correctly in single-line text" $ do
@@ -211,7 +204,6 @@ configToLookupTableSpec = describe "fromConfig" $ parallel $ do
 
 spec :: Spec
 spec = parallel $ do
-  splitLinesSpec
   findPositionSpec
   templateGenSpec
   configToLookupTableSpec

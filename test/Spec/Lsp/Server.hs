@@ -1,12 +1,19 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DuplicateRecordFields #-}
+{-# LANGUAGE ExtendedDefaultRules #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 {-# OPTIONS_GHC -Wno-unused-do-bind #-}
 
 module Spec.Lsp.Server (spec) where
 
+import Cli.InitNoteBook (initNotebook)
 import Control.Concurrent
 import Control.Exception
 import Control.Lens ((^.))
@@ -25,52 +32,141 @@ import Language.LSP.Protocol.Types
 import Language.LSP.Server
 import Language.LSP.Test
 import Lsp.Server
+import Parser.Opts
+import Path
+import Path.IO
+import Project.ProjectRoot
 import System.Process
 import Test.Hspec
+import Text.RawString.QQ
 
-withDummyServer :: ((Handle, Handle) -> IO ()) -> IO ()
-withDummyServer f = do
-  (hinRead, hinWrite) <- createPipe
-  (houtRead, houtWrite) <- createPipe
+sampleMarkdownDoc :: String
+sampleMarkdownDoc =
+  [r|# Introduction
 
-  handlerEnv <- HandlerEnv <$> newEmptyMVar <*> newEmptyMVar
-  let definition =
-        ServerDefinition
-          { doInitialize = \env _req -> pure $ Right env,
-            defaultConfig = 1 :: Int,
-            configSection = "dummy",
-            parseConfig = \_old new -> case fromJSON new of
-              J.Success v -> Right v
-              J.Error err -> Left $ T.pack err,
-            onConfigChange = const $ pure (),
-            staticHandlers = \_caps -> handlers',
-            interpretHandler = \env ->
-              Iso (\m -> runLspT env (runReaderT m handlerEnv)) liftIO,
-            options = defaultOptions {optExecuteCommandCommands = Just ["doAnEdit"]}
-          }
+This is a sample document.
 
-  bracket
-    (forkIO $ void $ runServerWithHandles mempty mempty hinRead houtWrite definition)
-    killThread
-    (const $ f (hinWrite, houtRead))
+[this is a link](target.md#tag)
 
-data HandlerEnv = HandlerEnv
-  { relRegToken :: MVar (RegistrationToken Method_WorkspaceDidChangeWatchedFiles),
-    absRegToken :: MVar (RegistrationToken Method_WorkspaceDidChangeWatchedFiles)
-  }
+[[target.md#tag]]
+  |]
 
-handlers' :: Handlers (ReaderT HandlerEnv (LspM Int))
-handlers' =
-  mconcat
-    [ notificationHandler SMethod_Initialized initializedHandler,
-      requestHandler SMethod_TextDocumentHover textDocumentHoverHandler,
-      requestHandler SMethod_TextDocumentDefinition textDocumentDefinitionHandler
-    ]
+configWithoutWikilink :: String
+configWithoutWikilink =
+  [r|
+{
+  "template":{
+    "name": "John",
+    "email": "john@example.com",
+    "dateFormat": "%Y-%m-%d",
+    "timeFormat": "%H:%M:%S",
+    "dateTimeFormat": "%Y-%m-%dT%H:%M:%S",
+    "variables": {
+      "game": "League of Legends"
+    }
+  },
+  "extensions": [
+    "gfm", "attributes", "auto_identifiers"
+  ]
+}
+|]
+
+configWithWikilink :: String
+configWithWikilink =
+  [r|
+{
+  "template":{
+    "name": "John",
+    "email": "john@example.com",
+    "dateFormat": "%Y-%m-%d",
+    "timeFormat": "%H:%M:%S",
+    "dateTimeFormat": "%Y-%m-%dT%H:%M:%S",
+    "variables": {
+      "game": "League of Legends"
+    }
+  },
+  "extensions": [
+    "gfm", "attributes", "auto_identifiers", "wikilinks_title_after_pipe"
+  ]
+}
+|]
+
+hoverSpec :: Spec
+hoverSpec = describe "Lsp Hover" $ sequential $ do
+  it "do not hover on none link" $ do
+    withSystemTempDir "docLoader" $ \tmp -> do
+      cur <- getCurrentDir
+      let setup = do
+            setCurrentDir tmp
+            initNotebook InitOptions
+            writeFile (toFilePath (tmp </> $(mkRelFile "test.md"))) sampleMarkdownDoc
+          cleanup = do
+            setCurrentDir cur
+      bracket_ setup cleanup $ do
+        runSession "ants-ls" fullCaps (toFilePath tmp) $
+          do
+            docId <- openDoc "test.md" "markdown"
+            hover <- getHover docId (Position 0 5)
+            liftIO $ do
+              hover `shouldSatisfy` isNothing
+              pure ()
+
+  it "hover on link" $ do
+    withSystemTempDir "docLoader" $ \tmp -> do
+      cur <- getCurrentDir
+      let setup = do
+            setCurrentDir tmp
+            initNotebook InitOptions
+            writeFile (toFilePath (tmp </> $(mkRelFile "test.md"))) sampleMarkdownDoc
+          cleanup = do
+            setCurrentDir cur
+      bracket_ setup cleanup $ do
+        runSession "ants-ls" fullCaps (toFilePath tmp) $
+          do
+            docId <- openDoc "test.md" "markdown"
+            hover <- getHover docId (Position 4 5)
+            liftIO $ do
+              hover `shouldSatisfy` isJust
+              pure ()
+
+  it "respects config" $ do
+    withSystemTempDir "docLoader" $ \tmp -> do
+      cur <- getCurrentDir
+      let setup = do
+            setCurrentDir tmp
+            initNotebook InitOptions
+            writeFile (toFilePath $ tmp </> configDir </> configFileName) configWithoutWikilink
+            writeFile (toFilePath (tmp </> $(mkRelFile "test.md"))) sampleMarkdownDoc
+          cleanup = do
+            setCurrentDir cur
+      bracket_ setup cleanup $ do
+        runSession "ants-ls" fullCaps (toFilePath tmp) $
+          do
+            docId <- openDoc "test.md" "markdown"
+            hover <- getHover docId (Position 6 5)
+            liftIO $ do
+              hover `shouldSatisfy` isNothing
+              pure ()
+
+  it "hover on wiki-link" $ do
+    withSystemTempDir "docLoader" $ \tmp -> do
+      cur <- getCurrentDir
+      let setup = do
+            setCurrentDir tmp
+            initNotebook InitOptions
+            writeFile (toFilePath $ tmp </> configDir </> configFileName) configWithWikilink
+            writeFile (toFilePath (tmp </> $(mkRelFile "test.md"))) sampleMarkdownDoc
+          cleanup = do
+            setCurrentDir cur
+      bracket_ setup cleanup $ do
+        runSession "ants-ls" fullCaps (toFilePath tmp) $
+          do
+            docId <- openDoc "test.md" "markdown"
+            hover <- getHover docId (Position 6 5)
+            liftIO $ do
+              hover `shouldSatisfy` isJust
+              pure ()
 
 spec :: Spec
-spec = around withDummyServer $ do
-  describe "getHover" $
-    it "works" $ \(hin, hout) -> runSessionWithHandles hin hout def fullCaps "test/Spec/Lsp/data/dummy" $ do
-      doc <- openDoc "dummy.md" "markdown"
-      hover <- getHover doc (Position 1 1)
-      liftIO $ hover `shouldSatisfy` isJust
+spec = sequential $ do
+  hoverSpec

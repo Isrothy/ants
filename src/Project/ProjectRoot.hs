@@ -1,13 +1,32 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE OverloadedRecordDot #-}
+{-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 
-module Project.ProjectRoot (findRoot, findTemplate, configDir, templateDir, configFileName, defaultTemplateFileName, readConfig) where
+module Project.ProjectRoot
+  ( findRoot,
+    findTemplate,
+    configDir,
+    templateDir,
+    configFileName,
+    defaultTemplateFileName,
+    readConfig,
+  )
+where
 
 import Control.Conditional
+import Control.Monad.IO.Class
+import Control.Monad.Trans.Maybe
+import Data.Aeson qualified
+import Data.ByteString.Lazy qualified as BL
+import Model.Config
 import Path
 import Path.IO
-import Model.Config (Config)
-import qualified Data.Aeson
-import Data.String (fromString)
+import Util.IO
 
 configDir :: Path Rel Dir
 configDir = $(mkRelDir ".ants")
@@ -43,7 +62,7 @@ findTemplate :: Path Abs Dir -> IO (Maybe (Path Abs Dir))
 findTemplate dir = findDir dir templateDir
 
 readConfig :: Path Abs Dir -> IO (Maybe Config)
-readConfig pathToRoot = do
+readConfig pathToRoot = runMaybeT $ do
   let configPath = pathToRoot </> configDir </> configFileName
-  conf <- readFile $ toFilePath configPath
-  return $ Data.Aeson.decode $ fromString conf 
+  text <- MaybeT $ readFileSafe $ toFilePath configPath
+  MaybeT $ return $ Data.Aeson.decode text

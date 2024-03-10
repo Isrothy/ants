@@ -1,12 +1,11 @@
 {-# LANGUAGE ExtendedDefaultRules #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TupleSections #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 module Cli.NewNoteGen
-  ( splitLines,
-    replacePlaceholders,
+  ( replacePlaceholders,
     fromConfig,
     findPosition,
     newNote,
@@ -15,6 +14,7 @@ where
 
 import Commonmark
 import Control.Monad
+import Control.Monad.Extra (fromMaybeM)
 import qualified Data.Bifunctor
 import Data.Char (isSpace)
 import Data.Functor.Identity
@@ -23,8 +23,10 @@ import Data.Maybe (fromJust, fromMaybe, maybeToList)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
 import qualified Data.Text.Lazy as TL
+import Data.Text.LineBreaker
 import Data.Time
 import qualified Data.Yaml as Y
+import Model.Config (getSyntaxSpec)
 import qualified Model.Config as Config
 import Model.MarkdownAst
 import qualified Model.Metadata as M
@@ -33,9 +35,8 @@ import Parser.Opts
 import Parser.Placeholder
 import Path (parseRelFile, toFilePath, (</>))
 import Path.IO (resolveDir')
-import Project.ProjectRoot (defaultTemplateFileName, findRoot, findTemplate, templateDir, readConfig)
+import Project.ProjectRoot (defaultTemplateFileName, findRoot, findTemplate, readConfig, templateDir)
 import Safe
-import Control.Monad.Extra (fromMaybeM)
 
 markdownAstWithPlaceholder ::
   (Monad m) =>
@@ -65,28 +66,15 @@ posReverse (_, SourceRange ((pos1, _) : _)) (_, SourceRange ((pos2, _) : _)) =
   pos2 `compare` pos1
 posReverse _ _ = error "posReverse: empty source range"
 
--- For Text.lines does not treat '\r' (CR, carriage return) as a newline character.
-splitLines :: T.Text -> [T.Text]
-splitLines txt = map (T.reverse . TL.toStrict) $ splitLines' (TL.fromStrict txt) TL.empty
-
-splitLines' :: TL.Text -> TL.Text -> [TL.Text]
-splitLines' txt line = case TL.uncons txt of
-  Nothing -> [line]
-  Just ('\r', rest) -> case TL.uncons rest of
-    Just ('\n', rest') -> ('\n' `TL.cons` '\r' `TL.cons` line) : splitLines' rest' TL.empty
-    _ -> ('\r' `TL.cons` line) : splitLines' rest TL.empty
-  Just ('\n', rest) -> ('\n' `TL.cons` line) : splitLines' rest TL.empty
-  Just (c, rest) -> splitLines' rest (c `TL.cons` line)
-
 findPosition :: Int -> Int -> T.Text -> Maybe Int
 findPosition lineNumber columnNumber text = do
   guard $ lineNumber >= 1 && columnNumber >= 1
   let lines' = splitLines text
   guard $ lineNumber <= length lines'
-  let line = at lines' (lineNumber - 1)
-  guard $ columnNumber <= T.length line
+  let (line, lineBreaker) = at lines' (lineNumber - 1)
+  guard $ columnNumber <= T.length line + maybe 0 (length . toString) lineBreaker
   let linesBefore = take (lineNumber - 1) lines'
-  let charsInLinesBefore = sum $ map T.length linesBefore
+  let charsInLinesBefore = T.length $ joinLines linesBefore
   return $ charsInLinesBefore + columnNumber - 1
 
 replace :: T.Text -> (SourcePos, SourcePos) -> T.Text -> T.Text
@@ -139,7 +127,7 @@ newNote op = do
   pathToTemplate <- findTemplate actualPath
   let templatePath = fmap (</> templateDir </> defaultTemplateFileName) pathToTemplate
   templateString <- maybe (pure "") (readFile . toFilePath) templatePath
-  let replacedContent = replacePlaceholders (getExtensionsFromConfig config) (T.pack templateString) newtab
+  let replacedContent = replacePlaceholders (getSyntaxSpec config) (T.pack templateString) newtab
   let mdata =
         M.Metadata
           { M.title = Just $ Parser.Opts.title op,

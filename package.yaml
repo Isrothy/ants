@@ -25,19 +25,21 @@ dependencies:
   - bytestring
   - commonmark
   - commonmark-extensions
-  - containers
   - cond
+  - containers
   - data-default
   - directory
   - either
   - extra
   - filepath
-  - mtl
+  - fmt
   - lens
   - loop
   - lsp
   - lsp-test
   - lsp-types
+  - mtl
+  - network-uri
   - optparse-applicative
   - parsec
   - path
@@ -47,9 +49,11 @@ dependencies:
   - raw-strings-qq
   - regex-tdfa ^>= 1.3.2
   - safe
-  - text
   - temporary
+  - text
+  - text-rope
   - time
+  - transformers
   - unliftio
   - unordered-containers
   - vector
