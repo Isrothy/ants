@@ -34,7 +34,10 @@ comparebyField x a b = case x of
   _ -> compare (relPath a) (relPath b)
 filterNotes :: FilterOptions -> IO ()
 filterNotes op = do
-  let q = parse completeQuery "" $ queryString op
+  let qs = case queryString op of
+        "" -> "content:/.*/"
+        x -> x
+  let q = parse completeQuery "" $ qs
   let expr = either (error . concatMap messageString . errorMessages) id q
   pathToRoot <- fromMaybeM (error "Cannot find config") findRoot
   config <- fromMaybeM (error "config: Decode failed") $ readConfig pathToRoot
