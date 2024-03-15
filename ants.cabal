@@ -43,8 +43,25 @@ library
       Model.Document
       Model.MarkdownAst
       Model.MarkdownAst.Classes
+      Model.MarkdownAst.Classes.HasAlertType
+      Model.MarkdownAst.Classes.HasBlock
+      Model.MarkdownAst.Classes.HasChar
+      Model.MarkdownAst.Classes.HasColAlignments
+      Model.MarkdownAst.Classes.HasDefListItems
+      Model.MarkdownAst.Classes.HasFormat
+      Model.MarkdownAst.Classes.HasHeaders
       Model.MarkdownAst.Classes.HasInline
+      Model.MarkdownAst.Classes.HasLabel
+      Model.MarkdownAst.Classes.HasLanguage
+      Model.MarkdownAst.Classes.HasLevel
+      Model.MarkdownAst.Classes.HasListItems
+      Model.MarkdownAst.Classes.HasListSpacing
+      Model.MarkdownAst.Classes.HasListType
+      Model.MarkdownAst.Classes.HasNumber
+      Model.MarkdownAst.Classes.HasRows
       Model.MarkdownAst.Classes.HasTarget
+      Model.MarkdownAst.Classes.HasTaskListItems
+      Model.MarkdownAst.Classes.HasText
       Model.MarkdownAst.Classes.HasTitle
       Model.MarkdownAst.Params
       Model.MarkdownAst.Params.AlertParams

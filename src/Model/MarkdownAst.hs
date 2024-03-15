@@ -28,23 +28,9 @@ module Model.MarkdownAst
     firstNode',
     allNodes',
     nodeAt',
-    LinkParams (..),
-    ImageParams (..),
-    ReferenceLinkDefinationParams (..),
     attributes,
     element,
     sourceRange,
-    imageTarget,
-    imageTitle,
-    imageInline,
-    listType,
-    listSpacing,
-    listItems,
-    referenceLinkDefinationLabel,
-    referenceLinkDefinationDestination,
-    referenceLinkDefinationTitle,
-    wikiLinkTarget,
-    wikiLinkInline,
   )
 where
 
@@ -57,9 +43,14 @@ import Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Text.Internal.Builder as TB
 import qualified Data.Text.Lazy as LT
+import Model.MarkdownAst.Classes
+import Model.MarkdownAst.Params.AlertParams
 import Model.MarkdownAst.Params.EntityParams
+import Model.MarkdownAst.Params.ImageParams
 import Model.MarkdownAst.Params.LineBreakParams
 import Model.MarkdownAst.Params.LinkParams
+import Model.MarkdownAst.Params.ListParams
+import Model.MarkdownAst.Params.ReferenceLinkDefinationParams
 import Model.MarkdownAst.Params.TextParams
 import Model.MarkdownAst.Params.WikiLinkParams
 import Parser.Placeholder
@@ -78,18 +69,18 @@ type MarkdownAst = [MarkdownAstNode]
 data MarkdownElement where
   Text :: TextParams -> MarkdownElement
   Entity :: EntityParams -> MarkdownElement
-  LineBreak :: MarkdownElement
+  LineBreak :: LineBreakParams -> MarkdownElement
   SoftBreak :: MarkdownElement
   EscapedChar :: Char -> MarkdownElement
   Code :: T.Text -> MarkdownElement
   Emphasis :: MarkdownAst -> MarkdownElement
   Strong :: MarkdownAst -> MarkdownElement
-  Link :: LinkParams -> MarkdownElement
-  Image :: ImageParams -> MarkdownElement
+  Link :: (LinkParams MarkdownAst) -> MarkdownElement
+  Image :: (ImageParams MarkdownAst) -> MarkdownElement
   Strikethrough :: MarkdownAst -> MarkdownElement
   Highlight :: MarkdownAst -> MarkdownElement
   RawInline :: Format -> T.Text -> MarkdownElement
-  Alert :: AlertType -> MarkdownAst -> MarkdownElement
+  Alert :: (AlertParams MarkdownAst) -> MarkdownElement
   Emoji :: T.Text -> T.Text -> MarkdownElement
   InlineMath :: T.Text -> MarkdownElement
   DisplayMath :: T.Text -> MarkdownElement
@@ -100,7 +91,7 @@ data MarkdownElement where
   Paragraph :: MarkdownAst -> MarkdownElement
   Plain :: MarkdownAst -> MarkdownElement
   Header :: Int -> MarkdownAst -> MarkdownElement
-  List :: ListParams -> MarkdownElement
+  List :: (ListParams MarkdownAst) -> MarkdownElement
   Blockquote :: MarkdownAst -> MarkdownElement
   CodeBlock :: T.Text -> T.Text -> MarkdownElement
   RawBlock :: Format -> T.Text -> MarkdownElement
@@ -120,39 +111,12 @@ data MarkdownElement where
     ListSpacing ->
     [(Bool, MarkdownAst)] ->
     MarkdownElement
-  WikiLink :: WikiLinkParams -> MarkdownElement
+  WikiLink :: (WikiLinkParams MarkdownAst) -> MarkdownElement
   Footnote :: Int -> T.Text -> MarkdownAst -> MarkdownElement
   FootnoteList :: [MarkdownAst] -> MarkdownElement
   FootnoteRef :: T.Text -> T.Text -> MarkdownAst -> MarkdownElement
   Placeholder :: T.Text -> MarkdownElement
   Span :: MarkdownAst -> MarkdownElement
-  deriving (Show, Eq)
-
-data ImageParams where
-  ImageParams ::
-    { _imageTarget :: T.Text,
-      _imageTitle :: T.Text,
-      _imageInline :: MarkdownAst
-    } ->
-    ImageParams
-  deriving (Show, Eq)
-
-data ListParams where
-  ListData ::
-    { _listType :: ListType,
-      _listSpacing :: ListSpacing,
-      _listItems :: [MarkdownAst]
-    } ->
-    ListParams
-  deriving (Show, Eq)
-
-data ReferenceLinkDefinationParams where
-  ReferenceLinkDefinationData ::
-    { _referenceLinkDefinationLabel :: T.Text,
-      _referenceLinkDefinationDestination :: T.Text,
-      _referenceLinkDefinationTitle :: T.Text
-    } ->
-    ReferenceLinkDefinationParams
   deriving (Show, Eq)
 
 makeLenses ''MarkdownAstNode
@@ -171,7 +135,7 @@ instance Rangeable MarkdownAst where
   ranged sr xs = [MarkdownAstNode (Span xs) (Just sr) []]
 
 instance IsInline MarkdownAst where
-  lineBreak = rawNode LineBreak
+  lineBreak = rawNode $ LineBreak LineBreakParams
   softBreak = rawNode SoftBreak
   entity = rawNode . Entity . EntityParams
   emph = rawNode . Emphasis
@@ -220,7 +184,7 @@ instance HasTaskList MarkdownAst MarkdownAst where
   taskList listtype spacing items = rawNode (TaskList listtype spacing items)
 
 instance HasAlerts MarkdownAst MarkdownAst where
-  alert a = rawNode . Alert a
+  alert a = rawNode . Alert . AlertParams a
 
 instance HasWikilinks MarkdownAst where
   wikilink target inline = rawNode $ WikiLink $ WikiLinkParams target inline
@@ -246,14 +210,14 @@ toPlainTextBuilder' :: MarkdownAstNode -> TB.Builder
 toPlainTextBuilder' (MarkdownAstNode ele _ _) = case ele of
   Text t -> TB.fromText $ t ^. text
   Entity (EntityParams t) -> TB.fromText t
-  LineBreak -> "\n"
+  LineBreak _ -> "\n"
   SoftBreak -> " "
   EscapedChar c -> TB.singleton c
   Code t -> TB.fromText t
   Emphasis ast -> toPlainTextBuilder ast
   Strong ast -> toPlainTextBuilder ast
   Link link -> toPlainTextBuilder $ link ^. inline
-  Image image -> toPlainTextBuilder $ image ^. imageInline
+  Image image -> toPlainTextBuilder $ image ^. inline
   Strikethrough ast -> toPlainTextBuilder ast
   Highlight ast -> toPlainTextBuilder ast
   RawInline _ t -> TB.fromText t
@@ -266,7 +230,11 @@ toPlainTextBuilder' (MarkdownAstNode ele _ _) = case ele of
   Superscript ast -> " " <> toPlainTextBuilder ast <> " "
   Paragraph ast -> toPlainTextBuilder ast <> "\n"
   Plain ast -> toPlainTextBuilder ast
-  Alert a ast -> TB.fromText (alertName a) <> ": " <> toPlainTextBuilder ast
+  Alert alert ->
+    TB.fromText
+      (alertName (alert ^. alertType))
+      <> ": "
+      <> toPlainTextBuilder (alert ^. block)
   Header _ ast -> toPlainTextBuilder ast <> "\n"
   List list -> mconcat $ map (\ast -> toPlainTextBuilder ast <> "\n") $ list ^. listItems
   Blockquote ast -> toPlainTextBuilder ast <> "\n"
@@ -278,7 +246,7 @@ toPlainTextBuilder' (MarkdownAstNode ele _ _) = case ele of
       tableHelper [] = ""
       tableHelper (x : xs) =
         mconcat (map (\y -> toPlainTextBuilder y <> " ") x) <> "\n" <> tableHelper xs
-  ReferenceLinkDefination ref -> TB.fromText $ ref ^. referenceLinkDefinationLabel
+  ReferenceLinkDefination ref -> TB.fromText $ ref ^. label
   DefinitionList _ asts ->
     mconcat
       ( map
@@ -292,7 +260,7 @@ toPlainTextBuilder' (MarkdownAstNode ele _ _) = case ele of
           asts
       )
   TaskList _ _ items -> mconcat $ map (\(_, ast) -> toPlainTextBuilder ast <> "\n") items
-  WikiLink wiki -> toPlainTextBuilder (wiki ^. wikiLinkInline)
+  WikiLink wiki -> toPlainTextBuilder (wiki ^. inline)
   Footnote num txt ast ->
     "[" <> TB.fromString (show num) <> "] " <> TB.fromText txt <> toPlainTextBuilder ast
   FootnoteList items -> mconcat $ map (\item -> toPlainTextBuilder item <> "\n") items
@@ -316,7 +284,7 @@ children (Strikethrough ast) = [ast]
 children (Superscript ast) = [ast]
 children (Subscript ast) = [ast]
 children (Link link) = [link ^. inline]
-children (Image image) = [image ^. imageInline]
+children (Image image) = [image ^. inline]
 children (Span asts) = [asts]
 children (Paragraph ast) = [ast]
 children (Plain ast) = [ast]
@@ -326,11 +294,11 @@ children (Blockquote ast) = [ast]
 children (PipeTable _ title rows) = concat (title : rows)
 children (DefinitionList _ asts) = map fst asts ++ concatMap snd asts
 children (TaskList _ _ items) = map snd items
-children (WikiLink wiki) = [wiki ^. wikiLinkInline]
+children (WikiLink wiki) = [wiki ^. inline]
 children (Footnote _ _ ast) = [ast]
 children (FootnoteList items) = items
 children (FootnoteRef _ _ ast) = [ast]
-children (Alert _ ast) = [ast]
+children (Alert alert) = [alert ^. block]
 children _ = []
 
 findPlaceholders :: MarkdownAst -> [(T.Text, SourceRange)]
@@ -356,7 +324,7 @@ findUnfinishedTasks = map snd . filter (not . fst) . findTasks
 
 findAlerts :: MarkdownAst -> [(AlertType, MarkdownAst)]
 findAlerts = concatMap \case
-  (MarkdownAstNode (Alert t ast) _ _) -> [(t, ast)]
+  (MarkdownAstNode (Alert (AlertParams t ast)) _ _) -> [(t, ast)]
   (MarkdownAstNode ele _ _) -> concatMap findAlerts (children ele)
 
 betweenPos :: (Integral a) => a -> a -> (SourcePos, SourcePos) -> Bool

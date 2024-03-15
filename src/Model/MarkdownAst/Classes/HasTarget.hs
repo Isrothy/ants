@@ -1,5 +1,3 @@
-{-# LANGUAGE FunctionalDependencies #-}
-
 module Model.MarkdownAst.Classes.HasTarget
   ( HasTarget (..),
   )

@@ -48,6 +48,7 @@ import Lsp.State
 import Lsp.Util
 import Model.Config
 import Model.MarkdownAst
+import Model.MarkdownAst.Classes (HasTarget (target))
 import Model.Metadata
 import Parser.Markdown
 import Parser.MarkdownWithFrontmatter
@@ -137,8 +138,8 @@ linkFromUriFile ::
   LSP.LspT ServerConfig IO (Maybe (LSP.Range, FilePath, Maybe Bookmark))
 linkFromUriFile spec origUri pos = do
   let fromLink :: MarkdownAstNode -> Maybe T.Text
-      fromLink (MarkdownAstNode (Link ldata) _ _) = Just (ldata ^. linkTarget)
-      fromLink (MarkdownAstNode (WikiLink ldata) _ _) = Just (ldata ^. wikiLinkTarget)
+      fromLink (MarkdownAstNode (Link ldata) _ _) = Just (ldata ^. target)
+      fromLink (MarkdownAstNode (WikiLink ldata) _ _) = Just (ldata ^. target)
       fromLink _ = Nothing
   let mpath = uriToFile origUri
   mfile <- LSP.getVirtualFile (LSP.toNormalizedUri origUri)

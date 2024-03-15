@@ -6,10 +6,7 @@
 {-# LANGUAGE StarIsType #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Model.MarkdownAst.Params.LinkParams
-  ( LinkParams (..),
-  )
-where
+module Model.MarkdownAst.Params.LinkParams where
 
 import Control.Lens
 import Data.Text qualified as T
@@ -19,20 +16,20 @@ import Model.MarkdownAst.Classes.HasTitle
 
 data LinkParams il where
   LinkParams ::
-    { _target :: T.Text,
+    { _linkTarget :: T.Text,
       _title :: T.Text,
       _inline :: il
     } ->
     LinkParams il
   deriving (Show, Eq)
 
-makeLenses ''LinkParams
-
 instance HasInline LinkParams il where
-  inline = Model.MarkdownAst.Params.LinkParams.inline
+  inline = inline
 
 instance HasTarget (LinkParams il) where
-  target = Model.MarkdownAst.Params.LinkParams.target
+  target = linkTarget
 
 instance HasTitle (LinkParams il) where
-  title = Model.MarkdownAst.Params.LinkParams.title
+  title = title
+
+makeLenses ''LinkParams
