@@ -1,7 +1,9 @@
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ExtendedDefaultRules #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -26,16 +28,13 @@ module Model.MarkdownAst
     firstNode',
     allNodes',
     nodeAt',
-    LinkData (..),
-    ImageData (..),
-    ReferenceLinkDefinationData (..),
+    LinkParams (..),
+    ImageParams (..),
+    ReferenceLinkDefinationParams (..),
     attributes,
     element,
     sourceRange,
-    linkTarget,
-    linkTitle,
-    linkInline,
-    imageSource,
+    imageTarget,
     imageTitle,
     imageInline,
     listType,
@@ -58,6 +57,11 @@ import Data.Maybe
 import qualified Data.Text as T
 import qualified Data.Text.Internal.Builder as TB
 import qualified Data.Text.Lazy as LT
+import Model.MarkdownAst.Params.EntityParams
+import Model.MarkdownAst.Params.LineBreakParams
+import Model.MarkdownAst.Params.LinkParams
+import Model.MarkdownAst.Params.TextParams
+import Model.MarkdownAst.Params.WikiLinkParams
 import Parser.Placeholder
 
 data MarkdownAstNode where
@@ -72,16 +76,16 @@ data MarkdownAstNode where
 type MarkdownAst = [MarkdownAstNode]
 
 data MarkdownElement where
-  Text :: T.Text -> MarkdownElement
-  Entity :: T.Text -> MarkdownElement
+  Text :: TextParams -> MarkdownElement
+  Entity :: EntityParams -> MarkdownElement
   LineBreak :: MarkdownElement
   SoftBreak :: MarkdownElement
   EscapedChar :: Char -> MarkdownElement
   Code :: T.Text -> MarkdownElement
   Emphasis :: MarkdownAst -> MarkdownElement
   Strong :: MarkdownAst -> MarkdownElement
-  Link :: LinkData -> MarkdownElement
-  Image :: ImageData -> MarkdownElement
+  Link :: LinkParams -> MarkdownElement
+  Image :: ImageParams -> MarkdownElement
   Strikethrough :: MarkdownAst -> MarkdownElement
   Highlight :: MarkdownAst -> MarkdownElement
   RawInline :: Format -> T.Text -> MarkdownElement
@@ -96,7 +100,7 @@ data MarkdownElement where
   Paragraph :: MarkdownAst -> MarkdownElement
   Plain :: MarkdownAst -> MarkdownElement
   Header :: Int -> MarkdownAst -> MarkdownElement
-  List :: ListData -> MarkdownElement
+  List :: ListParams -> MarkdownElement
   Blockquote :: MarkdownAst -> MarkdownElement
   CodeBlock :: T.Text -> T.Text -> MarkdownElement
   RawBlock :: Format -> T.Text -> MarkdownElement
@@ -106,7 +110,7 @@ data MarkdownElement where
     [MarkdownAst] ->
     [[MarkdownAst]] ->
     MarkdownElement
-  ReferenceLinkDefination :: ReferenceLinkDefinationData -> MarkdownElement
+  ReferenceLinkDefination :: ReferenceLinkDefinationParams -> MarkdownElement
   DefinitionList ::
     ListSpacing ->
     [(MarkdownAst, [MarkdownAst])] ->
@@ -116,7 +120,7 @@ data MarkdownElement where
     ListSpacing ->
     [(Bool, MarkdownAst)] ->
     MarkdownElement
-  WikiLink :: WikiLinkData -> MarkdownElement
+  WikiLink :: WikiLinkParams -> MarkdownElement
   Footnote :: Int -> T.Text -> MarkdownAst -> MarkdownElement
   FootnoteList :: [MarkdownAst] -> MarkdownElement
   FootnoteRef :: T.Text -> T.Text -> MarkdownAst -> MarkdownElement
@@ -124,61 +128,34 @@ data MarkdownElement where
   Span :: MarkdownAst -> MarkdownElement
   deriving (Show, Eq)
 
-data LinkData where
-  LinkData ::
-    { _linkTarget :: T.Text,
-      _linkTitle :: T.Text,
-      _linkInline :: MarkdownAst
-    } ->
-    LinkData
-  deriving (Show, Eq)
-
-data ImageData where
-  ImageData ::
-    { _imageSource :: T.Text,
+data ImageParams where
+  ImageParams ::
+    { _imageTarget :: T.Text,
       _imageTitle :: T.Text,
       _imageInline :: MarkdownAst
     } ->
-    ImageData
+    ImageParams
   deriving (Show, Eq)
 
-data WikiLinkData where
-  WikiLinkData ::
-    { _wikiLinkTarget :: T.Text,
-      _wikiLinkInline :: MarkdownAst
-    } ->
-    WikiLinkData
-  deriving (Show, Eq)
-
-data ListData where
+data ListParams where
   ListData ::
     { _listType :: ListType,
       _listSpacing :: ListSpacing,
       _listItems :: [MarkdownAst]
     } ->
-    ListData
+    ListParams
   deriving (Show, Eq)
 
-data ReferenceLinkDefinationData where
+data ReferenceLinkDefinationParams where
   ReferenceLinkDefinationData ::
     { _referenceLinkDefinationLabel :: T.Text,
       _referenceLinkDefinationDestination :: T.Text,
       _referenceLinkDefinationTitle :: T.Text
     } ->
-    ReferenceLinkDefinationData
+    ReferenceLinkDefinationParams
   deriving (Show, Eq)
 
 makeLenses ''MarkdownAstNode
-
-makeLenses ''LinkData
-
-makeLenses ''WikiLinkData
-
-makeLenses ''ImageData
-
-makeLenses ''ListData
-
-makeLenses ''ReferenceLinkDefinationData
 
 rawNode :: MarkdownElement -> MarkdownAst
 rawNode x = [MarkdownAstNode x Nothing []]
@@ -196,14 +173,14 @@ instance Rangeable MarkdownAst where
 instance IsInline MarkdownAst where
   lineBreak = rawNode LineBreak
   softBreak = rawNode SoftBreak
-  entity = rawNode . Entity
+  entity = rawNode . Entity . EntityParams
   emph = rawNode . Emphasis
   strong = rawNode . Strong
-  link target title inline = rawNode $ Link $ LinkData target title inline
-  image source title inline = rawNode $ Image $ ImageData source title inline
+  link target title inline = rawNode $ Link $ LinkParams target title inline
+  image source title inline = rawNode $ Image $ ImageParams source title inline
   code x = rawNode $ Code x
   rawInline format x = rawNode $ RawInline format x
-  str = rawNode . Text
+  str = rawNode . Text . TextParams
   escapedChar = rawNode . EscapedChar
 
 instance IsBlock MarkdownAst MarkdownAst where
@@ -246,7 +223,7 @@ instance HasAlerts MarkdownAst MarkdownAst where
   alert a = rawNode . Alert a
 
 instance HasWikilinks MarkdownAst where
-  wikilink target inline = rawNode $ WikiLink $ WikiLinkData target inline
+  wikilink target inline = rawNode $ WikiLink $ WikiLinkParams target inline
 
 instance HasFootnote MarkdownAst MarkdownAst where
   footnote num label bl = rawNode $ Footnote num label bl
@@ -267,15 +244,15 @@ instance HasDiv MarkdownAst where
 
 toPlainTextBuilder' :: MarkdownAstNode -> TB.Builder
 toPlainTextBuilder' (MarkdownAstNode ele _ _) = case ele of
-  Text t -> TB.fromText t
-  Entity t -> TB.fromText t
+  Text t -> TB.fromText $ t ^. text
+  Entity (EntityParams t) -> TB.fromText t
   LineBreak -> "\n"
   SoftBreak -> " "
   EscapedChar c -> TB.singleton c
   Code t -> TB.fromText t
   Emphasis ast -> toPlainTextBuilder ast
   Strong ast -> toPlainTextBuilder ast
-  Link link -> toPlainTextBuilder $ link ^. linkInline
+  Link link -> toPlainTextBuilder $ link ^. inline
   Image image -> toPlainTextBuilder $ image ^. imageInline
   Strikethrough ast -> toPlainTextBuilder ast
   Highlight ast -> toPlainTextBuilder ast
@@ -338,7 +315,7 @@ children (Strong ast) = [ast]
 children (Strikethrough ast) = [ast]
 children (Superscript ast) = [ast]
 children (Subscript ast) = [ast]
-children (Link link) = [link ^. linkInline]
+children (Link link) = [link ^. inline]
 children (Image image) = [image ^. imageInline]
 children (Span asts) = [asts]
 children (Paragraph ast) = [ast]
@@ -363,7 +340,7 @@ findPlaceholders = concatMap \case
 
 findLinks :: MarkdownAst -> [(T.Text, T.Text)]
 findLinks = concatMap \case
-  (MarkdownAstNode (Link (LinkData target title _)) _ _) -> [(target, title)]
+  (MarkdownAstNode (Link (LinkParams target title _)) _ _) -> [(target, title)]
   (MarkdownAstNode ele _ _) -> concatMap findLinks (children ele)
 
 findTasks :: MarkdownAst -> [(Bool, MarkdownAst)]

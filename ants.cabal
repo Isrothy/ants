@@ -42,6 +42,50 @@ library
       Model.DocQuery.Term
       Model.Document
       Model.MarkdownAst
+      Model.MarkdownAst.Classes
+      Model.MarkdownAst.Classes.HasInline
+      Model.MarkdownAst.Classes.HasTarget
+      Model.MarkdownAst.Classes.HasTitle
+      Model.MarkdownAst.Params
+      Model.MarkdownAst.Params.AlertParams
+      Model.MarkdownAst.Params.BlockquoteParams
+      Model.MarkdownAst.Params.CodeBlockParams
+      Model.MarkdownAst.Params.CodeParams
+      Model.MarkdownAst.Params.DefinitionListParams
+      Model.MarkdownAst.Params.DisplayMathParams
+      Model.MarkdownAst.Params.DoubleQuotedParams
+      Model.MarkdownAst.Params.EmojiParams
+      Model.MarkdownAst.Params.EmphasisParams
+      Model.MarkdownAst.Params.EntityParams
+      Model.MarkdownAst.Params.EscapedCharParams
+      Model.MarkdownAst.Params.FootnoteListParams
+      Model.MarkdownAst.Params.FootnoteParams
+      Model.MarkdownAst.Params.FootnoteRefParams
+      Model.MarkdownAst.Params.HeaderParams
+      Model.MarkdownAst.Params.HighlightParams
+      Model.MarkdownAst.Params.HorizontalRuleParams
+      Model.MarkdownAst.Params.ImageParams
+      Model.MarkdownAst.Params.InlineMathParams
+      Model.MarkdownAst.Params.LineBreakParams
+      Model.MarkdownAst.Params.LinkParams
+      Model.MarkdownAst.Params.ListParams
+      Model.MarkdownAst.Params.ParagraphParams
+      Model.MarkdownAst.Params.PipeTableParams
+      Model.MarkdownAst.Params.PlaceholderParams
+      Model.MarkdownAst.Params.PlainParams
+      Model.MarkdownAst.Params.RawBlockParams
+      Model.MarkdownAst.Params.RawInlineParams
+      Model.MarkdownAst.Params.ReferenceLinkDefinationParams
+      Model.MarkdownAst.Params.SingleQuotedParams
+      Model.MarkdownAst.Params.SoftBreakParams
+      Model.MarkdownAst.Params.SpanParams
+      Model.MarkdownAst.Params.StrikethroughParams
+      Model.MarkdownAst.Params.StrongParams
+      Model.MarkdownAst.Params.SubscriptParams
+      Model.MarkdownAst.Params.SuperscriptParams
+      Model.MarkdownAst.Params.TaskListParams
+      Model.MarkdownAst.Params.TextParams
+      Model.MarkdownAst.Params.WikiLinkParams
       Model.Metadata
       Parser.DocQuery
       Parser.Frontmatter
