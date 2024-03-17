@@ -32,5 +32,5 @@ loadDocument spec root relPath = do
 loadAllFromDirectory :: MarkdownSyntax -> Path b Dir -> IO [Document]
 loadAllFromDirectory spec dir = do
   (_, files) <- listDirRecurRel dir
-  let mdFiles = filter ((== Just ".md") . fileExtension) files
+  let mdFiles = filter ((/= "default.md") . toFilePath . Path.filename) $ filter ((== Just ".md") . fileExtension) files
   mapM (loadDocument spec dir) mdFiles

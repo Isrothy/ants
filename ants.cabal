@@ -25,8 +25,8 @@ source-repository head
 
 library
   exposed-modules:
-      Cli.FilterNotes
       Cli.InitNoteBook
+      Cli.ListNotes
       Cli.NewNoteGen
       Data.Aeson.Extra
       Data.Text.LineBreaker

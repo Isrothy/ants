@@ -13,10 +13,10 @@ where
 import Cli.InitNoteBook
 import Cli.NewNoteGen
 import Parser.Opts
-import Cli.FilterNotes
+import Cli.ListNotes (listNotes)
 
 entrance :: Options -> IO ()
 entrance op = case optCommand op of
   Init x -> initNotebook x
   New y -> newNote y
-  Filter z -> filterNotes z
+  Lst z -> listNotes z
