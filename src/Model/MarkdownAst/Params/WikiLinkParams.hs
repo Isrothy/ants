@@ -11,10 +11,11 @@ module Model.MarkdownAst.Params.WikiLinkParams
   )
 where
 
+import Commonmark (IsInline)
 import Control.Lens (makeLenses)
 import Data.Text qualified as T
-import Model.MarkdownAst.Classes.HasInline
-import Model.MarkdownAst.Classes.HasTarget
+import Model.MarkdownAst.Lenses.HasInline
+import Model.MarkdownAst.Lenses.HasTarget
 
 data WikiLinkParams il where
   WikiLinkParams ::
@@ -26,7 +27,7 @@ data WikiLinkParams il where
 
 makeLenses ''WikiLinkParams
 
-instance HasInline WikiLinkParams il where
+instance (IsInline il) => HasInline WikiLinkParams il where
   inline = Model.MarkdownAst.Params.WikiLinkParams.inline
 
 instance HasTarget (WikiLinkParams il) where

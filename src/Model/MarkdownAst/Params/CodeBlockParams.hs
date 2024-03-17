@@ -11,8 +11,8 @@ where
 
 import Control.Lens
 import Data.Text qualified as T
-import Model.MarkdownAst.Classes.HasLanguage
-import Model.MarkdownAst.Classes.HasText
+import Model.MarkdownAst.Lenses.HasLanguage
+import Model.MarkdownAst.Lenses.HasText
 
 data CodeBlockParams where
   CodeBlockParams ::
@@ -20,6 +20,7 @@ data CodeBlockParams where
       _text :: T.Text
     } ->
     CodeBlockParams
+  deriving (Show, Eq)
 
 makeLenses ''CodeBlockParams
 

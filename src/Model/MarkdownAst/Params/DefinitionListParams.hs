@@ -9,10 +9,10 @@ module Model.MarkdownAst.Params.DefinitionListParams
   )
 where
 
-import Commonmark (ListSpacing)
+import Commonmark.Types
 import Control.Lens
-import Model.MarkdownAst.Classes.HasDefListItems
-import Model.MarkdownAst.Classes.HasListSpacing
+import Model.MarkdownAst.Lenses.HasDefListItems
+import Model.MarkdownAst.Lenses.HasListSpacing
 
 data DefinitionListParams il bl where
   DefinitionListParams ::
@@ -27,5 +27,5 @@ makeLenses ''DefinitionListParams
 instance HasListSpacing (DefinitionListParams il bl) where
   listSpacing = Model.MarkdownAst.Params.DefinitionListParams.listSpacing
 
-instance HasDefListItems DefinitionListParams il bl where
+instance (IsInline il, IsBlock il bl) => HasDefListItems DefinitionListParams il bl where
   defListItems = Model.MarkdownAst.Params.DefinitionListParams.defListItems

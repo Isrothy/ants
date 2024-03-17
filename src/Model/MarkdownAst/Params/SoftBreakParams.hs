@@ -7,7 +7,7 @@ module Model.MarkdownAst.Params.SoftBreakParams where
 import Control.Lens (makeLenses)
 
 data SoftBreakParams where
-  LineBreakParams ::
+  SoftBreakParams ::
     {} ->
     SoftBreakParams
   deriving (Show, Eq)

@@ -1,12 +1,12 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 
-module Model.MarkdownAst.Classes.HasTitle
-  ( HasTitle (..),
+module Model.MarkdownAst.Lenses.HasEmoji
+  ( HasEmoji (..),
   )
 where
 
 import Control.Lens (Lens')
 import Data.Text qualified as T
 
-class HasTitle a where
-  title :: Lens' a T.Text
+class HasEmoji a where
+  emoji :: Lens' a T.Text

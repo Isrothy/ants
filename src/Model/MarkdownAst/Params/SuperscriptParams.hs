@@ -9,16 +9,18 @@ module Model.MarkdownAst.Params.SuperscriptParams
   )
 where
 
+import Commonmark
 import Control.Lens
-import Model.MarkdownAst.Classes.HasInline
+import Model.MarkdownAst.Lenses.HasInline
 
 data SuperscriptParams il where
   SuperscriptParams ::
     { _inline :: il
     } ->
     SuperscriptParams il
+  deriving (Show, Eq)
 
 makeLenses ''SuperscriptParams
 
-instance HasInline SuperscriptParams il where
+instance (IsInline il) => HasInline SuperscriptParams il where
   inline = Model.MarkdownAst.Params.SuperscriptParams.inline

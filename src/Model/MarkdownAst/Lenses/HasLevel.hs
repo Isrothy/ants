@@ -1,4 +1,4 @@
-module Model.MarkdownAst.Classes.HasLevel
+module Model.MarkdownAst.Lenses.HasLevel
   ( HasLevel (..),
   )
 where

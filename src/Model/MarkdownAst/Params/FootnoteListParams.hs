@@ -9,17 +9,18 @@ module Model.MarkdownAst.Params.FootnoteListParams
   )
 where
 
+import Commonmark
 import Control.Lens
-import Model.MarkdownAst.Classes.HasListItems
+import Model.MarkdownAst.Lenses.HasListItems
 
-data FootnoteListParams bl where
+data FootnoteListParams il bl where
   FootnoteListParams ::
     { _listItems :: [bl]
     } ->
-    FootnoteListParams bl
+    FootnoteListParams il bl
   deriving (Show, Eq)
 
 makeLenses ''FootnoteListParams
 
-instance HasListItems FootnoteListParams bl where
+instance (IsInline il, IsBlock il bl) => HasListItems FootnoteListParams il bl where
   listItems = Model.MarkdownAst.Params.FootnoteListParams.listItems

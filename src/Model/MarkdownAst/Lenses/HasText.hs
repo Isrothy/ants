@@ -1,6 +1,6 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 
-module Model.MarkdownAst.Classes.HasText
+module Model.MarkdownAst.Lenses.HasText
   ( HasText (..),
   )
 where

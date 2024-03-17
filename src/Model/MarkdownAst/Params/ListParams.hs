@@ -11,26 +11,26 @@ where
 
 import Commonmark.Types
 import Control.Lens
-import Model.MarkdownAst.Classes.HasListItems
-import Model.MarkdownAst.Classes.HasListSpacing
-import Model.MarkdownAst.Classes.HasListType
+import Model.MarkdownAst.Lenses.HasListItems
+import Model.MarkdownAst.Lenses.HasListSpacing
+import Model.MarkdownAst.Lenses.HasListType
 
-data ListParams bl where
+data ListParams il bl where
   ListData ::
     { _listType :: ListType,
       _listSpacing :: ListSpacing,
       _listItems :: [bl]
     } ->
-    ListParams bl
+    ListParams il bl
   deriving (Show, Eq)
 
 makeLenses ''ListParams
 
-instance HasListSpacing (ListParams bl) where
+instance HasListSpacing (ListParams il bl) where
   listSpacing = Model.MarkdownAst.Params.ListParams.listSpacing
 
-instance HasListType (ListParams bl) where
+instance HasListType (ListParams il bl) where
   listType = Model.MarkdownAst.Params.ListParams.listType
 
-instance HasListItems ListParams bl where
+instance (IsInline il, IsBlock il bl) => HasListItems ListParams il bl where
   listItems = Model.MarkdownAst.Params.ListParams.listItems

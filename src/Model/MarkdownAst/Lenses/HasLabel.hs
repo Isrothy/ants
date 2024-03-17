@@ -1,4 +1,4 @@
-module Model.MarkdownAst.Classes.HasLabel
+module Model.MarkdownAst.Lenses.HasLabel
   ( HasLabel (..),
   )
 where

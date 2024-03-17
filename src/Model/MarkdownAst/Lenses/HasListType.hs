@@ -1,4 +1,4 @@
-module Model.MarkdownAst.Classes.HasListType
+module Model.MarkdownAst.Lenses.HasListType
   ( HasListType (..),
   )
 where

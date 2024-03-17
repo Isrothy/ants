@@ -42,34 +42,37 @@ library
       Model.DocQuery.Term
       Model.Document
       Model.MarkdownAst
-      Model.MarkdownAst.Classes
-      Model.MarkdownAst.Classes.HasAlertType
-      Model.MarkdownAst.Classes.HasBlock
-      Model.MarkdownAst.Classes.HasChar
-      Model.MarkdownAst.Classes.HasColAlignments
-      Model.MarkdownAst.Classes.HasDefListItems
-      Model.MarkdownAst.Classes.HasFormat
-      Model.MarkdownAst.Classes.HasHeaders
-      Model.MarkdownAst.Classes.HasInline
-      Model.MarkdownAst.Classes.HasLabel
-      Model.MarkdownAst.Classes.HasLanguage
-      Model.MarkdownAst.Classes.HasLevel
-      Model.MarkdownAst.Classes.HasListItems
-      Model.MarkdownAst.Classes.HasListSpacing
-      Model.MarkdownAst.Classes.HasListType
-      Model.MarkdownAst.Classes.HasNumber
-      Model.MarkdownAst.Classes.HasRows
-      Model.MarkdownAst.Classes.HasTarget
-      Model.MarkdownAst.Classes.HasTaskListItems
-      Model.MarkdownAst.Classes.HasText
-      Model.MarkdownAst.Classes.HasTitle
-      Model.MarkdownAst.Params
+      Model.MarkdownAst.Kinds
+      Model.MarkdownAst.Lenses
+      Model.MarkdownAst.Lenses.HasAlertType
+      Model.MarkdownAst.Lenses.HasAscii
+      Model.MarkdownAst.Lenses.HasBlock
+      Model.MarkdownAst.Lenses.HasChar
+      Model.MarkdownAst.Lenses.HasColAlignments
+      Model.MarkdownAst.Lenses.HasDefListItems
+      Model.MarkdownAst.Lenses.HasEmoji
+      Model.MarkdownAst.Lenses.HasFormat
+      Model.MarkdownAst.Lenses.HasHeaders
+      Model.MarkdownAst.Lenses.HasInline
+      Model.MarkdownAst.Lenses.HasLabel
+      Model.MarkdownAst.Lenses.HasLanguage
+      Model.MarkdownAst.Lenses.HasLevel
+      Model.MarkdownAst.Lenses.HasListItems
+      Model.MarkdownAst.Lenses.HasListSpacing
+      Model.MarkdownAst.Lenses.HasListType
+      Model.MarkdownAst.Lenses.HasNumber
+      Model.MarkdownAst.Lenses.HasRows
+      Model.MarkdownAst.Lenses.HasTarget
+      Model.MarkdownAst.Lenses.HasTaskListItems
+      Model.MarkdownAst.Lenses.HasText
+      Model.MarkdownAst.Lenses.HasTitle
       Model.MarkdownAst.Params.AlertParams
       Model.MarkdownAst.Params.BlockquoteParams
       Model.MarkdownAst.Params.CodeBlockParams
       Model.MarkdownAst.Params.CodeParams
       Model.MarkdownAst.Params.DefinitionListParams
       Model.MarkdownAst.Params.DisplayMathParams
+      Model.MarkdownAst.Params.DivParams
       Model.MarkdownAst.Params.DoubleQuotedParams
       Model.MarkdownAst.Params.EmojiParams
       Model.MarkdownAst.Params.EmphasisParams

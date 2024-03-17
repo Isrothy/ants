@@ -9,28 +9,29 @@ module Model.MarkdownAst.Params.FootnoteParams
   )
 where
 
+import Commonmark.Types
 import Control.Lens
 import Data.Text qualified as T
-import Model.MarkdownAst.Classes.HasBlock
-import Model.MarkdownAst.Classes.HasLabel
-import Model.MarkdownAst.Classes.HasNumber
+import Model.MarkdownAst.Lenses.HasBlock
+import Model.MarkdownAst.Lenses.HasLabel
+import Model.MarkdownAst.Lenses.HasNumber
 
-data FootnoteParams bl where
+data FootnoteParams il bl where
   FootnoteParams ::
     { _number :: Int,
       _label :: T.Text,
       _block :: bl
     } ->
-    FootnoteParams bl
+    FootnoteParams il bl
   deriving (Show, Eq)
 
 makeLenses ''FootnoteParams
 
-instance HasBlock FootnoteParams bl where
+instance (IsInline il, IsBlock il bl) => HasBlock FootnoteParams il bl where
   block = Model.MarkdownAst.Params.FootnoteParams.block
 
-instance HasLabel (FootnoteParams bl) where
+instance HasLabel (FootnoteParams il bl) where
   label = Model.MarkdownAst.Params.FootnoteParams.label
 
-instance HasNumber (FootnoteParams bl) where
+instance HasNumber (FootnoteParams il bl) where
   number = Model.MarkdownAst.Params.FootnoteParams.number

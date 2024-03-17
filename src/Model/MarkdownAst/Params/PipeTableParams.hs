@@ -11,9 +11,10 @@ where
 
 import Commonmark.Extensions (ColAlignment)
 import Control.Lens
-import Model.MarkdownAst.Classes.HasColAlignments
-import Model.MarkdownAst.Classes.HasHeaders
-import Model.MarkdownAst.Classes.HasRows
+import Model.MarkdownAst.Lenses.HasColAlignments
+import Model.MarkdownAst.Lenses.HasHeaders
+import Model.MarkdownAst.Lenses.HasRows
+import Commonmark
 
 data PipeTableParams il where
   PipeTableParams ::
@@ -22,14 +23,15 @@ data PipeTableParams il where
       _rows :: [[il]]
     } ->
     PipeTableParams il
+  deriving (Show, Eq)
 
 makeLenses ''PipeTableParams
 
 instance HasColAlignments (PipeTableParams il) where
   colAlignments = Model.MarkdownAst.Params.PipeTableParams.colAlignments
 
-instance HasHeaders PipeTableParams il where
+instance (IsInline il) => HasHeaders PipeTableParams il where
   headers = Model.MarkdownAst.Params.PipeTableParams.headers
 
-instance HasRows PipeTableParams il where
+instance (IsInline il) => HasRows PipeTableParams il where
   rows = Model.MarkdownAst.Params.PipeTableParams.rows

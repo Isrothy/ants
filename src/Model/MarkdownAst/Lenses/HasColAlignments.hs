@@ -1,4 +1,4 @@
-module Model.MarkdownAst.Classes.HasColAlignments
+module Model.MarkdownAst.Lenses.HasColAlignments
   ( HasColAlignments (..),
   )
 where

@@ -1,3 +1,5 @@
+{-# LANGUAGE DataKinds #-}
+
 module Model.Document
   ( Document (..),
   )

@@ -8,7 +8,7 @@ module Model.MarkdownAst.Params.EscapedCharParams
 where
 
 import Control.Lens
-import Model.MarkdownAst.Classes.HasChar
+import Model.MarkdownAst.Lenses.HasChar
 
 data EscapedCharParams where
   EscapedCharParams ::

@@ -11,13 +11,14 @@ where
 
 import Control.Lens
 import Data.Text qualified as T
-import Model.MarkdownAst.Classes.HasText
+import Model.MarkdownAst.Lenses.HasText
 
 data CodeParams where
   CodeParams ::
     { _text :: T.Text
     } ->
     CodeParams
+  deriving (Show, Eq)
 
 makeLenses ''CodeParams
 

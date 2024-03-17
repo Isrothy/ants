@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -82,5 +83,5 @@ instance ToJSON Template where
           Just (fromString "variables" .= variablesToJson variables')
         ]
 
-getSyntaxSpec :: (Monad m, Typeable m) => Config -> SyntaxSpec m MarkdownAst MarkdownAst
+getSyntaxSpec :: Config -> MarkdownSyntax
 getSyntaxSpec config = lookupSyntax $ map T.unpack (extensions config)

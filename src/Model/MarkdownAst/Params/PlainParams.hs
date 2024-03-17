@@ -9,16 +9,18 @@ module Model.MarkdownAst.Params.PlainParams
   )
 where
 
+import Commonmark
 import Control.Lens (makeLenses)
-import Model.MarkdownAst.Classes.HasInline
+import Model.MarkdownAst.Lenses.HasInline
 
 data PlainParams il where
   PlainParams ::
     { _text :: il
     } ->
     PlainParams il
+  deriving (Show, Eq)
 
 makeLenses ''PlainParams
 
-instance HasInline PlainParams il where
+instance (IsInline il) => HasInline PlainParams il where
   inline = Model.MarkdownAst.Params.PlainParams.text

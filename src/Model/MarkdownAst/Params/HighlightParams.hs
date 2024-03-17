@@ -9,16 +9,18 @@ module Model.MarkdownAst.Params.HighlightParams
   )
 where
 
+import Commonmark (IsInline)
 import Control.Lens
-import Model.MarkdownAst.Classes.HasInline
+import Model.MarkdownAst.Lenses.HasInline
 
 data HighlightParams il where
   HighlightParams ::
     { _inline :: il
     } ->
     HighlightParams il
+  deriving (Show, Eq)
 
 makeLenses ''HighlightParams
 
-instance HasInline HighlightParams il where
+instance (IsInline il) => HasInline HighlightParams il where
   inline = Model.MarkdownAst.Params.HighlightParams.inline

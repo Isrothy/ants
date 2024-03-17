@@ -9,16 +9,18 @@ module Model.MarkdownAst.Params.SingleQuotedParams
   )
 where
 
+import Commonmark (IsInline)
 import Control.Lens (makeLenses)
-import Model.MarkdownAst.Classes.HasInline
+import Model.MarkdownAst.Lenses.HasInline
 
 data SingleQuotedParams il where
   SingleQuotedParams ::
     { _text :: il
     } ->
     SingleQuotedParams il
+  deriving (Show, Eq)
 
 makeLenses ''SingleQuotedParams
 
-instance HasInline SingleQuotedParams il where
+instance (IsInline il) => HasInline SingleQuotedParams il where
   inline = Model.MarkdownAst.Params.SingleQuotedParams.text

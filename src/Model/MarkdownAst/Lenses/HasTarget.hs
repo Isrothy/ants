@@ -1,4 +1,4 @@
-module Model.MarkdownAst.Classes.HasTarget
+module Model.MarkdownAst.Lenses.HasTarget
   ( HasTarget (..),
   )
 where

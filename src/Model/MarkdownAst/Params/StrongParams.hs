@@ -9,16 +9,18 @@ module Model.MarkdownAst.Params.StrongParams
   )
 where
 
+import Commonmark (IsInline)
 import Control.Lens
-import Model.MarkdownAst.Classes.HasInline
+import Model.MarkdownAst.Lenses.HasInline
 
 data StrongParams il where
   StrongParams ::
     { _inline :: il
     } ->
     StrongParams il
+  deriving (Show, Eq)
 
 makeLenses ''StrongParams
 
-instance HasInline StrongParams il where
+instance (IsInline il) => HasInline StrongParams il where
   inline = Model.MarkdownAst.Params.StrongParams.inline

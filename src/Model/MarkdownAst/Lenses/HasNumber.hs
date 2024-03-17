@@ -1,4 +1,4 @@
-module Model.MarkdownAst.Classes.HasNumber
+module Model.MarkdownAst.Lenses.HasNumber
   ( HasNumber (..),
   )
 where

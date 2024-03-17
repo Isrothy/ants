@@ -18,11 +18,7 @@ import Parser.MarkdownWithFrontmatter
 import Path
 import Path.IO
 
-loadDocument ::
-  SyntaxSpec Identity MarkdownAst MarkdownAst ->
-  Path b Dir ->
-  Path Rel File ->
-  IO Document
+loadDocument :: MarkdownSyntax -> Path b Dir -> Path Rel File -> IO Document
 loadDocument spec root relPath = do
   let path = root </> relPath
   lastAccessed <- getAccessTime path
@@ -33,10 +29,7 @@ loadDocument spec root relPath = do
   let metadata = fromMaybe (def metadata) mMetadata
   return Document {..}
 
-loadAllFromDirectory ::
-  SyntaxSpec Identity MarkdownAst MarkdownAst ->
-  Path b Dir ->
-  IO [Document]
+loadAllFromDirectory :: MarkdownSyntax -> Path b Dir -> IO [Document]
 loadAllFromDirectory spec dir = do
   (_, files) <- listDirRecurRel dir
   let mdFiles = filter ((== Just ".md") . fileExtension) files

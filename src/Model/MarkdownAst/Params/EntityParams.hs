@@ -9,7 +9,7 @@ where
 
 import Control.Lens (makeLenses)
 import Data.Text qualified as T
-import Model.MarkdownAst.Classes.HasText
+import Model.MarkdownAst.Lenses.HasText
 
 data EntityParams where
   EntityParams ::

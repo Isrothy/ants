@@ -1,6 +1,6 @@
 {-# LANGUAGE ImportQualifiedPost #-}
 
-module Model.MarkdownAst.Classes.HasLanguage
+module Model.MarkdownAst.Lenses.HasLanguage
   ( HasLanguage (..),
   )
 where

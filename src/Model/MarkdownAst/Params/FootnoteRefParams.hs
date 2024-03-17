@@ -12,8 +12,8 @@ where
 
 import Control.Lens
 import Data.Text qualified as T
-import Model.MarkdownAst.Classes.HasLabel
-import Model.MarkdownAst.Classes.HasText
+import Model.MarkdownAst.Lenses.HasLabel
+import Model.MarkdownAst.Lenses.HasText
 
 data FootnoteRefParams bl where
   FootnoteRefParams ::

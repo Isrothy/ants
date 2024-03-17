@@ -1,4 +1,5 @@
-module Model.MarkdownAst.Classes.HasChar
+module Model.MarkdownAst.Lenses.HasChar
+
   ( HasChar (..),
   )
 where

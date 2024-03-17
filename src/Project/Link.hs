@@ -1,3 +1,6 @@
+{-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 
@@ -17,27 +20,25 @@ import Control.Conditional
 import Control.Lens
 import Control.Monad (mzero)
 import Control.Monad.Trans.Maybe
+import Data.List (find)
 import qualified Data.Text as T
 import qualified Model.Document as D
 import Model.MarkdownAst
-import Parser.MarkdownWithFrontmatter (MarkdownSyntax, markdownWithFrontmatter)
+import Model.MarkdownAst.Params.HeaderParams
+import Parser.MarkdownWithFrontmatter (MarkdownSyntax)
 import Path
 import Path.IO
 import Project.DocLoader
 import System.FilePath
 
-isHeaderWithId :: T.Text -> MarkdownAstNode -> Bool
-isHeaderWithId id (MarkdownAstNode (Header _ _) _ attrs) = lookup "id" attrs == Just id
-isHeaderWithId _ _ = False
-
-findHeaderWithId :: T.Text -> MarkdownAst -> Maybe MarkdownAstNode
-findHeaderWithId id = firstNode (isHeaderWithId id)
-
 type Bookmark = T.Text
 
-isLink :: MarkdownAstNode -> Bool
-isLink (MarkdownAstNode (Link {}) _ _) = True
-isLink (MarkdownAstNode (WikiLink {}) _ _) = True
+findHeaderWithId :: T.Text -> MarkdownAst -> Maybe (AstNode (HeaderParams InlineAst))
+findHeaderWithId id ast = find (\node -> lookup "id" (node ^. attributes) == Just id) (findHaders ast)
+
+isLink :: MdNode k -> Bool
+isLink (AstNode (Link {}) _ _) = True
+isLink (AstNode (WikiLink {}) _ _) = True
 isLink _ = False
 
 parseLink :: T.Text -> Maybe (T.Text, Maybe Bookmark)
@@ -59,7 +60,7 @@ gotoLinkedElement ::
   Path Abs Dir ->
   Path Abs File ->
   T.Text ->
-  IO (Maybe (D.Document, Maybe MarkdownAstNode))
+  IO (Maybe (D.Document, Maybe (AstNode (HeaderParams InlineAst))))
 gotoLinkedElement spec root orig txt =
   runMaybeT $ do
     (link, tag) <- MaybeT $ return $ parseLink txt

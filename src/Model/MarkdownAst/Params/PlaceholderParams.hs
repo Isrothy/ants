@@ -11,13 +11,14 @@ where
 
 import Control.Lens
 import Data.Text qualified as T
-import Model.MarkdownAst.Classes.HasText
+import Model.MarkdownAst.Lenses.HasText
 
 data PlaceholderParams where
   PlaceholderParams ::
     { _text :: T.Text
     } ->
     PlaceholderParams
+  deriving (Show, Eq)
 
 makeLenses ''PlaceholderParams
 

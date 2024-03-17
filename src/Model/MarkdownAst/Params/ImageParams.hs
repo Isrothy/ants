@@ -11,11 +11,12 @@ module Model.MarkdownAst.Params.ImageParams
   )
 where
 
+import Commonmark.Types
 import Control.Lens (makeLenses)
 import Data.Text qualified as T
-import Model.MarkdownAst.Classes.HasInline
-import Model.MarkdownAst.Classes.HasTarget
-import Model.MarkdownAst.Classes.HasTitle
+import Model.MarkdownAst.Lenses.HasInline
+import Model.MarkdownAst.Lenses.HasTarget
+import Model.MarkdownAst.Lenses.HasTitle
 
 data ImageParams il where
   ImageParams ::
@@ -28,7 +29,7 @@ data ImageParams il where
 
 makeLenses ''ImageParams
 
-instance HasInline ImageParams il where
+instance (IsInline il) => HasInline ImageParams il where
   inline = Model.MarkdownAst.Params.ImageParams.inline
 
 instance HasTarget (ImageParams il) where

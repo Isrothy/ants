@@ -9,16 +9,18 @@ module Model.MarkdownAst.Params.DoubleQuotedParams
   )
 where
 
-import Control.Lens ( makeLenses )
-import Model.MarkdownAst.Classes.HasInline ( HasInline(..) )
+import Commonmark (IsInline)
+import Control.Lens (makeLenses)
+import Model.MarkdownAst.Lenses.HasInline (HasInline (..))
 
 data DoubleQuotedParams il where
   DoubleQuotedParams ::
     { _inline :: il
     } ->
     DoubleQuotedParams il
+  deriving (Show, Eq)
 
 makeLenses ''DoubleQuotedParams
 
-instance HasInline DoubleQuotedParams il where
+instance (IsInline il) => HasInline DoubleQuotedParams il where
   inline = Model.MarkdownAst.Params.DoubleQuotedParams.inline

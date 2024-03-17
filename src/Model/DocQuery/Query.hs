@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -11,6 +12,7 @@ where
 
 import Commonmark hiding (plain)
 import Commonmark.Extensions (AlertType)
+import Control.Lens ((^.))
 import Data.Algebra.Boolean
 import Data.Maybe
 import qualified Data.Text as T
@@ -19,6 +21,8 @@ import Model.DocQuery.BoolExpr
 import Model.DocQuery.Term
 import qualified Model.Document as D
 import Model.MarkdownAst hiding (Alert)
+import Model.MarkdownAst.Lenses
+import Model.MarkdownAst.Params.AlertParams
 import qualified Model.Metadata as M
 import Path
 import Prelude hiding (and, any, not, or, (&&), (||))
@@ -71,17 +75,29 @@ instance IsQuery Query where
   query (Tag t) = metadata $ any (match t) . M.tags
   query (Description t) = metadata $ match t . M.description
   query (Content t) = (ast . plain) (match t)
-  query (Task Both t) = ast' $ any (match t . toPlainText . snd) . findTasks
-  query (Task Done t) = ast' $ any (match t . toPlainText) . findFinishedTasks
-  query (Task Todo t) = ast' $ any (match t . toPlainText) . findUnfinishedTasks
-  query (Alert a t) = ast' $ any (((== a) . fst) && (match t . toPlainText) . snd) . findAlerts
+  query (Task Both t) = ast' $ \md ->
+    any (match t . toPlainText . snd) $
+      findTasks md >>= (^. paramaters . taskListItems)
+  query (Task Done t) = ast' $ \md ->
+    any (match t . toPlainText . snd) $
+      filter fst $
+        findTasks md >>= (^. paramaters . taskListItems)
+  query (Task Todo t) = ast' $ \md ->
+    any (match t . toPlainText . snd) $
+      filter (not . fst) $
+        findTasks md >>= (^. paramaters . taskListItems)
+  query (Alert a t) =
+    ast' $ \md ->
+      any
+        (\(AstNode (AlertParams at b) _ _) -> (at == a) && (match t . toPlainText) b)
+        (findAlerts md)
   query (DateTimeRange start end) = metadata $ maybe False (between start end) . M.dateTime
     where
       between (Just s) (Just e) d = s <= e && d >= s && d < e
       between (Just s) _ d = d >= s
       between _ (Just e) d = d < e
       between _ _ _ = True
-  query (HasLink p) = ast' $ elem (Just p) . map (parseRelFile . T.unpack . fst) . findLinks
+  query (HasLink p) = ast' $ elem (Just p) . map (parseRelFile . T.unpack . (^. paramaters . title)) . findLinks
   query (InDirectory p) = relPath $ isProperPrefixOf p
 
 instance IsQuery (BoolExpr Query) where

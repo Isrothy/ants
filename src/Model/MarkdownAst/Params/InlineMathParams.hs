@@ -4,17 +4,21 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TemplateHaskell #-}
 
-module Model.MarkdownAst.Params.InlineMathParams where
+module Model.MarkdownAst.Params.InlineMathParams
+  ( InlineMathParams (..),
+  )
+where
 
 import Control.Lens (makeLenses)
 import Data.Text qualified as T
-import Model.MarkdownAst.Classes.HasText
+import Model.MarkdownAst.Lenses.HasText
 
 data InlineMathParams where
   InlineMathParams ::
     { _text :: T.Text
     } ->
     InlineMathParams
+  deriving (Show, Eq)
 
 makeLenses ''InlineMathParams
 

@@ -1,4 +1,4 @@
-module Model.MarkdownAst.Classes.HasFormat
+module Model.MarkdownAst.Lenses.HasFormat
   ( HasFormat (..),
   )
 where

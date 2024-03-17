@@ -9,9 +9,9 @@ where
 
 import Control.Lens
 import Data.Text qualified as T
-import Model.MarkdownAst.Classes.HasLabel
-import Model.MarkdownAst.Classes.HasTarget
-import Model.MarkdownAst.Classes.HasTitle
+import Model.MarkdownAst.Lenses.HasLabel
+import Model.MarkdownAst.Lenses.HasTarget
+import Model.MarkdownAst.Lenses.HasTitle
 
 data ReferenceLinkDefinationParams where
   ReferenceLinkDefinationData ::

@@ -12,8 +12,8 @@ where
 import Commonmark (Format)
 import Control.Lens
 import Data.Text qualified as T
-import Model.MarkdownAst.Classes.HasFormat
-import Model.MarkdownAst.Classes.HasText
+import Model.MarkdownAst.Lenses.HasFormat
+import Model.MarkdownAst.Lenses.HasText
 
 data RawBlockParams where
   RawBlockParams ::
@@ -21,6 +21,7 @@ data RawBlockParams where
       _text :: T.Text
     } ->
     RawBlockParams
+  deriving (Show, Eq)
 
 makeLenses ''RawBlockParams
 

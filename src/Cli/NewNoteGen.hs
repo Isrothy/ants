@@ -13,6 +13,7 @@ module Cli.NewNoteGen
 where
 
 import Commonmark
+import Control.Lens ((^.))
 import Control.Monad
 import Control.Monad.Extra (fromMaybeM)
 import qualified Data.Bifunctor
@@ -29,6 +30,8 @@ import qualified Data.Yaml as Y
 import Model.Config (getSyntaxSpec)
 import qualified Model.Config as Config
 import Model.MarkdownAst
+import Model.MarkdownAst.Lenses
+import Model.MarkdownAst.Params.PlaceholderParams
 import qualified Model.Metadata as M
 import Parser.Markdown
 import Parser.Opts
@@ -40,7 +43,7 @@ import Safe
 
 markdownAstWithPlaceholder ::
   (Monad m) =>
-  SyntaxSpec m MarkdownAst MarkdownAst ->
+  SyntaxSpec m InlineAst BlockAst ->
   String ->
   T.Text ->
   m (Either Commonmark.ParseError MarkdownAst)
@@ -48,17 +51,23 @@ markdownAstWithPlaceholder exts =
   markdownAstWith (placeholderSpec <> exts <> defaultSyntaxSpec)
 
 replacePlaceholders ::
-  SyntaxSpec Identity MarkdownAst MarkdownAst ->
+  SyntaxSpec Identity InlineAst BlockAst ->
   T.Text ->
   [(T.Text, T.Text)] ->
   T.Text
-replacePlaceholders exts text lookupTable =
-  case runIdentity $ markdownAstWithPlaceholder exts "" text of
-    Left _ -> text
+replacePlaceholders exts t lookupTable =
+  case runIdentity $ markdownAstWithPlaceholder exts "" t of
+    Left _ -> t
     Right ast ->
       replacePlaceholders'
-        text
-        (sortBy posReverse (findPlaceholders ast))
+        t
+        ( sortBy
+            posReverse
+            ( map
+                (\node -> (node ^. (paramaters . text), fromJust (node ^. sourceRange)))
+                (findPlaceholders ast)
+            )
+        )
         (map (Data.Bifunctor.first T.toCaseFold) lookupTable)
 
 posReverse :: (T.Text, SourceRange) -> (T.Text, SourceRange) -> Ordering

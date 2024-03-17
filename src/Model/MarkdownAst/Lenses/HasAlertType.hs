@@ -1,4 +1,4 @@
-module Model.MarkdownAst.Classes.HasAlertType
+module Model.MarkdownAst.Lenses.HasAlertType
   ( HasAlertType (..),
   )
 where

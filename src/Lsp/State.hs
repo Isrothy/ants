@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
@@ -17,7 +18,8 @@ import Data.Default (Default (def))
 import Data.Functor.Identity (Identity)
 import qualified Data.Text as T
 import qualified Language.LSP.Server as LSP
-import Model.MarkdownAst (MarkdownAst)
+import Model.MarkdownAst
+import Parser.Markdown
 
 type HandlerM =
   ExceptT (Severity, T.Text) (StateT ServerState (LSP.LspT ServerConfig IO))
@@ -40,7 +42,7 @@ instance FromJSON ServerConfig where
 
 data ServerState where
   ServerState ::
-    { _markdownSyntaxSpec :: SyntaxSpec Identity MarkdownAst MarkdownAst
+    { _markdownSyntaxSpec :: MarkdownSyntax
     } ->
     ServerState
 

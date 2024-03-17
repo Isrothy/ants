@@ -9,23 +9,24 @@ module Model.MarkdownAst.Params.AlertParams
   )
 where
 
+import Commonmark
 import Commonmark.Extensions
 import Control.Lens
-import Model.MarkdownAst.Classes.HasAlertType
-import Model.MarkdownAst.Classes.HasBlock
+import Model.MarkdownAst.Lenses.HasAlertType
+import Model.MarkdownAst.Lenses.HasBlock
 
-data AlertParams bl where
+data AlertParams il bl where
   AlertParams ::
     { _alertType :: AlertType,
       _block :: bl
     } ->
-    AlertParams bl
+    AlertParams il bl
   deriving (Show, Eq)
 
 makeLenses ''AlertParams
 
-instance HasBlock AlertParams bl where
+instance (IsBlock il bl, IsInline il) => HasBlock AlertParams il bl where
   block = Model.MarkdownAst.Params.AlertParams.block
 
-instance HasAlertType (AlertParams bl) where
+instance HasAlertType (AlertParams il bl) where
   alertType = Model.MarkdownAst.Params.AlertParams.alertType

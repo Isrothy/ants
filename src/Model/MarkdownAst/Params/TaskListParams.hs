@@ -9,28 +9,28 @@ module Model.MarkdownAst.Params.TaskListParams
   )
 where
 
-import Commonmark (ListType)
-import Commonmark.Types (ListSpacing)
+import Commonmark.Types
 import Control.Lens
-import Model.MarkdownAst.Classes.HasListSpacing
-import Model.MarkdownAst.Classes.HasListType
-import Model.MarkdownAst.Classes.HasTaskListItems
+import Model.MarkdownAst.Lenses.HasListSpacing
+import Model.MarkdownAst.Lenses.HasListType
+import Model.MarkdownAst.Lenses.HasTaskListItems
 
-data TaskListParams bl where
+data TaskListParams il bl where
   TaskListParams ::
     { _listType :: ListType,
       _listSpacing :: ListSpacing,
       _taskListItems :: [(Bool, bl)]
     } ->
-    TaskListParams bl
+    TaskListParams il bl
+  deriving (Show, Eq)
 
 makeLenses ''TaskListParams
 
-instance HasListSpacing (TaskListParams bl) where
+instance HasListSpacing (TaskListParams il bl) where
   listSpacing = Model.MarkdownAst.Params.TaskListParams.listSpacing
 
-instance HasListType (TaskListParams bl) where
+instance HasListType (TaskListParams il bl) where
   listType = Model.MarkdownAst.Params.TaskListParams.listType
 
-instance HasTaskListItems TaskListParams bl where
+instance (IsInline il, IsBlock il bl) => HasTaskListItems TaskListParams il bl where
   taskListItems = Model.MarkdownAst.Params.TaskListParams.taskListItems

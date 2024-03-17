@@ -11,13 +11,14 @@ where
 
 import Control.Lens (makeLenses)
 import Data.Text qualified as T
-import Model.MarkdownAst.Classes.HasText
+import Model.MarkdownAst.Lenses.HasText
 
 data DisplayMathParams where
   DisplayMathParams ::
     { _text :: T.Text
     } ->
     DisplayMathParams
+  deriving (Show, Eq)
 
 makeLenses ''DisplayMathParams
 

@@ -1,5 +1,6 @@
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DisambiguateRecordFields #-}
 {-# LANGUAGE ExplicitNamespaces #-}
 {-# LANGUAGE ExtendedDefaultRules #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -8,7 +9,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
 module Lsp.Handlers
@@ -23,8 +23,7 @@ where
 import Commonmark (SourceRange (..))
 import Commonmark.Types (sourceLine)
 import Control.Conditional (guard)
-import Control.Lens (modifying, use, (.=), (^.))
-import Control.Lens.TH (makeLenses)
+import Control.Lens (use, (.=), (^.))
 import Control.Monad (unless)
 import Control.Monad.RWS
 import Control.Monad.Trans.Except
@@ -48,7 +47,8 @@ import Lsp.State
 import Lsp.Util
 import Model.Config
 import Model.MarkdownAst
-import Model.MarkdownAst.Classes (HasTarget (target))
+import Model.MarkdownAst.Lenses (HasTarget (target))
+import Model.MarkdownAst.Params.HeaderParams
 import Model.Metadata
 import Parser.Markdown
 import Parser.MarkdownWithFrontmatter
@@ -56,7 +56,6 @@ import Path
 import Project.Link
 import Project.ProjectRoot (readConfig)
 import Safe (atMay)
-import Text.RawString.QQ
 
 handleErrorWithDefault ::
   (Either a1 b -> HandlerM a2) ->
@@ -137,9 +136,9 @@ linkFromUriFile ::
   LSP.Position ->
   LSP.LspT ServerConfig IO (Maybe (LSP.Range, FilePath, Maybe Bookmark))
 linkFromUriFile spec origUri pos = do
-  let fromLink :: MarkdownAstNode -> Maybe T.Text
-      fromLink (MarkdownAstNode (Link ldata) _ _) = Just (ldata ^. target)
-      fromLink (MarkdownAstNode (WikiLink ldata) _ _) = Just (ldata ^. target)
+  let fromLink :: MdNode k -> Maybe T.Text
+      fromLink (AstNode (Link ldata) _ _) = Just (ldata ^. target)
+      fromLink (AstNode (WikiLink ldata) _ _) = Just (ldata ^. target)
       fromLink _ = Nothing
   let mpath = uriToFile origUri
   mfile <- LSP.getVirtualFile (LSP.toNormalizedUri origUri)
@@ -269,8 +268,8 @@ completionHandler =
                   displayFrontMatter = fmtLn ("```yaml\n" +| TE.decodeUtf8With TEE.lenientDecode (encodePretty defConfig mfrontMatter) |+ "\n```\n")
                   displayContent = fmtLn ("Line: " +| lineNr |+ "\n\n" +| T.joinLines (take lineCount $ drop (lineNr - 1) lines) |+ "")
                in displayPath <> displayFrontMatter <> displayContent
-        let headerToItem :: MarkdownAstNode -> Maybe LSP.CompletionItem
-            headerToItem (MarkdownAstNode (Header _ ast) msr attrs) = do
+        let headerToItem :: MdNode Bl -> Maybe LSP.CompletionItem
+            headerToItem (AstNode (Header (HeaderParams _ _)) msr attrs) = do
               label <- lookup "id" attrs
               sr <- msr
               lineNr <- case unSourceRange sr of

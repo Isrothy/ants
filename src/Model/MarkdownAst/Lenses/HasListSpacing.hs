@@ -2,7 +2,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE StarIsType #-}
 
-module Model.MarkdownAst.Classes.HasListSpacing
+module Model.MarkdownAst.Lenses.HasListSpacing
   ( HasListSpacing (..),
   )
 where

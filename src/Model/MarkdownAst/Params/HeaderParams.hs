@@ -9,9 +9,10 @@ module Model.MarkdownAst.Params.HeaderParams
   )
 where
 
+import Commonmark.Types
 import Control.Lens
-import Model.MarkdownAst.Classes.HasInline
-import Model.MarkdownAst.Classes.HasLevel
+import Model.MarkdownAst.Lenses.HasInline
+import Model.MarkdownAst.Lenses.HasLevel
 
 data HeaderParams il where
   HeaderParams ::
@@ -19,10 +20,11 @@ data HeaderParams il where
       _inline :: il
     } ->
     HeaderParams il
+  deriving (Show, Eq)
 
 makeLenses ''HeaderParams
 
-instance HasInline HeaderParams il where
+instance (IsInline il) => HasInline HeaderParams il where
   inline = Model.MarkdownAst.Params.HeaderParams.inline
 
 instance HasLevel (HeaderParams il) where

@@ -16,5 +16,6 @@ data HorizontalRuleParams where
     {
     } ->
     HorizontalRuleParams
+  deriving (Show, Eq)
 
 makeLenses ''HorizontalRuleParams

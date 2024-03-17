@@ -9,18 +9,18 @@ module Model.MarkdownAst.Params.BlockquoteParams
   )
 where
 
+import Commonmark
 import Control.Lens
-import Data.Text qualified as T
-import Model.MarkdownAst.Classes.HasText
+import Model.MarkdownAst.Lenses.HasBlock
 
-data BlockquoteParams where
+data BlockquoteParams il bl where
   BlockquoteParams ::
-    { _text :: T.Text
+    { _block :: bl
     } ->
-    BlockquoteParams
+    BlockquoteParams il bl
   deriving (Show, Eq)
 
 makeLenses ''BlockquoteParams
 
-instance HasText BlockquoteParams where
-  text = Model.MarkdownAst.Params.BlockquoteParams.text
+instance (IsInline il, IsBlock il bl) => HasBlock BlockquoteParams il bl where
+  block = Model.MarkdownAst.Params.BlockquoteParams.block
