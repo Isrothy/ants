@@ -9,7 +9,7 @@ module Parser.Opts
     Command (..),
     InitOptions (..),
     NewOptions (..),
-    FilterOptions (..),
+    ListOptions (..),
     LookupTable,
   )
 where
@@ -32,8 +32,8 @@ data InitOptions = InitOptions
   {
   }
 
-data FilterOptions = FilterOptions
-  { queryString :: T.Text,
+data ListOptions = ListOptions
+  { filterString :: Maybe T.Text,
     sortString :: Maybe T.Text
   }
 
@@ -44,7 +44,7 @@ newtype Options = Options
 data Command
   = New NewOptions
   | Init InitOptions
-  | Filter FilterOptions
+  | Lst ListOptions
 
 parsePair :: ReadM (T.Text, T.Text)
 parsePair = eitherReader $ \s ->
@@ -95,14 +95,17 @@ initCommand :: Parser Command
 initCommand = do
   pure $ Init $ InitOptions {}
 
-filterCommand :: Parser Command
-filterCommand = do
+listCommand :: Parser Command
+listCommand = do
   sortString <-
     optional $
       strOption $
         long "sort" <> short 's' <> metavar "FIELD" <> help "Field of metadata used for sorting" <> completeWith ["title", "author", "time"]
-  queryString <- strArgument (metavar "QUERY" <> help "Query to be used for filtering")
-  pure $ Filter $ FilterOptions {..}
+  filterString <-
+    optional $
+      strOption $
+        long "filter" <> short 'f' <> metavar "FILTER" <> help "Expression used for filtering"
+  pure $ Lst $ ListOptions {..}
 
 opts :: Parser Options
 opts = do
@@ -110,6 +113,6 @@ opts = do
     hsubparser
       ( command "init" (info initCommand $ progDesc "Init the notebook")
           <> command "new" (info newCommand $ progDesc "Create a new note")
-          <> command "filter" (info filterCommand $ progDesc "Filter notes")
+          <> command "list" (info listCommand $ progDesc "Filter notes")
       )
   pure $ Options {..}
