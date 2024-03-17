@@ -97,7 +97,7 @@ instance IsQuery Query where
       between (Just s) _ d = d >= s
       between _ (Just e) d = d < e
       between _ _ _ = True
-  query (HasLink p) = ast' $ elem (Just p) . map (parseRelFile . T.unpack . (^. paramaters . title)) . findLinks
+  query (HasLink p) = ast' $ elem (Just p) . map (parseRelFile . T.unpack . (^. paramaters . target)) . findLinks
   query (InDirectory p) = relPath $ isProperPrefixOf p
 
 instance IsQuery (BoolExpr Query) where

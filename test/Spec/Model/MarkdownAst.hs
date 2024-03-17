@@ -55,9 +55,9 @@ nodeAtSpec = describe "nodeAt" $ do
         nodeAt isLink 3 78 ast `shouldSatisfy` isNothing
         nodeAt isLink 4 60 ast `shouldSatisfy` isNothing
   where
-    isHeader (MarkdownAstNode (Header _ _) _ _) = True
+    isHeader (AstNode (Header {}) _ _) = True
     isHeader _ = False
-    isLink (MarkdownAstNode (Link {}) _ _) = True
+    isLink (AstNode (Link {}) _ _) = True
     isLink _ = False
 
 spec :: Spec

@@ -193,9 +193,9 @@ This document does not contain any links.
   let testMarkdownAstWithLink = rightToMaybe $ markdownAst "test1" (T.pack testDocWithLink)
   let testMarkdownAstWithoutLink = rightToMaybe $ markdownAst "test1" (T.pack testDocWithoutLink)
   let testMarkdownAstMultipleLinks = rightToMaybe $ markdownAst "test1" (T.pack testDocMultipleLinks)
-  let docWithLink = sampleDoc {ast = testMarkdownAstWithLink, text = (T.pack testDocWithLink)}
-  let docWithoutLink = sampleDoc {ast = testMarkdownAstWithoutLink, text = (T.pack testDocWithoutLink)}
-  let multipleLinksDoc = sampleDoc {ast = testMarkdownAstMultipleLinks, text = (T.pack testDocMultipleLinks)}
+  let docWithLink = sampleDoc {ast = testMarkdownAstWithLink, text = T.pack testDocWithLink}
+  let docWithoutLink = sampleDoc {ast = testMarkdownAstWithoutLink, text = T.pack testDocWithoutLink}
+  let multipleLinksDoc = sampleDoc {ast = testMarkdownAstMultipleLinks, text = T.pack testDocMultipleLinks}
   let linkInDoc = $(P.mkRelFile "someLink/here/test.md")
   let nonExistentLink = $(P.mkRelFile "nonexistent/link.md")
 

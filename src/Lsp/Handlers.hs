@@ -136,7 +136,7 @@ linkFromUriFile ::
   LSP.Position ->
   LSP.LspT ServerConfig IO (Maybe (LSP.Range, FilePath, Maybe Bookmark))
 linkFromUriFile spec origUri pos = do
-  let fromLink :: MdNode k -> Maybe T.Text
+  let fromLink :: MdNode -> Maybe T.Text
       fromLink (AstNode (Link ldata) _ _) = Just (ldata ^. target)
       fromLink (AstNode (WikiLink ldata) _ _) = Just (ldata ^. target)
       fromLink _ = Nothing
@@ -268,7 +268,7 @@ completionHandler =
                   displayFrontMatter = fmtLn ("```yaml\n" +| TE.decodeUtf8With TEE.lenientDecode (encodePretty defConfig mfrontMatter) |+ "\n```\n")
                   displayContent = fmtLn ("Line: " +| lineNr |+ "\n\n" +| T.joinLines (take lineCount $ drop (lineNr - 1) lines) |+ "")
                in displayPath <> displayFrontMatter <> displayContent
-        let headerToItem :: MdNode Bl -> Maybe LSP.CompletionItem
+        let headerToItem :: MdNode  -> Maybe LSP.CompletionItem
             headerToItem (AstNode (Header (HeaderParams _ _)) msr attrs) = do
               label <- lookup "id" attrs
               sr <- msr

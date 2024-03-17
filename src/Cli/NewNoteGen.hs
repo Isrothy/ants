@@ -43,7 +43,7 @@ import Safe
 
 markdownAstWithPlaceholder ::
   (Monad m) =>
-  SyntaxSpec m InlineAst BlockAst ->
+  SyntaxSpec m MarkdownAst MarkdownAst ->
   String ->
   T.Text ->
   m (Either Commonmark.ParseError MarkdownAst)
@@ -51,7 +51,7 @@ markdownAstWithPlaceholder exts =
   markdownAstWith (placeholderSpec <> exts <> defaultSyntaxSpec)
 
 replacePlaceholders ::
-  SyntaxSpec Identity InlineAst BlockAst ->
+  SyntaxSpec Identity MarkdownAst MarkdownAst ->
   T.Text ->
   [(T.Text, T.Text)] ->
   T.Text

@@ -42,7 +42,6 @@ library
       Model.DocQuery.Term
       Model.Document
       Model.MarkdownAst
-      Model.MarkdownAst.Kinds
       Model.MarkdownAst.Lenses
       Model.MarkdownAst.Lenses.HasAlertType
       Model.MarkdownAst.Lenses.HasAscii
@@ -72,7 +71,6 @@ library
       Model.MarkdownAst.Params.CodeParams
       Model.MarkdownAst.Params.DefinitionListParams
       Model.MarkdownAst.Params.DisplayMathParams
-      Model.MarkdownAst.Params.DivParams
       Model.MarkdownAst.Params.DoubleQuotedParams
       Model.MarkdownAst.Params.EmojiParams
       Model.MarkdownAst.Params.EmphasisParams

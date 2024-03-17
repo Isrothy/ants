@@ -33,10 +33,10 @@ import System.FilePath
 
 type Bookmark = T.Text
 
-findHeaderWithId :: T.Text -> MarkdownAst -> Maybe (AstNode (HeaderParams InlineAst))
+findHeaderWithId :: T.Text -> MarkdownAst -> Maybe (AstNode (HeaderParams MarkdownAst))
 findHeaderWithId id ast = find (\node -> lookup "id" (node ^. attributes) == Just id) (findHaders ast)
 
-isLink :: MdNode k -> Bool
+isLink :: MdNode -> Bool
 isLink (AstNode (Link {}) _ _) = True
 isLink (AstNode (WikiLink {}) _ _) = True
 isLink _ = False
@@ -60,7 +60,7 @@ gotoLinkedElement ::
   Path Abs Dir ->
   Path Abs File ->
   T.Text ->
-  IO (Maybe (D.Document, Maybe (AstNode (HeaderParams InlineAst))))
+  IO (Maybe (D.Document, Maybe (AstNode (HeaderParams MarkdownAst))))
 gotoLinkedElement spec root orig txt =
   runMaybeT $ do
     (link, tag) <- MaybeT $ return $ parseLink txt

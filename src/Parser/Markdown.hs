@@ -69,18 +69,18 @@ extensionLookup =
     ("gfm", gfmExtensions)
   ]
 
-allSpecExtensions :: (Monad m, Typeable m) => SyntaxSpec m InlineAst BlockAst
+allSpecExtensions :: (Monad m, Typeable m) => SyntaxSpec m MarkdownAst MarkdownAst
 allSpecExtensions = mconcat (map snd extensionLookup)
 
 markdownAstWith ::
   (Monad m) =>
-  SyntaxSpec m InlineAst BlockAst ->
+  SyntaxSpec m MarkdownAst MarkdownAst ->
   String ->
   T.Text ->
   m (Either ParseError MarkdownAst)
 markdownAstWith = commonmarkWith
 
-lookupSyntax :: (Monad m, Typeable m) => [String] -> SyntaxSpec m InlineAst MarkdownAst
+lookupSyntax :: (Monad m, Typeable m) => [String] -> SyntaxSpec m MarkdownAst MarkdownAst
 lookupSyntax ext =
   if "all" `elem` ext
     then allSpecExtensions
@@ -88,4 +88,4 @@ lookupSyntax ext =
       defaultSyntaxSpec
         <> mconcat (map (\ext' -> fromMaybe mempty (lookup ext' extensionLookup)) ext)
 
-type MarkdownSyntax = SyntaxSpec Identity InlineAst BlockAst
+type MarkdownSyntax = SyntaxSpec Identity MarkdownAst MarkdownAst
