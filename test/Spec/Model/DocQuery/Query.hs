@@ -226,12 +226,12 @@ linkQuerySpec = do
  # Document without Link
  This document does not contain any links.
 
- |]
+|]
   let testDocWithLink =
         [r|
   # Document with Link
   [somePlace](../../../someLink/here/test.md#tag)
-  |]
+|]
   let testDocMultipleLinks =
         [r|
  # Document with Multiple Links

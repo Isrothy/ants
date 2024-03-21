@@ -145,6 +145,25 @@ searchQuerySpec = describe "SearchTermParser" $ parallel $ do
       parse description "" "description:\"Haskell programming\"" `shouldBe` Right (Description (Val (CaseInsensitiveTerm "Haskell programming")))
       parse description "" "description:~Haskell programming~" `shouldBe` Right (Description (Val (FuzzyTerm "Haskell programming")))
 
+  describe "HasLink Query Parser" $ do
+    it "parses a simple hasLink query" $ do
+      parse hasLink "" "has-link:this/is/a/link" `shouldBe` Right (HasLink "this/is/a/link")
+
+    it "parses a hasLink query with a complex path" $ do
+      parse hasLink "" "has-link:this/is/a/deep/link/path" `shouldBe` Right (HasLink "this/is/a/deep/link/path")
+
+    it "parses a hasLink query with special characters" $ do
+      parse hasLink "" "has-link:this/link-has_special.chars?query=1#section" `shouldBe` Right (HasLink "this/link-has_special.chars?query=1#section")
+
+    it "parses a hasLink query with numeric and dashed path" $ do
+      parse hasLink "" "has-link:2021/03/14/article-name" `shouldBe` Right (HasLink "2021/03/14/article-name")
+
+    it "fails to parse a hasLink query without a link" $ do
+      parse hasLink "" "has-link:" `shouldSatisfy` isLeft
+
+    it "fails to parse an incorrect hasLink query" $ do
+      parse hasLink "" "has-link" `shouldSatisfy` isLeft
+
   describe "Content Query Parser" $ parallel $ do
     it "parses a content query" $ do
       parse content "" "content:\"sample content\"" `shouldBe` Right (Content (Val (CaseInsensitiveTerm "sample content")))
