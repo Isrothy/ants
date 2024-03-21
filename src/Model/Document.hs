@@ -13,6 +13,7 @@ import qualified Path as P
 
 data Document = Document
   { relPath :: P.Path P.Rel P.File,
+    absPath :: P.Path P.Abs P.File,
     lastAccessed :: UTCTime,
     lastModified :: UTCTime,
     filename :: String,
