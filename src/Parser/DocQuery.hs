@@ -51,12 +51,7 @@ orOp :: Parser (BoolExpr a -> BoolExpr a -> BoolExpr a)
 orOp = spaced (string "||" *> notFollowedBy (char '|')) $> Or
 
 andOp :: Parser (BoolExpr a -> BoolExpr a -> BoolExpr a)
-andOp = do
-  _ <- spaces
-  _ <- string "&&"
-  _ <- notFollowedBy $ char '&'
-  _ <- spaces
-  return And
+andOp = spaced (string "&&" *> notFollowedBy (char '&')) $> And
 
 orExpr :: (HasParser a) => Parser (BoolExpr a)
 orExpr = andExpr `chainl1` try orOp
@@ -68,15 +63,13 @@ notExpr :: (HasParser a) => Parser (BoolExpr a)
 notExpr = (Not <$> (notOp *> notExpr)) <|> simpleExpr
 
 prefixed :: String -> Parser a -> Parser a
-prefixed label parser = string label *> parser
+prefixed l p = string l *> p
 
 simpleExpr :: (HasParser a) => Parser (BoolExpr a)
 simpleExpr = parens boolExpr <|> (parser <&> Val)
 
 escapedChar :: Parser Char
-escapedChar = do
-  _ <- char '\\'
-  punctuation
+escapedChar = char '\\' *> punctuation
 
 punctuation :: Parser Char
 punctuation = satisfy isPunctuation
@@ -88,9 +81,7 @@ unquotedTerm = do
 
 quotedTerm :: Char -> (T.Text -> Term) -> Parser Term
 quotedTerm quote constructor = do
-  _ <- char quote
-  text <- many1 (escapedChar <|> noneOf [quote])
-  _ <- char quote
+  text <- between (char quote) (char quote) (many1 (escapedChar <|> noneOf [quote]))
   return $ constructor $ T.pack text
 
 doubleQuotedTerm :: Parser Term
@@ -173,17 +164,12 @@ date = prefixed "date:" (range <|> singleDay)
       return $ DateTimeRange start end
 
 hasLink :: Parser Query
-hasLink = do
-  _ <- string "has-link:"
+hasLink = prefixed "has-link:" $ do
   linkText <- quotedLink <|> many1 (noneOf " \n")
   return $ HasLink $ T.pack linkText
 
 quotedLink :: Parser String
-quotedLink = do
-  _ <- char '"'
-  linkText <- many1 (escapedChar <|> noneOf "\"")
-  _ <- char '"'
-  return linkText
+quotedLink = between (char '"') (char '"') (many1 (escapedChar <|> noneOf "\""))
 
 query :: Parser Query
 query =
@@ -202,7 +188,4 @@ instance HasParser Query where
   parser = query
 
 completeQuery :: Parser (BoolExpr Query)
-completeQuery = do
-  q <- boolExpr
-  _ <- eof
-  return q
+completeQuery = boolExpr <* eof
