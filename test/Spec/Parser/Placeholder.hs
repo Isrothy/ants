@@ -48,7 +48,7 @@ spec = describe "placeholder" $ parallel $ do
       Left parseError -> expectationFailure $ "Parsing failed: " ++ show parseError
       Right ast -> do
         show (findPlaceholders ast)
-          `shouldBe` "[AstNode {_parameters = PlaceholderParams {_text = \"a placeholder\"}, _sourceRange = Just a@1:4-1:21, _attributes = []},AstNode {_paramaters = PlaceholderParams {_text = \"another placeholder\"}, _sourceRange = Just a@2:4-2:27, _attributes = []}]"
+          `shouldBe` "[AstNode {_parameters = PlaceholderParams {_text = \"a placeholder\"}, _sourceRange = Just a@1:4-1:21, _attributes = []},AstNode {_parameters = PlaceholderParams {_text = \"another placeholder\"}, _sourceRange = Just a@2:4-2:27, _attributes = []}]"
 
   it "parses adjacent placeholders correctly" $ do
     let input = T.pack "- {{a placeholder}}{{another placeholder}}"
@@ -56,7 +56,7 @@ spec = describe "placeholder" $ parallel $ do
       Left parseError -> expectationFailure $ "Parsing failed: " ++ show parseError
       Right ast -> do
         show (findPlaceholders ast)
-          `shouldBe` "[AstNode {_parameters = PlaceholderParams {_text = \"a placeholder\"}, _sourceRange = Just a@1:3-1:20, _attributes = []},AstNode {_paramaters = PlaceholderParams {_text = \"another placeholder\"}, _sourceRange = Just a@1:20-1:43, _attributes = []}]"
+          `shouldBe` "[AstNode {_parameters = PlaceholderParams {_text = \"a placeholder\"}, _sourceRange = Just a@1:3-1:20, _attributes = []},AstNode {_parameters = PlaceholderParams {_text = \"another placeholder\"}, _sourceRange = Just a@1:20-1:43, _attributes = []}]"
 
   it "do not parse unclosed placeholder" $ do
     let input = T.pack "This is an {{unclosed placeholder."

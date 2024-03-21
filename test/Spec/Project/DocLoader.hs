@@ -43,7 +43,7 @@ spec = describe "document loading" $ sequential $ do
           cleanup = do
             setCurrentDir cur
       bracket_ setup cleanup $ do
-        doc <- loadDocument defaultSyntaxSpec $(mkRelDir ".") $(mkRelFile "test.md")
+        doc <- loadDocument defaultSyntaxSpec tmp $(mkRelFile "test.md")
         T.unpack (D.text doc) `shouldBe` sampleMarkdownDoc
         D.filename doc `shouldBe` "test.md"
 
@@ -57,7 +57,7 @@ spec = describe "document loading" $ sequential $ do
           cleanup = do
             setCurrentDir cur
       bracket_ setup cleanup $ do
-        doc <- loadDocument defaultSyntaxSpec $(mkRelDir "some/sub") $(mkRelFile "dir/test.md")
+        doc <- loadDocument defaultSyntaxSpec (tmp </> $(mkRelDir "some/sub")) $(mkRelFile "dir/test.md")
         T.unpack (D.text doc) `shouldBe` sampleMarkdownDoc
 
   it "loads all documents in some directory correctly" $ do
@@ -73,5 +73,5 @@ spec = describe "document loading" $ sequential $ do
           cleanup = do
             setCurrentDir cur
       bracket_ setup cleanup $ do
-        docs <- loadAllFromDirectory defaultSyntaxSpec $(mkRelDir ".")
+        docs <- loadAllFromDirectory defaultSyntaxSpec tmp
         length docs `shouldBe` 2

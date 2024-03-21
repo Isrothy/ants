@@ -94,15 +94,13 @@ instance IsQuery Query where
       any (match t . toPlainText . snd) $
         filter (not . fst) $
           findTasks md >>= (^. parameters . taskListItems)
-  query (Alert a t) =
-    ast' $ \md ->
-      return $
-        any
-          (\(AstNode (AlertParams at bl) _ _) -> (at == a) && (match t . toPlainText) bl)
-          (findAlerts md)
-  query (DateTimeRange start end) = metadata $
-    \meta ->
-      return $ maybe False (between start end) (M.dateTime meta)
+  query (Alert a t) = ast' $ \md ->
+    return $
+      any
+        (\(AstNode (AlertParams at bl) _ _) -> (at == a) && (match t . toPlainText) bl)
+        (findAlerts md)
+  query (DateTimeRange start end) = metadata $ \meta ->
+    return $ maybe False (between start end) (M.dateTime meta)
     where
       between (Just s) (Just e) d = s <= e && d >= s && d < e
       between (Just s) _ d = d >= s
@@ -111,7 +109,6 @@ instance IsQuery Query where
   query (HasLink tar) = \doc -> do
     result <- runMaybeT $ do
       ast <- MaybeT $ return $ D.ast doc
-      let links = map (T.unpack . (^. parameters . target)) (findLinks ast)
       root <- MaybeT findRoot
       lift $
         anyM
@@ -119,7 +116,7 @@ instance IsQuery Query where
               t <- resolveLinkInFile (D.absPath doc) filepath
               return $ t == Just (root </> tar)
           )
-          links
+          (map (T.unpack . (^. parameters . target)) (findLinks ast))
     return $ fromMaybe False result
   query (InDirectory dir) = relPath $ \path -> return $ dir `isProperPrefixOf` path
 
