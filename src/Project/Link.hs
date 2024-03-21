@@ -9,27 +9,33 @@ module Project.Link
     gotoLinkedElement,
     isLink,
     Bookmark,
+    parseAbsOrRelFile,
     findBookmarkLine,
     parseLink,
     findHeaderWithId,
+    hasLinkTo,
   )
 where
 
 import Commonmark
-import Control.Conditional
+import Control.Applicative
 import Control.Lens
-import Control.Monad (mzero)
+import Control.Monad
+import Control.Monad.Extra
+import Control.Monad.RWS
 import Control.Monad.Trans.Maybe
 import Data.List (find)
+import Data.Maybe
 import qualified Data.Text as T
 import qualified Model.Document as D
 import Model.MarkdownAst
+import Model.MarkdownAst.Lenses
 import Model.MarkdownAst.Params.HeaderParams
 import Parser.MarkdownWithFrontmatter (MarkdownSyntax)
 import Path
 import Path.IO
 import Project.DocLoader
-import System.FilePath
+import System.FilePath hiding ((</>))
 
 type Bookmark = T.Text
 
@@ -41,12 +47,14 @@ isLink (AstNode (Link {}) _ _) = True
 isLink (AstNode (WikiLink {}) _ _) = True
 isLink _ = False
 
-parseLink :: T.Text -> Maybe (T.Text, Maybe Bookmark)
+parseLink :: T.Text -> Maybe (FilePath, Maybe Bookmark)
 parseLink input = case T.splitOn "#" input of
-  [] -> Nothing
-  [link] -> Just (link, Nothing)
-  [link, bookmark] -> Just (link, Just bookmark)
+  [link] -> Just (T.unpack link, Nothing)
+  [link, bookmark] -> Just (T.unpack link, Just bookmark)
   _ -> Nothing
+
+parseAbsOrRelFile :: Path Abs Dir -> FilePath -> Maybe (Path Abs File)
+parseAbsOrRelFile root file = parseAbsFile file <|> fmap (root </>) (parseRelFile file)
 
 resolveLinkInFile :: Path Abs File -> FilePath -> IO (Maybe (Path Abs File))
 resolveLinkInFile orig link
@@ -64,7 +72,7 @@ gotoLinkedElement ::
 gotoLinkedElement spec root orig txt =
   runMaybeT $ do
     (link, tag) <- MaybeT $ return $ parseLink txt
-    path <- MaybeT $ resolveLinkInFile orig (T.unpack link)
+    path <- MaybeT $ resolveLinkInFile orig link
     exist <- doesFileExist path
     unless exist mzero
     rel <- MaybeT $ return $ stripProperPrefix root path
@@ -79,3 +87,18 @@ findBookmarkLine bookmark ast = do
   case unSourceRange sr of
     (begin, _) : _ -> Just $ sourceLine begin
     _ -> Nothing
+
+hasLinkTo :: Path Abs Dir -> Path Abs File -> MarkdownAst -> (FilePath, Maybe Bookmark) -> IO Bool
+hasLinkTo root orig ast (targetFilePath, targetTag) = do
+  result <- runMaybeT $ do
+    targetAbsPath <- MaybeT $ return $ parseAbsOrRelFile root targetFilePath
+    lift $
+      anyM
+        ( \link -> case parseLink link of
+            Nothing -> return False
+            Just (thisFilePath, thisTag) -> do
+              t <- resolveLinkInFile orig thisFilePath
+              return $ t == Just targetAbsPath && (isNothing targetTag || thisTag == targetTag)
+        )
+        (map (^. parameters . target) (findLinks ast))
+  return $ fromMaybe False result

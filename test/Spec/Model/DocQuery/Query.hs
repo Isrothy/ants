@@ -13,6 +13,7 @@ import Control.Exception (bracket_)
 import Control.Monad.IO.Class
 import Data.Either.Combinators
 import Data.Functor.Identity
+import Data.Maybe
 import qualified Data.Text as T
 import Data.Time
 import Model.DocQuery
@@ -229,12 +230,12 @@ linkQuerySpec = do
   let testDocWithLink =
         [r|
   # Document with Link
-  [somePlace](../../../someLink/here/test.md)
+  [somePlace](../../../someLink/here/test.md#tag)
   |]
   let testDocMultipleLinks =
         [r|
  # Document with Multiple Links
- [somePlace](../../../someLink/here/test.md)
+ [somePlace](../../../someLink/here/test.md#tag)
  [anotherPlace](../../../anotherLink/there/test.md)
 |]
 
@@ -244,21 +245,45 @@ linkQuerySpec = do
   let docWithLink root = (mksampleDoc root) {ast = testMarkdownAstWithLink, text = T.pack testDocWithLink}
   let docWithoutLink root = (mksampleDoc root) {ast = testMarkdownAstWithoutLink, text = T.pack testDocWithoutLink}
   let multipleLinksDoc root = (mksampleDoc root) {ast = testMarkdownAstMultipleLinks, text = T.pack testDocMultipleLinks}
-  let linkInDoc = $(P.mkRelFile "someLink/here/test.md")
-  let nonExistentLink = $(P.mkRelFile "nonexistent/link.md")
+  let linkWithoutTag = "someLink/here/test.md"
+  let linkWithTag = "someLink/here/test.md#tag"
+  let linkWithAnotherTag = "someLink/here/test.md#tag2"
+  let nonExistentLink = "nonexistent/link.md"
 
   describe "Has Link Filter" $ do
     it "matches document containing a specific link" $ do
       testInEnv $ \root -> do
-        let filter' = HasLink linkInDoc
+        let filter' = HasLink linkWithoutTag
+        let doc = docWithLink root
+        ensureDir (root P.</> $(P.mkRelDir "some/test/path"))
+        query filter' doc >>= (`shouldBe` True)
+
+    it "matches document containing an absolute path link" $ do
+      testInEnv $ \root -> do
+        let absLink = T.pack $ P.toFilePath $ root P.</> fromJust (P.parseRelFile (T.unpack linkWithTag))
+        let filter' = HasLink absLink
         let doc = docWithLink root
         ensureDir (root P.</> $(P.mkRelDir "some/test/path"))
         query filter' doc >>= (`shouldBe` True)
 
     it "does not match document without the specific link" $ do
       testInEnv $ \root -> do
-        let filter' = HasLink linkInDoc
+        let filter' = HasLink linkWithoutTag
         let doc = docWithoutLink root
+        ensureDir (root P.</> $(P.mkRelDir "some/test/path"))
+        query filter' doc >>= (`shouldBe` False)
+
+    it "matches document containing a link with a tag" $ do
+      testInEnv $ \root -> do
+        let filter' = HasLink linkWithTag
+        let doc = docWithLink root
+        ensureDir (root P.</> $(P.mkRelDir "some/test/path"))
+        query filter' doc >>= (`shouldBe` True)
+
+    it "does not match document containing wrong link" $ do
+      testInEnv $ \root -> do
+        let filter' = HasLink linkWithAnotherTag
+        let doc = docWithLink root
         ensureDir (root P.</> $(P.mkRelDir "some/test/path"))
         query filter' doc >>= (`shouldBe` False)
 
@@ -271,7 +296,7 @@ linkQuerySpec = do
 
     it "matches document with multiple links if one of them matches" $ do
       testInEnv $ \root -> do
-        let filter' = HasLink linkInDoc
+        let filter' = HasLink linkWithoutTag
         let doc = multipleLinksDoc root
         ensureDir (root P.</> $(P.mkRelDir "some/test/path"))
         query filter' doc >>= (`shouldBe` True)

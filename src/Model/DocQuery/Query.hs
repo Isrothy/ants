@@ -70,7 +70,7 @@ data Query where
   Task :: TaskType -> (BoolExpr Term) -> Query
   Alert :: AlertType -> (BoolExpr Term) -> Query
   DateTimeRange :: Maybe UTCTime -> Maybe UTCTime -> Query
-  HasLink :: Path Rel File -> Query
+  HasLink :: T.Text -> Query
   InDirectory :: Path Rel Dir -> Query
   deriving (Show, Eq)
 
@@ -106,17 +106,12 @@ instance IsQuery Query where
       between (Just s) _ d = d >= s
       between _ (Just e) d = d < e
       between _ _ _ = True
-  query (HasLink tar) = \doc -> do
+  query (HasLink link) = \doc -> do
     result <- runMaybeT $ do
       ast <- MaybeT $ return $ D.ast doc
       root <- MaybeT findRoot
-      lift $
-        anyM
-          ( \filepath -> do
-              t <- resolveLinkInFile (D.absPath doc) filepath
-              return $ t == Just (root </> tar)
-          )
-          (map (T.unpack . (^. parameters . target)) (findLinks ast))
+      (targetFilePath, targetTag) <- MaybeT $ return $ parseLink link
+      lift $ hasLinkTo root (D.absPath doc) ast (targetFilePath, targetTag)
     return $ fromMaybe False result
   query (InDirectory dir) = relPath $ \path -> return $ dir `isProperPrefixOf` path
 
