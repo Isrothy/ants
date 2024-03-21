@@ -74,15 +74,9 @@ escapedChar = char '\\' *> punctuation
 punctuation :: Parser Char
 punctuation = satisfy isPunctuation
 
-unquotedTerm :: Parser Term
-unquotedTerm = do
-  text <- many1 alphaNum
-  return $ CaseInsensitiveTerm $ T.pack text
-
 quotedTerm :: Char -> (T.Text -> Term) -> Parser Term
-quotedTerm quote constructor = do
-  text <- between (char quote) (char quote) (many1 (escapedChar <|> noneOf [quote]))
-  return $ constructor $ T.pack text
+quotedTerm quote constructor =
+  constructor . T.pack <$> between (char quote) (char quote) (many1 (escapedChar <|> noneOf [quote]))
 
 doubleQuotedTerm :: Parser Term
 doubleQuotedTerm = quotedTerm '"' CaseInsensitiveTerm
@@ -96,6 +90,11 @@ regexTerm = quotedTerm '/' RegexTerm
 fuzzyTerm :: Parser Term
 fuzzyTerm = quotedTerm '~' FuzzyTerm
 
+unquotedTerm :: Parser Term
+unquotedTerm = do
+  text <- many1 alphaNum
+  return $ CaseInsensitiveTerm $ T.pack text
+
 term :: Parser Term
 term = doubleQuotedTerm <|> singleQuotedTerm <|> regexTerm <|> fuzzyTerm <|> unquotedTerm
 
@@ -103,40 +102,35 @@ instance HasParser Term where
   parser = term
 
 author :: Parser Query
-author = prefixed "author:" $ Author <$> simpleExpr
+author = Author <$> prefixed "author:" simpleExpr
 
 tag :: Parser Query
-tag = prefixed "tag:" $ Tag <$> simpleExpr
+tag = Tag <$> prefixed "tag:" simpleExpr
 
 description :: Parser Query
-description = prefixed "description:" $ Description <$> simpleExpr
+description = Description <$> prefixed "description:" simpleExpr
 
 content :: Parser Query
-content = prefixed "content:" $ Content <$> simpleExpr
+content = Content <$> prefixed "content:" simpleExpr
 
 task :: Parser Query
-task = do
-  _ <- string "task"
-  t <- taskType
-  Task t <$> simpleExpr
+task = Task <$> (string "task" *> taskType) <*> simpleExpr
   where
     taskType =
-      (char ':' >> return Both) <|> do
-        _ <- char '-'
-        (string "done:" >> return Done) <|> (string "todo:" >> return Todo)
+      (char ':' $> Both)
+        <|> char '-' *> ((string "done:" $> Done) <|> (string "todo:" $> Todo))
 
 alert :: Parser Query
-alert = do
-  _ <- string "alert-"
-  t <- alertType
-  Alert t <$> simpleExpr
+alert = Alert <$> (string "alert-" *> alertType) <*> simpleExpr
   where
     alertType =
-      (string "note:" >> return NoteAlert)
-        <|> (string "tip:" >> return TipAlert)
-        <|> (string "important:" >> return ImportantAlert)
-        <|> (string "warning:" >> return WarningAlert)
-        <|> (string "caution:" >> return CautionAlert)
+      choice
+        [ NoteAlert <$ string "note:",
+          TipAlert <$ string "tip:",
+          ImportantAlert <$ string "important:",
+          WarningAlert <$ string "warning:",
+          CautionAlert <$ string "caution:"
+        ]
 
 dayParser :: Parser Day
 dayParser = do
@@ -164,12 +158,10 @@ date = prefixed "date:" (range <|> singleDay)
       return $ DateTimeRange start end
 
 hasLink :: Parser Query
-hasLink = prefixed "has-link:" $ do
-  linkText <- quotedLink <|> many1 (noneOf " \n")
-  return $ HasLink $ T.pack linkText
+hasLink = HasLink . T.pack <$> prefixed "has-link:" (quotedString <|> many1 (noneOf " \n"))
 
-quotedLink :: Parser String
-quotedLink = between (char '"') (char '"') (many1 (escapedChar <|> noneOf "\""))
+quotedString :: Parser String
+quotedString = between (char '"') (char '"') (many1 (escapedChar <|> noneOf "\""))
 
 query :: Parser Query
 query =
