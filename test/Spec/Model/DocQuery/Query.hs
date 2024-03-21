@@ -28,14 +28,14 @@ import Text.RawString.QQ
 import Prelude hiding (and, any, not, or)
 
 testInEnv :: (P.Path P.Abs P.Dir -> IO a) -> IO a
-testInEnv tests = withSystemTempDir "Query" $ \tmp -> do
+testInEnv tests = withSystemTempDir "Query" $ \root -> do
   cur <- getCurrentDir
   let setup = do
-        ensureDir (tmp P.</> configDir)
-        setCurrentDir tmp
+        ensureDir (root P.</> configDir)
+        setCurrentDir root
       cleanup = do
         setCurrentDir cur
-  bracket_ setup cleanup (tests tmp)
+  bracket_ setup cleanup (tests root)
 
 sampleMarkdownDoc :: String
 sampleMarkdownDoc =
@@ -104,120 +104,119 @@ mksampleDoc root =
 metadataQuerySpec :: Spec
 metadataQuerySpec = describe "Metadata Filter" $ sequential $ do
   it "matches metadata with a specific date range" $ do
-    withSystemTempDir "Query" $ \tmp -> do
+    testInEnv $ \root -> do
       let startDate = parseTimeOrError True defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ" "2021-01-01T00:00:00Z"
       let endDate = parseTimeOrError True defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ" "2021-12-31T23:59:59Z"
       let filter' = DateTimeRange (Just startDate) (Just endDate)
-      let doc = mksampleDoc tmp
+      let doc = mksampleDoc root
       query filter' doc >>= (`shouldBe` True)
 
   it "does not match metadata outside of a specific date range" $ do
-    withSystemTempDir "Query" $ \tmp -> do
+    testInEnv $ \root -> do
       let beforeDate = parseTimeOrError True defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ" "2020-01-01T00:00:00Z"
       let afterDate = parseTimeOrError True defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ" "2021-01-01T00:00:00Z"
       let filter' = DateTimeRange (Just beforeDate) (Just afterDate)
-      let doc = mksampleDoc tmp
+      let doc = mksampleDoc root
       query filter' doc >>= (`shouldBe` False)
 
   it "matches metadata when only start date is given" $ do
-    withSystemTempDir "Query" $ \tmp -> do
+    testInEnv $ \root -> do
       let startDate = parseTimeOrError True defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ" "2021-01-01T00:00:00Z"
       let filter' = DateTimeRange (Just startDate) Nothing
-      let doc = mksampleDoc tmp
+      let doc = mksampleDoc root
       query filter' doc >>= (`shouldBe` True)
 
   it "matches metadata when only end date is given" $ do
-    withSystemTempDir "Query" $ \tmp -> do
+    testInEnv $ \root -> do
       let endDate = parseTimeOrError True defaultTimeLocale "%Y-%m-%dT%H:%M:%SZ" "2021-12-31T23:59:59Z"
       let filter' = DateTimeRange Nothing (Just endDate)
-      let doc = mksampleDoc tmp
+      let doc = mksampleDoc root
       query filter' doc >>= (`shouldBe` True)
 
   it "matches metadata when no date range is given" $ do
-    withSystemTempDir "Query" $ \tmp -> do
+    testInEnv $ \root -> do
       let filter' = DateTimeRange Nothing Nothing
-      let doc = mksampleDoc tmp
+      let doc = mksampleDoc root
       query filter' doc >>= (`shouldBe` True)
 
   it "matches metadata with the specific author" $ do
-    withSystemTempDir "Query" $ \tmp -> do
+    testInEnv $ \root -> do
       let filter' = Author $ Val $ StrictTerm "Test Author"
-      let doc = mksampleDoc tmp
+      let doc = mksampleDoc root
       query filter' doc >>= (`shouldBe` True)
 
   it "does not match metadata with a different author" $ do
-    withSystemTempDir "Query" $ \tmp -> do
+    testInEnv $ \root -> do
       let filter' = Author $ Val $ StrictTerm "Nonexistent Author"
-      let doc = mksampleDoc tmp
+      let doc = mksampleDoc root
       query filter' doc >>= (`shouldBe` False)
 
   it "matches metadata with the specific title" $ do
-    withSystemTempDir "Query" $ \tmp -> do
+    testInEnv $ \root -> do
       let filter' = Title $ Val $ StrictTerm "Test Title"
-      let doc = mksampleDoc tmp
+      let doc = mksampleDoc root
       query filter' doc >>= (`shouldBe` True)
 
   it "does not match metadata with a different title" $ do
-    withSystemTempDir "Query" $ \tmp -> do
+    testInEnv $ \root -> do
       let filter' = Title $ Val $ StrictTerm "Nonexistent Title"
-      let doc = mksampleDoc tmp
+      let doc = mksampleDoc root
       query filter' doc >>= (`shouldBe` False)
 
   it "matches metadata with a specific tag" $ do
-    withSystemTempDir "Query" $ \tmp -> do
+    testInEnv $ \root -> do
       let filter' = Tag $ Val $ StrictTerm "haskell"
-      let doc = mksampleDoc tmp
+      let doc = mksampleDoc root
       query filter' doc >>= (`shouldBe` True)
 
   it "does not match metadata without a specific tag" $ do
-    withSystemTempDir "Query" $ \tmp -> do
+    testInEnv $ \root -> do
       let filter' = Tag $ Val $ StrictTerm "nonexistent"
-      let doc = mksampleDoc tmp
+      let doc = mksampleDoc root
       query filter' doc >>= (`shouldBe` False)
 
   it "matches metadata with a fuzzy description" $ do
-    withSystemTempDir "Query" $ \tmp -> do
+    testInEnv $ \root -> do
       let filter' = Description $ Val $ FuzzyTerm "Haskell and * parsing"
-      let doc = mksampleDoc tmp
+      let doc = mksampleDoc root
       query filter' doc >>= (`shouldBe` True)
 
   it "does not match metadata that does not contain the fuzzy description" $ do
-    withSystemTempDir "Query" $ \tmp -> do
+    testInEnv $ \root -> do
       let filter' = Description $ Val $ FuzzyTerm "unrelated topic"
-      let doc = mksampleDoc tmp
+      let doc = mksampleDoc root
       query filter' doc >>= (`shouldBe` False)
 
   it "matches metadata when fuzzy description is partially matched" $ do
-    withSystemTempDir "Query" $ \tmp -> do
+    testInEnv $ \root -> do
       let filter' = Description $ Val $ FuzzyTerm "test document"
-      let doc = mksampleDoc tmp
+      let doc = mksampleDoc root
       query filter' doc >>= (`shouldBe` True)
 
   it "does not match metadata when fuzzy description is not matched at all" $ do
-    withSystemTempDir "Query" $ \tmp -> do
+    testInEnv $ \root -> do
       let filter' = Description $ Val $ FuzzyTerm "completely unrelated"
-      let doc = mksampleDoc tmp
+      let doc = mksampleDoc root
       query filter' doc >>= (`shouldBe` False)
 
   it "matches metadata with case insensitive fuzzy description" $ do
-    withSystemTempDir "Query" $ \tmp -> do
+    testInEnv $ \root -> do
       let filter' = Description $ Val $ FuzzyTerm "HASKELL AND PARSING"
-      let doc = mksampleDoc tmp
+      let doc = mksampleDoc root
       query filter' doc >>= (`shouldBe` True)
 
 pathQuerySpec :: Spec
-pathQuerySpec = do
-  describe "Path Matching Filter" $ do
-    it "matches document with specific relative path" $ do
-      withSystemTempDir "Query" $ \tmp -> do
-        let doc = mksampleDoc tmp
-        query (InDirectory $(P.mkRelDir "some/test/path")) doc >>= (`shouldBe` True)
-        query (InDirectory $(P.mkRelDir "some/test")) doc >>= (`shouldBe` True)
+pathQuerySpec = describe "Path Matching Filter" $ do
+  it "matches document with specific relative path" $ do
+    testInEnv $ \root -> do
+      let doc = mksampleDoc root
+      query (InDirectory $(P.mkRelDir "some/test/path")) doc >>= (`shouldBe` True)
+      query (InDirectory $(P.mkRelDir "some/test")) doc >>= (`shouldBe` True)
 
-    it "does not match document with different relative path" $ do
-      withSystemTempDir "Query" $ \tmp -> do
-        let doc = mksampleDoc tmp
-        query (InDirectory $(P.mkRelDir "other/test/path")) doc >>= (`shouldBe` False)
+  it "does not match document with different relative path" $ do
+    testInEnv $ \root -> do
+      let doc = mksampleDoc root
+      query (InDirectory $(P.mkRelDir "other/test/path")) doc >>= (`shouldBe` False)
 
 linkQuerySpec :: Spec
 linkQuerySpec = do
@@ -281,26 +280,26 @@ contentQuerySpec :: Spec
 contentQuerySpec = sequential $ do
   describe "Complex Content Query Functionality" $ sequential $ do
     it "matches a document with content that satisfies both terms in an AND query" $ do
-      withSystemTempDir "Query" $ \tmp -> do
-        let doc = mksampleDoc tmp
+      testInEnv $ \root -> do
+        let doc = mksampleDoc root
         let query' = Content (And (Val (StrictTerm "Markdown")) (Val (FuzzyTerm "iteem")))
         query query' doc >>= (`shouldBe` True)
 
     it "does not match a document when one term in an AND query is not satisfied" $ do
-      withSystemTempDir "Query" $ \tmp -> do
-        let doc = mksampleDoc tmp
+      testInEnv $ \root -> do
+        let doc = mksampleDoc root
         let query' = Content (And (Val (StrictTerm "markdown")) (Val (FuzzyTerm "test")))
         query query' doc >>= (`shouldBe` False)
 
     it "matches a document with content that satisfies at least one term in an OR query" $ do
-      withSystemTempDir "Query" $ \tmp -> do
-        let doc = mksampleDoc tmp
+      testInEnv $ \root -> do
+        let doc = mksampleDoc root
         let query' = Content (Or (Val (StrictTerm "markdown")) (Val (StrictTerm "Ordered")))
         query query' doc >>= (`shouldBe` True)
 
     it "does not match a document when none of the terms in an OR query are satisfied" $ do
-      withSystemTempDir "Query" $ \tmp -> do
-        let doc = mksampleDoc tmp
+      testInEnv $ \root -> do
+        let doc = mksampleDoc root
         let query' = Content (Or (Val (StrictTerm "markup")) (Val (StrictTerm "markdown")))
         query query' doc >>= (`shouldBe` False)
 
@@ -334,21 +333,21 @@ taskQuerySpec = describe "Task Query Functionality" $ sequential $ do
           }
 
   it "matches a document with 'Done' tasks containing a specific term" $ do
-    withSystemTempDir "Query" $ \tmp -> do
+    testInEnv $ \root -> do
       let query' = Task Done (Val (StrictTerm "specific term"))
-      let doc = docWithTasks tmp
+      let doc = docWithTasks root
       query query' doc >>= (`shouldBe` True)
 
   it "does not match a document if no 'Todo' tasks contain the specific term" $ do
-    withSystemTempDir "Query" $ \tmp -> do
+    testInEnv $ \root -> do
       let query' = Task Todo (Val (StrictTerm "nonexistent term"))
-      let doc = docWithTasks tmp
+      let doc = docWithTasks root
       query query' doc >>= (`shouldBe` False)
 
   it "matches a document with any tasks containing a specific term" $ do
-    withSystemTempDir "Query" $ \tmp -> do
+    testInEnv $ \root -> do
       let query' = Task Both (Val (FuzzyTerm "general term"))
-      let doc = docWithTasks tmp
+      let doc = docWithTasks root
       query query' doc >>= (`shouldBe` True)
 
 alertQuerySpec :: Spec
@@ -385,21 +384,21 @@ alertQuerySpec = describe "Alert Query Functionality" $ sequential $ do
           }
 
   it "matches a document with a specific type of alert containing a term" $ do
-    withSystemTempDir "Query" $ \tmp -> do
+    testInEnv $ \root -> do
       let query' = Alert WarningAlert (Val (StrictTerm "term"))
-      let doc = docWithAlerts tmp
+      let doc = docWithAlerts root
       query query' doc >>= (`shouldBe` True)
 
   it "does not match a document with alerts of a different type" $ do
-    withSystemTempDir "Query" $ \tmp -> do
+    testInEnv $ \root -> do
       let query' = Alert WarningAlert (Val (StrictTerm "another"))
-      let doc = docWithAlerts tmp
+      let doc = docWithAlerts root
       query query' doc >>= (`shouldBe` False)
 
   it "matches a document with alerts of a specific type using a complex boolean expression" $ do
-    withSystemTempDir "Query" $ \tmp -> do
+    testInEnv $ \root -> do
       let query' = Alert NoteAlert (And (Val (FuzzyTerm "AlErT")) (Not (Val (StrictTerm "Alert"))))
-      let doc = docWithAlerts tmp
+      let doc = docWithAlerts root
       query query' doc >>= (`shouldBe` True)
 
 complexQuerySpec :: Spec
@@ -441,27 +440,27 @@ complexQuerySpec = describe "Complex Query Functionality" $ sequential $ do
           }
 
   it "matches a document with both a specific alert and a done task" $ do
-    withSystemTempDir "Query" $ \tmp -> do
+    testInEnv $ \root -> do
       let alertQuery = Alert ImportantAlert (Val (CaseInsensitiveTerm "important"))
       let taskQuery = Task Done (Val (StrictTerm "specific"))
       let complexQuery = And (Val alertQuery) (Val taskQuery)
-      let doc = docWithTasksAndAlerts tmp
+      let doc = docWithTasksAndAlerts root
       query complexQuery doc >>= (`shouldBe` True)
 
   it "does not match a document when only one part of an AND query is satisfied" $ do
-    withSystemTempDir "Query" $ \tmp -> do
+    testInEnv $ \root -> do
       let alertQuery = Alert ImportantAlert (Val (StrictTerm "nonexistent"))
       let taskQuery = Task Done (Val (StrictTerm "specific"))
       let complexQuery = And (Val alertQuery) (Val taskQuery)
-      let doc = docWithTasksAndAlerts tmp
+      let doc = docWithTasksAndAlerts root
       query complexQuery doc >>= (`shouldBe` False)
 
   it "matches a document when at least one part of an OR query is satisfied" $ do
-    withSystemTempDir "Query" $ \tmp -> do
+    testInEnv $ \root -> do
       let alertQuery = Alert ImportantAlert (Val (FuzzyTerm "important"))
       let taskQuery = Task Done (Val (StrictTerm "nonexistent"))
       let complexQuery = Or (Val alertQuery) (Val taskQuery)
-      let doc = docWithTasksAndAlerts tmp
+      let doc = docWithTasksAndAlerts root
       query complexQuery doc >>= (`shouldBe` True)
 
 spec :: Spec
