@@ -94,8 +94,8 @@ mksampleDoc root =
   Document
     { relPath = samplePath,
       absPath = root P.</> samplePath,
-      lastAccessed = UTCTime (fromGregorian 2024 1 1) 0,
-      lastModified = UTCTime (fromGregorian 2024 1 1) 0,
+      lastAccessed = Just $ UTCTime (fromGregorian 2024 1 1) 0,
+      lastModified = Just $ UTCTime (fromGregorian 2024 1 1) 0,
       filename = "sample.md",
       metadata = sampleMetadata,
       ast = sampleMarkdownAst,

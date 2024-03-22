@@ -1,4 +1,5 @@
 {-# LANGUAGE ImportQualifiedPost #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Lsp.Util
   ( uriToDir,
@@ -9,20 +10,29 @@ module Lsp.Util
     sourcePosToPosition,
     sourceRangeToCodePointRange,
     sourcePosToCodePointPosition,
+    loadLocalOrVirtualDocument,
   )
 where
 
 import Commonmark
 import Control.Monad.RWS
+import Control.Monad.Trans.Maybe
+import Data.Default
 import Data.Maybe
 import Data.Text qualified as T
 import Language.LSP.Protocol.Types qualified as LSP
 import Language.LSP.Server qualified as LSP
 import Language.LSP.VFS qualified as VFS
 import Lsp.State
+import Model.Document
+import Model.MarkdownAst
+import Model.Metadata
+import Parser.Markdown
+import Parser.MarkdownWithFrontmatter (markdownWithFrontmatter)
 import Path
+import Project.DocLoader
 import Text.Parsec.Pos
-import Util.IO (readFileSafe)
+import Util.IO (readFileSafe, safeIO)
 
 uriToDir :: LSP.Uri -> Maybe (Path Abs Dir)
 uriToDir uriStr = LSP.uriToFilePath uriStr >>= parseAbsDir
@@ -59,3 +69,23 @@ sourceRangeToCodePointRange sr = map helper (unSourceRange sr)
 
 sourceRangeToRange :: VFS.VirtualFile -> SourceRange -> [LSP.Range]
 sourceRangeToRange vf sr = mapMaybe (VFS.codePointRangeToRange vf) (sourceRangeToCodePointRange sr)
+
+loadLocalOrVirtualDocument ::
+  MarkdownSyntax ->
+  Path Abs Dir ->
+  Path Rel File ->
+  LSP.LspT ServerConfig IO (Maybe Document)
+loadLocalOrVirtualDocument spec root relPath = do
+  let absPath = root </> relPath
+  let uri = LSP.filePathToUri $ toFilePath $ root </> relPath
+  mfile <- LSP.getVirtualFile $ LSP.toNormalizedUri uri
+  case mfile of
+    Nothing -> liftIO $ safeIO $ loadDocument spec root relPath
+    Just virtualFile -> return $ do
+      let lastAccessed = Nothing
+      let lastModified = Nothing
+      let text = VFS.virtualFileText virtualFile
+      let (mMetadata, ast) = markdownWithFrontmatter spec (toFilePath absPath) text
+      let filename = toFilePath (Path.filename absPath)
+      let metadata = fromMaybe def mMetadata
+      return $ Document {..}

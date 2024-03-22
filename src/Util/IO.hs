@@ -6,6 +6,7 @@
 
 module Util.IO
   ( readFileSafe,
+    safeIO,
   )
 where
 
@@ -42,9 +43,17 @@ instance HasReadFile Data.ByteString.ByteString where
 instance HasReadFile Data.ByteString.Lazy.ByteString where
   readFile = Data.ByteString.Lazy.readFile
 
-readFileSafe :: forall a. (HasReadFile a) => Prelude.FilePath -> IO (Maybe a)
-readFileSafe filePath = do
-  result <- try (readFile filePath) :: IO (Either IOException a)
+safeIO :: forall a. IO a -> IO (Maybe a)
+safeIO io = do
+  result <- try io :: IO (Either IOException a)
   return $ case result of
     Left _ -> Nothing
     Right content -> Just content
+
+readFileSafe :: forall a. (HasReadFile a) => Prelude.FilePath -> IO (Maybe a)
+readFileSafe = safeIO . readFile
+
+-- result <- try (readFile filePath) :: IO (Either IOException a)
+-- return $ case result of
+--   Left _ -> Nothing
+--   Right content -> Just content
