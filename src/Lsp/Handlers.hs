@@ -24,7 +24,7 @@ import Commonmark (SourceRange (..))
 import Commonmark.Types (sourceLine)
 import Control.Conditional (guard)
 import Control.Lens (use, (.=), (^.))
-import Control.Monad (unless)
+import Control.Monad (unless, when)
 import Control.Monad.RWS (MonadIO (liftIO), MonadTrans (lift))
 import Control.Monad.Trans.Except
 import Control.Monad.Trans.Maybe
@@ -165,10 +165,9 @@ linkedFile ::
   LSP.LspT ServerConfig IO (Either LinkException Document)
 linkedFile spec origPath linkPath = runExceptT $ do
   targetPath <- maybeToExceptT TargetNotFound $ MaybeT $ liftIO $ resolveLinkInFile origPath linkPath
-  mroot <- lift LSP.getRootPath
-  let root = fromJust $ mroot >>= parseAbsDir
+  root <- maybeToExceptT TargetNotFound $ MaybeT $ fmap (>>= parseAbsDir) LSP.getRootPath
   relPath <- maybeToExceptT OutOfRange $ MaybeT $ return $ stripProperPrefix root targetPath
-  unless (isHiddenFile relPath) $ throwE OutOfRange
+  when (isHiddenFile relPath) $ throwE OutOfRange
   unless (fileExtension targetPath == Just ".md") $ throwE FileFormatNotSupported
   maybeToExceptT TargetNotFound $ MaybeT $ loadLocalOrVirtualDocument spec root relPath
 
