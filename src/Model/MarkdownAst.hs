@@ -25,9 +25,11 @@ module Model.MarkdownAst
     attributes,
     findPlaceholders,
     findLinks,
+    findWikiLinks,
     findTasks,
     findAlerts,
     findHaders,
+    headerAt,
     allNodes,
     firstNode,
     nodeAt,
@@ -385,6 +387,11 @@ findLinks = allNodes' \case
   (AstNode (Link params) sr attr) -> Just (AstNode params sr attr)
   _ -> Nothing
 
+findWikiLinks :: MarkdownAst -> [AstNode (WikiLinkParams MarkdownAst)]
+findWikiLinks = allNodes' \case
+  (AstNode (WikiLink params) sr attr) -> Just (AstNode params sr attr)
+  _ -> Nothing
+
 findTasks :: MarkdownAst -> [AstNode (TaskListParams MarkdownAst MarkdownAst)]
 findTasks = allNodes' \case
   (AstNode (TaskList params) sr attr) -> Just (AstNode params sr attr)
@@ -397,5 +404,10 @@ findAlerts = allNodes' \case
 
 findHaders :: MarkdownAst -> [AstNode (HeaderParams MarkdownAst)]
 findHaders = allNodes' \case
+  (AstNode (Header params) sr attr) -> Just (AstNode params sr attr)
+  _ -> Nothing
+
+headerAt :: (Integral i) => i -> i -> MarkdownAst -> Maybe (AstNode (HeaderParams MarkdownAst))
+headerAt = nodeAt' \case
   (AstNode (Header params) sr attr) -> Just (AstNode params sr attr)
   _ -> Nothing

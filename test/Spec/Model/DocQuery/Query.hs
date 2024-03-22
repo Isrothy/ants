@@ -232,6 +232,11 @@ linkQuerySpec = do
   # Document with Link
   [somePlace](../../../someLink/here/test.md#tag)
 |]
+  let testDocWithWikiLink =
+        [r|
+  # Document with Link
+  [[../../../someLink/here/test.md#tag]]
+|]
   let testDocMultipleLinks =
         [r|
  # Document with Multiple Links
@@ -241,9 +246,11 @@ linkQuerySpec = do
 
   let testMarkdownAstWithLink = rightToMaybe $ markdownAst "test1" (T.pack testDocWithLink)
   let testMarkdownAstWithoutLink = rightToMaybe $ markdownAst "test1" (T.pack testDocWithoutLink)
+  let testMarkdownAstWikiLinks = rightToMaybe $ fromJust $ markdownAstWith (wikilinksSpec TitleAfterPipe) "test1" (T.pack testDocWithWikiLink)
   let testMarkdownAstMultipleLinks = rightToMaybe $ markdownAst "test1" (T.pack testDocMultipleLinks)
   let docWithLink root = (mksampleDoc root) {ast = testMarkdownAstWithLink, text = T.pack testDocWithLink}
   let docWithoutLink root = (mksampleDoc root) {ast = testMarkdownAstWithoutLink, text = T.pack testDocWithoutLink}
+  let docWithWikiLink root = (mksampleDoc root) {ast = testMarkdownAstWikiLinks, text = T.pack testDocWithLink}
   let multipleLinksDoc root = (mksampleDoc root) {ast = testMarkdownAstMultipleLinks, text = T.pack testDocMultipleLinks}
   let linkWithoutTag = "someLink/here/test.md"
   let linkWithTag = "someLink/here/test.md#tag"
@@ -293,6 +300,13 @@ linkQuerySpec = do
         let doc = docWithLink root
         ensureDir (root P.</> $(P.mkRelDir "some/test/path"))
         query filter' doc >>= (`shouldBe` False)
+
+    it "matches document containing a wiki link" $ do
+      testInEnv $ \root -> do
+        let filter' = HasLink linkWithoutTag
+        let doc = docWithWikiLink root
+        ensureDir (root P.</> $(P.mkRelDir "some/test/path"))
+        query filter' doc >>= (`shouldBe` True)
 
     it "matches document with multiple links if one of them matches" $ do
       testInEnv $ \root -> do
