@@ -31,7 +31,9 @@ instance IsTerm Term where
   match (RegexTerm t) text = text =~ t
 
 instance IsTerm (BoolExpr Term) where
-  match (Val t) text = match t text
-  match (Not t) text = not $ match t text
-  match (And t1 t2) text = match t1 text && match t2 text
-  match (Or t1 t2) text = match t1 text || match t2 text
+  match (Var t) = match t
+  match (Not t) = not $ match t
+  match (And t1 t2) = match t1 && match t2
+  match (Or t1 t2) = match t1 || match t2
+  match (Const t) = const t
+

@@ -66,7 +66,7 @@ prefixed :: String -> Parser a -> Parser a
 prefixed l p = string l *> p
 
 simpleExpr :: (HasParser a) => Parser (BoolExpr a)
-simpleExpr = parens boolExpr <|> (parser <&> Val)
+simpleExpr = parens boolExpr <|> (parser <&> Var)
 
 escapedChar :: Parser Char
 escapedChar = char '\\' *> punctuation
@@ -117,8 +117,8 @@ task :: Parser Query
 task = Task <$> (string "task" *> taskType) <*> simpleExpr
   where
     taskType =
-      (char ':' $> Both)
-        <|> char '-' *> ((string "done:" $> Done) <|> (string "todo:" $> Todo))
+      char ':' $> Both
+        <|> char '-' *> (string "done:" $> Done <|> string "todo:" $> Todo)
 
 alert :: Parser Query
 alert = Alert <$> (string "alert-" *> alertType) <*> simpleExpr

@@ -116,15 +116,8 @@ instance IsQuery Query where
   query (InDirectory dir) = relPath $ \path -> return $ dir `isProperPrefixOf` path
 
 instance IsQuery (BoolExpr Query) where
-  query (Val q) = query q
-  query (And a b) = \doc -> do
-    x <- query a doc
-    y <- query b doc
-    return $ x && y
-  query (Or a b) = \doc -> do
-    x <- query a doc
-    y <- query b doc
-    return $ x || y
-  query (Not a) = \doc -> do
-    x <- query a doc
-    return $ not x
+  query (Var q) = query q
+  query (And a b) = \doc -> liftA2 (&&) (query a doc) (query b doc)
+  query (Or a b) = \doc -> liftA2 (||) (query a doc) (query b doc)
+  query (Not a) = fmap not . query a
+  query (Const b) = \_ -> return b
