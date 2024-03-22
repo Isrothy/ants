@@ -8,9 +8,10 @@ module Project.DocLoader
 where
 
 import Data.Default
+import Data.List (isPrefixOf)
 import Data.Maybe (fromMaybe)
 import qualified Data.Text as T
-import Model.Document
+import Model.Document (Document (..))
 import Parser.MarkdownWithFrontmatter
 import Path
 import Path.IO
@@ -26,8 +27,16 @@ loadDocument spec root relPath = do
   let metadata = fromMaybe (def metadata) mMetadata
   return Document {..}
 
+isHiddenDir :: Path b Dir -> Bool
+isHiddenDir dir
+  | parent dir == dir = False
+  | otherwise = ("." `isPrefixOf` toFilePath (dirname dir)) || isHiddenDir (parent dir)
+
+isHiddenFile :: Path b File -> Bool
+isHiddenFile file = "." `isPrefixOf` toFilePath (Path.filename file) || isHiddenDir (parent file)
+
 loadAllFromDirectory :: MarkdownSyntax -> Path Abs Dir -> IO [Document]
 loadAllFromDirectory spec dir = do
   (_, files) <- listDirRecurRel dir
-  let mdFiles = filter ((/= "default.md") . toFilePath . Path.filename) $ filter ((== Just ".md") . fileExtension) files
+  let mdFiles = filter (not . isHiddenFile) $ filter ((== Just ".md") . fileExtension) files
   mapM (loadDocument spec dir) mdFiles

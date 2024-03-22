@@ -75,3 +75,19 @@ spec = describe "document loading" $ sequential $ do
       bracket_ setup cleanup $ do
         docs <- loadAllFromDirectory defaultSyntaxSpec tmp
         length docs `shouldBe` 2
+
+  it "discards hidden files and directories" $ do
+    withSystemTempDir "docLoader" $ \tmp -> do
+      cur <- getCurrentDir
+      let setup = do
+            ensureDir (tmp </> $(mkRelDir "some/sub/dir"))
+            ensureDir (tmp </> $(mkRelDir "some/.hidden/sub/dir"))
+            writeFile (toFilePath (tmp </> $(mkRelFile ".test1.md"))) sampleMarkdownDoc
+            writeFile (toFilePath (tmp </> $(mkRelFile "some/.hidden/sub/dir/test2.md"))) sampleMarkdownDoc2
+            writeFile (toFilePath (tmp </> $(mkRelFile "some/sub/dir/.test2.md"))) sampleMarkdownDoc2
+            setCurrentDir tmp
+          cleanup = do
+            setCurrentDir cur
+      bracket_ setup cleanup $ do
+        docs <- loadAllFromDirectory defaultSyntaxSpec tmp
+        length docs `shouldBe` 0
