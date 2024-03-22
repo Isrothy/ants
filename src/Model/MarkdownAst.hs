@@ -20,7 +20,7 @@ module Model.MarkdownAst
     MarkdownElement (..),
     AstNode (..),
     MdNode,
-    paramaters,
+    parameters,
     sourceRange,
     attributes,
     findPlaceholders,
@@ -89,7 +89,7 @@ import Parser.Placeholder
 
 data AstNode p where
   AstNode ::
-    { _paramaters :: p,
+    { _parameters :: p,
       _sourceRange :: Maybe SourceRange,
       _attributes :: Attributes
     } ->
@@ -350,12 +350,12 @@ allNodes' f = concatMap (helper f)
     helper f node =
       case f node of
         Just x -> [x]
-        Nothing -> concatMap (allNodes' f) $ children $ node ^. paramaters
+        Nothing -> concatMap (allNodes' f) $ children $ node ^. parameters
 
 allNodes :: (MdNode -> Bool) -> MarkdownAst -> [MdNode]
 allNodes f = concatMap (helper f)
   where
-    helper f node = if f node then [node] else concatMap (allNodes f) (children $ node ^. paramaters)
+    helper f node = if f node then [node] else concatMap (allNodes f) (children $ node ^. parameters)
 
 firstNode :: (MdNode -> Bool) -> MarkdownAst -> Maybe MdNode
 firstNode f ast = listToMaybe (allNodes f ast)

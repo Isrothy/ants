@@ -14,6 +14,7 @@ module Parser.DocQuery
     description,
     content,
     task,
+    hasLink,
     completeQuery,
   )
 where
@@ -34,40 +35,23 @@ import Prelude hiding (and, any, not, or, (&&), (||))
 class HasParser a where
   parser :: Parser a
 
+spaced :: Parser a -> Parser a
+spaced = between spaces spaces
+
 parens :: Parser a -> Parser a
-parens p = do
-  _ <- char '('
-  _ <- spaces
-  res <- p
-  _ <- spaces
-  _ <- char ')'
-  return res
+parens p = between (char '(') (char ')') (spaced p)
 
 boolExpr :: (HasParser a) => Parser (BoolExpr a)
 boolExpr = orExpr
 
 notOp :: Parser (BoolExpr a -> BoolExpr a)
-notOp = do
-  _ <- spaces
-  _ <- char '!'
-  _ <- spaces
-  return Not
+notOp = spaced (char '!') $> Not
 
 orOp :: Parser (BoolExpr a -> BoolExpr a -> BoolExpr a)
-orOp = do
-  _ <- spaces
-  _ <- string "||"
-  _ <- notFollowedBy $ char '|'
-  _ <- spaces
-  return Or
+orOp = spaced (string "||" *> notFollowedBy (char '|')) $> Or
 
 andOp :: Parser (BoolExpr a -> BoolExpr a -> BoolExpr a)
-andOp = do
-  _ <- spaces
-  _ <- string "&&"
-  _ <- notFollowedBy $ char '&'
-  _ <- spaces
-  return And
+andOp = spaced (string "&&" *> notFollowedBy (char '&')) $> And
 
 orExpr :: (HasParser a) => Parser (BoolExpr a)
 orExpr = andExpr `chainl1` try orOp
@@ -76,56 +60,40 @@ andExpr :: (HasParser a) => Parser (BoolExpr a)
 andExpr = notExpr `chainl1` try andOp
 
 notExpr :: (HasParser a) => Parser (BoolExpr a)
-notExpr =
-  ( do
-      op <- notOp
-      op <$> notExpr
-  )
-    <|> simpleExpr
+notExpr = (Not <$> (notOp *> notExpr)) <|> simpleExpr
+
+prefixed :: String -> Parser a -> Parser a
+prefixed l p = string l *> p
 
 simpleExpr :: (HasParser a) => Parser (BoolExpr a)
-simpleExpr = parens boolExpr <|> (parser <&> Val)
+simpleExpr = parens boolExpr <|> (parser <&> Var)
 
 escapedChar :: Parser Char
-escapedChar = do
-  _ <- char '\\'
-  punctuation
+escapedChar = char '\\' *> punctuation
 
 punctuation :: Parser Char
 punctuation = satisfy isPunctuation
 
+quotedTerm :: Char -> (T.Text -> Term) -> Parser Term
+quotedTerm quote constructor =
+  constructor . T.pack <$> between (char quote) (char quote) (many1 (escapedChar <|> noneOf [quote]))
+
 doubleQuotedTerm :: Parser Term
-doubleQuotedTerm = do
-  _ <- char '"'
-  text <- many1 (escapedChar <|> noneOf "\"")
-  _ <- char '"'
-  return $ CaseInsensitiveTerm $ T.pack text
+doubleQuotedTerm = quotedTerm '"' CaseInsensitiveTerm
 
 singleQuotedTerm :: Parser Term
-singleQuotedTerm = do
-  _ <- char '\''
-  text <- many1 (escapedChar <|> noneOf "\'")
-  _ <- char '\''
-  return $ StrictTerm $ T.pack text
+singleQuotedTerm = quotedTerm '\'' StrictTerm
+
+regexTerm :: Parser Term
+regexTerm = quotedTerm '/' RegexTerm
+
+fuzzyTerm :: Parser Term
+fuzzyTerm = quotedTerm '~' FuzzyTerm
 
 unquotedTerm :: Parser Term
 unquotedTerm = do
   text <- many1 alphaNum
   return $ CaseInsensitiveTerm $ T.pack text
-
-regexTerm :: Parser Term
-regexTerm = do
-  _ <- char '/'
-  text <- many1 (escapedChar <|> noneOf "/")
-  _ <- char '/'
-  return $ RegexTerm $ T.pack text
-
-fuzzyTerm :: Parser Term
-fuzzyTerm = do
-  _ <- char '~'
-  text <- many1 (escapedChar <|> noneOf "~")
-  _ <- char '~'
-  return $ FuzzyTerm $ T.pack text
 
 term :: Parser Term
 term = doubleQuotedTerm <|> singleQuotedTerm <|> regexTerm <|> fuzzyTerm <|> unquotedTerm
@@ -134,89 +102,82 @@ instance HasParser Term where
   parser = term
 
 author :: Parser Query
-author = do
-  _ <- string "author:"
-  Author <$> simpleExpr
+author = Author <$> prefixed "author:" simpleExpr
 
 tag :: Parser Query
-tag = do
-  _ <- string "tag:"
-  Tag <$> simpleExpr
+tag = Tag <$> prefixed "tag:" simpleExpr
 
 description :: Parser Query
-description = do
-  _ <- string "description:"
-  Description <$> simpleExpr
+description = Description <$> prefixed "description:" simpleExpr
 
 content :: Parser Query
-content = do
-  _ <- string "content:"
-  Content <$> simpleExpr
+content = Content <$> prefixed "content:" simpleExpr
 
 task :: Parser Query
-task = do
-  _ <- string "task"
-  t <- taskType
-  Task t <$> simpleExpr
+task = Task <$> (string "task" *> taskType) <*> simpleExpr
   where
     taskType =
-      (char ':' >> return Both) <|> do
-        _ <- char '-'
-        (string "done:" >> return Done) <|> (string "todo:" >> return Todo)
+      char ':' $> Both
+        <|> char '-' *> (string "done:" $> Done <|> string "todo:" $> Todo)
 
 alert :: Parser Query
-alert = do
-  _ <- string "alert-"
-  t <- alertType
-  Alert t <$> simpleExpr
+alert = Alert <$> (string "alert-" *> alertType) <*> simpleExpr
   where
     alertType =
-      (string "note:" >> return NoteAlert)
-        <|> (string "tip:" >> return TipAlert)
-        <|> (string "important:" >> return ImportantAlert)
-        <|> (string "warning:" >> return WarningAlert)
-        <|> (string "caution:" >> return CautionAlert)
+      choice
+        [ NoteAlert <$ string "note:",
+          TipAlert <$ string "tip:",
+          ImportantAlert <$ string "important:",
+          WarningAlert <$ string "warning:",
+          CautionAlert <$ string "caution:"
+        ]
 
-day :: Parser Day
-day = do
+dayParser :: Parser Day
+dayParser = do
   input <- many (oneOf "0123456789:TZ+-WP")
-  iso8601ParseM input
+  case iso8601ParseM input of
+    Just d -> return d
+    Nothing -> parserFail "Invalid date format"
 
 date :: Parser Query
-date = do
-  _ <- string "date:"
-  range <|> singleDay
+date = prefixed "date:" (range <|> singleDay)
   where
     dayStartTime d = UTCTime d (timeOfDayToTime midnight)
     dayEndTime d = UTCTime (addDays 1 d) (timeOfDayToTime midnight)
     range = do
       _ <- char '['
-      start <- optionMaybe $ dayStartTime <$> day
+      start <- optionMaybe $ dayStartTime <$> dayParser
       _ <- char ','
-      end <- optionMaybe $ dayEndTime <$> day
+      end <- optionMaybe $ dayEndTime <$> dayParser
       _ <- char ']'
       return $ DateTimeRange start end
     singleDay = do
-      d <- day
+      d <- dayParser
       let start = Just $ dayStartTime d
       let end = Just $ dayEndTime d
       return $ DateTimeRange start end
 
+hasLink :: Parser Query
+hasLink = HasLink . T.pack <$> prefixed "has-link:" (quotedString <|> many1 (noneOf " \n"))
+
+quotedString :: Parser String
+quotedString = between (char '"') (char '"') (many1 (escapedChar <|> noneOf "\""))
+
 query :: Parser Query
 query =
-  try author
-    <|> try alert
-    <|> try content
-    <|> try description
-    <|> try date
-    <|> try task
-    <|> try tag
+  choice
+    [ try author,
+      try alert,
+      try content,
+      try description,
+      try date,
+      try hasLink,
+      try task,
+      try tag
+    ]
 
 instance HasParser Query where
   parser = query
 
 completeQuery :: Parser (BoolExpr Query)
-completeQuery = do
-  q <- boolExpr
-  _ <- eof
-  return q
+completeQuery = boolExpr <* eof

@@ -64,7 +64,7 @@ replacePlaceholders exts t lookupTable =
         ( sortBy
             posReverse
             ( map
-                (\node -> (node ^. (paramaters . text), fromJust (node ^. sourceRange)))
+                (\node -> (node ^. (parameters . text), fromJust (node ^. sourceRange)))
                 (findPlaceholders ast)
             )
         )

@@ -94,7 +94,7 @@ configWithWikilink =
 hoverSpec :: Spec
 hoverSpec = describe "Lsp Hover" $ sequential $ do
   it "do not hover on none link" $ do
-    withSystemTempDir "docLoader" $ \tmp -> do
+    withSystemTempDir "LspHover" $ \tmp -> do
       cur <- getCurrentDir
       let setup = do
             setCurrentDir tmp
@@ -112,7 +112,7 @@ hoverSpec = describe "Lsp Hover" $ sequential $ do
               pure ()
 
   it "hover on link" $ do
-    withSystemTempDir "docLoader" $ \tmp -> do
+    withSystemTempDir "LspHover" $ \tmp -> do
       cur <- getCurrentDir
       let setup = do
             setCurrentDir tmp
@@ -130,7 +130,7 @@ hoverSpec = describe "Lsp Hover" $ sequential $ do
               pure ()
 
   it "respects config" $ do
-    withSystemTempDir "docLoader" $ \tmp -> do
+    withSystemTempDir "LspHover" $ \tmp -> do
       cur <- getCurrentDir
       let setup = do
             setCurrentDir tmp
@@ -149,7 +149,7 @@ hoverSpec = describe "Lsp Hover" $ sequential $ do
               pure ()
 
   it "hover on wiki-link" $ do
-    withSystemTempDir "docLoader" $ \tmp -> do
+    withSystemTempDir "LspHover" $ \tmp -> do
       cur <- getCurrentDir
       let setup = do
             setCurrentDir tmp

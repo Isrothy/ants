@@ -155,7 +155,7 @@ linkFromUriFile spec origUri pos = do
     rg <- do
       sr <- ele ^. sourceRange
       listToMaybe $ sourceRangeToRange origFile sr
-    return (rg, T.unpack filePath, mtag)
+    return (rg, filePath, mtag)
 
 linkedFile ::
   MarkdownSyntax ->
@@ -268,7 +268,7 @@ completionHandler =
                   displayFrontMatter = fmtLn ("```yaml\n" +| TE.decodeUtf8With TEE.lenientDecode (encodePretty defConfig mfrontMatter) |+ "\n```\n")
                   displayContent = fmtLn ("Line: " +| lineNr |+ "\n\n" +| T.joinLines (take lineCount $ drop (lineNr - 1) lines) |+ "")
                in displayPath <> displayFrontMatter <> displayContent
-        let headerToItem :: MdNode  -> Maybe LSP.CompletionItem
+        let headerToItem :: MdNode -> Maybe LSP.CompletionItem
             headerToItem (AstNode (Header (HeaderParams _ _)) msr attrs) = do
               label <- lookup "id" attrs
               sr <- msr

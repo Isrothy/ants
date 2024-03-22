@@ -141,73 +141,73 @@ booleanTerms = describe "BooleanTerm Tests" $ parallel $ do
   describe "Or Operation Tests" $ do
     let doc = "Document with term Haskell but not Ruby"
     it "matches when at least one term is present" $ do
-      match (Val (StrictTerm "Haskell") `Or` Val (StrictTerm "Ruby")) doc `shouldBe` True
+      match (Var (StrictTerm "Haskell") `Or` Var (StrictTerm "Ruby")) doc `shouldBe` True
     it "does not match when neither term is present" $ do
-      match (Val (StrictTerm "Java") `Or` Val (StrictTerm "C++")) doc `shouldBe` False
+      match (Var (StrictTerm "Java") `Or` Var (StrictTerm "C++")) doc `shouldBe` False
 
   describe "And Operation Tests" $ do
     let doc = "Document with terms Haskell and Parsing"
     it "matches when both terms are present" $ do
-      match (Val (StrictTerm "Haskell") `And` Val (StrictTerm "Parsing")) doc `shouldBe` True
+      match (Var (StrictTerm "Haskell") `And` Var (StrictTerm "Parsing")) doc `shouldBe` True
     it "does not match when one term is absent" $ do
-      match (Val (StrictTerm "Haskell") `And` Val (StrictTerm "Nonexistent")) doc `shouldBe` False
+      match (Var (StrictTerm "Haskell") `And` Var (StrictTerm "Nonexistent")) doc `shouldBe` False
 
   describe "Not Operation Tests" $ do
     let doc = "Document without the term Ruby"
     it "matches when the term is absent" $ do
-      match (Not $ Val $ StrictTerm "Ruby") doc `shouldBe` False
+      match (Not $ Var $ StrictTerm "Ruby") doc `shouldBe` False
     it "does not match when the term is present" $ do
-      match (Not $ Val $ StrictTerm "Haskell") doc `shouldBe` True
+      match (Not $ Var $ StrictTerm "Haskell") doc `shouldBe` True
 
   describe "Nested And-Or Operations" $ do
     let doc = "Advanced document featuring Haskell, Scala, and functional programming concepts."
 
     it "matches complex nested And-Or conditions" $ do
-      let term1 = And (Val (StrictTerm "Haskell")) (Val (StrictTerm "Scala"))
-      let term2 = Or (Val (StrictTerm "functional")) (Val (StrictTerm "imperative"))
+      let term1 = And (Var (StrictTerm "Haskell")) (Var (StrictTerm "Scala"))
+      let term2 = Or (Var (StrictTerm "functional")) (Var (StrictTerm "imperative"))
       match (And term1 term2) doc `shouldBe` True
 
     it "does not match if one of the nested conditions fails" $ do
-      let term1 = And (Val (StrictTerm "Haskell")) (Val (StrictTerm "Ruby"))
-      let term2 = Or (Val (StrictTerm "functional")) (Val (StrictTerm "imperative"))
+      let term1 = And (Var (StrictTerm "Haskell")) (Var (StrictTerm "Ruby"))
+      let term2 = Or (Var (StrictTerm "functional")) (Var (StrictTerm "imperative"))
       match (And term1 term2) doc `shouldBe` False
 
   describe "Complex Nested Not Operations" $ do
     let doc = "This document covers Haskell and functional programming but not OOP."
 
     it "matches with nested Not operations" $ do
-      let term = Not (Val (StrictTerm "Java") `Or` Not (Val (StrictTerm "OOP")))
+      let term = Not (Var (StrictTerm "Java") `Or` Not (Var (StrictTerm "OOP")))
       match term doc `shouldBe` True
 
     it "does not match if the nested Not condition is true" $ do
-      let term = Not (Val (StrictTerm "OOP") `Or` Not (Val (StrictTerm "Haskell")))
+      let term = Not (Var (StrictTerm "OOP") `Or` Not (Var (StrictTerm "Haskell")))
       match term doc `shouldBe` False
 
   describe "Boolean Combinations with Case Insensitivity" $ do
     let doc = "Document discussing PYTHON, java, and Ruby programming languages."
 
     it "matches mixed case terms with Or operation" $ do
-      let term1 = Val $ CaseInsensitiveTerm "python"
-      let term2 = Val $ CaseInsensitiveTerm "java"
-      let term3 = Val $ CaseInsensitiveTerm "ruby"
+      let term1 = Var $ CaseInsensitiveTerm "python"
+      let term2 = Var $ CaseInsensitiveTerm "java"
+      let term3 = Var $ CaseInsensitiveTerm "ruby"
       match (Or term1 (Or term2 term3)) doc `shouldBe` True
 
     it "does not match if none of the case-insensitive terms are present" $ do
-      let term1 = Val $ CaseInsensitiveTerm "c++"
-      let term2 = Val $ CaseInsensitiveTerm "haskell"
+      let term1 = Var $ CaseInsensitiveTerm "c++"
+      let term2 = Var $ CaseInsensitiveTerm "haskell"
       match (Or term1 term2) doc `shouldBe` False
 
   describe "Mixed Fuzzy and Regex with Boolean Operations" $ do
     let doc = "Exploring various programming paradigms, including OOP, functional, and procedural."
 
     it "matches a combination of fuzzy and regex terms with And operation" $ do
-      let term1 = Val $ FuzzyTerm "paradigm"
-      let term2 = Val $ RegexTerm "OOP|functional|procedural"
+      let term1 = Var $ FuzzyTerm "paradigm"
+      let term2 = Var $ RegexTerm "OOP|functional|procedural"
       match (And term1 term2) doc `shouldBe` True
 
     it "does not match if the regex term fails in And operation" $ do
-      let term1 = Val $ FuzzyTerm "paradigm"
-      let term2 = Val $ RegexTerm "machine learning"
+      let term1 = Var $ FuzzyTerm "paradigm"
+      let term2 = Var $ RegexTerm "machine learning"
       match (And term1 term2) doc `shouldBe` False
 
 spec :: Spec
