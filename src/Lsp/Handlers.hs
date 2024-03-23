@@ -217,7 +217,6 @@ textDocumentReferencesHandler =
                   let links = linksTo root path ast (toFilePath origPath, Just id)
                       refs = fmap (map (\_ -> LSP.Location uri (LSP.mkRange 0 0 0 0))) links
                    in liftLSP $ liftIO refs
-
         MaybeT $ Just <$> concatMapM referenceFromLocalDoc docs
       respond $ Right $ LSP.InL $ fromMaybe [] items
 
