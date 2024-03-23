@@ -25,9 +25,9 @@ import Commonmark.Types (sourceLine)
 import Control.Conditional (guard)
 import Control.Lens (use, (.=), (^.))
 import Control.Monad (unless)
-import Control.Monad.RWS
+import Control.Monad.RWS (MonadIO (liftIO), MonadTrans (lift))
 import Control.Monad.Trans.Except
-import Control.Monad.Trans.Maybe (MaybeT (MaybeT, runMaybeT), exceptToMaybeT, maybeToExceptT)
+import Control.Monad.Trans.Maybe
 import Data.Default
 import Data.Maybe
 import Data.Text qualified as T
