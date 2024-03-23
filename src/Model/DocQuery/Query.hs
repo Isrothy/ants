@@ -12,6 +12,7 @@ where
 
 import Commonmark hiding (plain)
 import Commonmark.Extensions (AlertType)
+import Control.Applicative (liftA2)
 import Control.Lens ((^.))
 import Control.Monad.Extra
 import Control.Monad.RWS
