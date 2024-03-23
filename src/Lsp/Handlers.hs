@@ -211,11 +211,14 @@ textDocumentReferencesHandler =
               let mAst = case mvfile of
                     Just vfile -> snd $ markdownWithFrontmatter spec (toFilePath path) (VFS.virtualFileText vfile)
                     Nothing -> ast doc
+              let toRange sr = head case mvfile of
+                    Just vfile -> sourceRangeToRange vfile sr
+                    Nothing -> sourceRangeToRangeT (text doc) sr
               case mAst of
                 Nothing -> return []
                 Just ast ->
                   let links = linksTo root path ast (toFilePath origPath, Just id)
-                      refs = fmap (map (\_ -> LSP.Location uri (LSP.mkRange 0 0 0 0))) links
+                      refs = fmap (map (LSP.Location uri . toRange)) links
                    in liftLSP $ liftIO refs
         MaybeT $ Just <$> concatMapM referenceFromLocalDoc docs
       respond $ Right $ LSP.InL $ fromMaybe [] items
