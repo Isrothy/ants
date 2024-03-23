@@ -4,6 +4,7 @@
 module Project.DocLoader
   ( loadDocument,
     loadAllFromDirectory,
+    isHiddenFile,
   )
 where
 
@@ -19,12 +20,12 @@ import Path.IO
 loadDocument :: MarkdownSyntax -> Path Abs Dir -> Path Rel File -> IO Document
 loadDocument spec root relPath = do
   let absPath = root </> relPath
-  lastAccessed <- getAccessTime absPath
-  lastModified <- getModificationTime absPath
+  lastAccessed <- Just <$> getAccessTime absPath
+  lastModified <- Just <$> getModificationTime absPath
   text <- T.pack <$> readFile (toFilePath absPath)
   let filename = toFilePath (Path.filename absPath)
   let (mMetadata, ast) = markdownWithFrontmatter spec filename text
-  let metadata = fromMaybe (def metadata) mMetadata
+  let metadata = fromMaybe def mMetadata
   return Document {..}
 
 isHiddenDir :: Path b Dir -> Bool

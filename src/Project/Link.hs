@@ -14,6 +14,7 @@ module Project.Link
     parseLink,
     findHeaderWithId,
     hasLinkTo,
+    linksTo,
   )
 where
 
@@ -89,16 +90,23 @@ findBookmarkLine bookmark ast = do
     _ -> Nothing
 
 hasLinkTo :: Path Abs Dir -> Path Abs File -> MarkdownAst -> (FilePath, Maybe Bookmark) -> IO Bool
-hasLinkTo root orig ast (targetFilePath, targetTag) = do
+hasLinkTo root orig ast target = linksTo root orig ast target <&> (not . null)
+
+linksTo :: Path Abs Dir -> Path Abs File -> MarkdownAst -> (FilePath, Maybe Bookmark) -> IO [SourceRange]
+linksTo root orig ast (targetFilePath, targetTag) = do
   result <- runMaybeT $ do
     targetAbsPath <- MaybeT $ return $ parseAbsOrRelFile root targetFilePath
+    let links = map (\x -> (x ^. (parameters . target), x ^. sourceRange)) (findLinks ast)
+    let wikiLinks = map (\x -> (x ^. (parameters . target), x ^. sourceRange)) (findWikiLinks ast)
     lift $
-      anyM
-        ( \link -> case parseLink link of
-            Nothing -> return False
+      concatMapM
+        ( \(tar, sr) -> case parseLink tar of
+            Nothing -> return []
             Just (thisFilePath, thisTag) -> do
               t <- resolveLinkInFile orig thisFilePath
-              return $ t == Just targetAbsPath && (isNothing targetTag || thisTag == targetTag)
+              if t == Just targetAbsPath && (isNothing targetTag || thisTag == targetTag)
+                then return $ maybeToList sr
+                else return []
         )
-        (map (^. parameters . target) (findLinks ast))
-  return $ fromMaybe False result
+        (links ++ wikiLinks)
+  return $ fromMaybe [] result
