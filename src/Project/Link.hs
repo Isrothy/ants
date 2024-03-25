@@ -41,7 +41,7 @@ import System.FilePath hiding ((</>))
 type Bookmark = T.Text
 
 findHeaderWithId :: T.Text -> MarkdownAst -> Maybe (AstNode (HeaderParams MarkdownAst))
-findHeaderWithId id ast = find (\node -> lookup "id" (node ^. attributes) == Just id) (findHaders ast)
+findHeaderWithId id ast = find (\node -> lookup "id" (node ^. attributes) == Just id) (findHeaders ast)
 
 isLink :: MdNode -> Bool
 isLink (AstNode (Link {}) _ _) = True

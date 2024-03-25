@@ -33,6 +33,7 @@ dependencies:
   - extra
   - filepath
   - fmt
+  - graphviz
   - lens
   - loop
   - lsp
