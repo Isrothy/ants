@@ -7,6 +7,7 @@ module Lsp.Handlers.Definition
   )
 where
 
+import Control.Applicative
 import Control.Lens (use, (.=), (^.))
 import Control.Monad.RWS (lift)
 import Control.Monad.Trans.Except
@@ -21,6 +22,8 @@ import Lsp.Handlers.Util
 import Lsp.State
 import Lsp.Util
 import Model.Document (Document (..))
+import Model.MarkdownAst
+import Model.MarkdownAst.Lenses (block)
 import Model.Metadata
 import Parser.Markdown
 import Parser.MarkdownWithFrontmatter
@@ -41,13 +44,15 @@ data DefinitionAnalysisResult where
     LSP.Range ->
     (Either LinkException LinkResult) ->
     DefinitionAnalysisResult
+  IsFootnote ::
+    LSP.Range -> DefinitionAnalysisResult
 
-definitionAnalysis ::
+linkAnalysis ::
   MarkdownSyntax ->
   LSP.Uri ->
   LSP.Position ->
   LSP.LspT ServerConfig IO (Maybe DefinitionAnalysisResult)
-definitionAnalysis spec origUri pos = do
+linkAnalysis spec origUri pos = do
   runMaybeT $ do
     origFile <- MaybeT $ LSP.getVirtualFile (LSP.toNormalizedUri origUri)
     origPath <- MaybeT $ return $ uriToFile origUri
@@ -75,6 +80,40 @@ definitionAnalysis spec origUri pos = do
                 (ast doc >>= findBookmarkLine bookmark)
     return $ IsLink rg ret
 
+footnoteAnalysis ::
+  MarkdownSyntax ->
+  LSP.Uri ->
+  LSP.Position ->
+  LSP.LspT ServerConfig IO (Maybe DefinitionAnalysisResult)
+footnoteAnalysis spec origUri pos = do
+  runMaybeT $ do
+    origFile <- MaybeT $ LSP.getVirtualFile (LSP.toNormalizedUri origUri)
+    origPath <- MaybeT $ return $ uriToFile origUri
+    dataPointPos <- MaybeT $ return $ VFS.positionToCodePointPosition origFile pos
+    let l = dataPointPos ^. VFS.line + 1
+        c = dataPointPos ^. VFS.character + 1
+    origAst <-
+      MaybeT $
+        return $
+          snd $
+            markdownWithFrontmatter spec (toFilePath origPath) $
+              VFS.virtualFileText origFile
+    footnoteRef <- MaybeT $ return $ footnoteRefAt l c origAst
+    bl <- MaybeT $ return $ listToMaybe $ footnoteRef ^. (parameters . block)
+    sr <- MaybeT $ return $ bl ^. sourceRange
+    rg <- MaybeT $ return $ listToMaybe $ sourceRangeToRange origFile sr
+    return $ IsFootnote rg
+
+definitionAnalysis ::
+  MarkdownSyntax ->
+  LSP.Uri ->
+  LSP.Position ->
+  LSP.LspT ServerConfig IO (Maybe DefinitionAnalysisResult)
+definitionAnalysis spec origUri pos = do
+  link <- linkAnalysis spec origUri pos
+  footnote <- footnoteAnalysis spec origUri pos
+  return $ link <|> footnote
+
 textDocumentDefinitionHandler :: LSP.Handlers HandlerM
 textDocumentDefinitionHandler =
   LSP.requestHandler LSP.SMethod_TextDocumentDefinition \request respond -> do
@@ -94,3 +133,4 @@ textDocumentDefinitionHandler =
                   BookmarkNotFound -> LSP.mkRange 0 0 1 0
              in respond $ Right $ LSP.InL $ LSP.Definition $ LSP.InL $ LSP.Location uri rg
           _ -> respond $ Right $ LSP.InR $ LSP.InR LSP.Null
+        Just (IsFootnote rg) -> respond $ Right $ LSP.InL $ LSP.Definition $ LSP.InL $ LSP.Location origUri rg

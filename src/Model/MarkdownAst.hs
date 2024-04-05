@@ -30,6 +30,7 @@ module Model.MarkdownAst
     findAlerts,
     findHaders,
     headerAt,
+    footnoteRefAt,
     allNodes,
     firstNode,
     nodeAt,
@@ -116,7 +117,7 @@ data MarkdownElement where
   EscapedChar :: EscapedCharParams -> MarkdownElement
   Footnote :: (FootnoteParams MarkdownAst MarkdownAst) -> MarkdownElement
   FootnoteList :: (FootnoteListParams MarkdownAst MarkdownAst) -> MarkdownElement
-  FootnoteRef :: (FootnoteRefParams MarkdownAst) -> MarkdownElement
+  FootnoteRef :: (FootnoteRefParams MarkdownAst MarkdownAst) -> MarkdownElement
   Header :: (HeaderParams MarkdownAst) -> MarkdownElement
   Highlight :: (HighlightParams MarkdownAst) -> MarkdownElement
   HorizontalRule :: HorizontalRuleParams -> MarkdownElement
@@ -217,7 +218,7 @@ instance HasWikilinks MarkdownAst where
 instance HasFootnote MarkdownAst MarkdownAst where
   footnote num label bl = rawNode $ Footnote $ FootnoteParams num label bl
   footnoteList items = rawNode $ FootnoteList $ FootnoteListParams items
-  footnoteRef num label bl = rawNode $ FootnoteRef $ FootnoteRefParams num label bl
+  footnoteRef href label bl = rawNode $ FootnoteRef $ FootnoteRefParams href label bl
 
 instance HasQuoted MarkdownAst where
   singleQuoted = rawNode . SingleQuoted . SingleQuotedParams
@@ -410,4 +411,9 @@ findHaders = allNodes' \case
 headerAt :: (Integral i) => i -> i -> MarkdownAst -> Maybe (AstNode (HeaderParams MarkdownAst))
 headerAt = nodeAt' \case
   (AstNode (Header params) sr attr) -> Just (AstNode params sr attr)
+  _ -> Nothing
+
+footnoteRefAt :: (Integral i) => i -> i -> MarkdownAst -> Maybe (AstNode (FootnoteRefParams MarkdownAst MarkdownAst))
+footnoteRefAt = nodeAt' \case
+  (AstNode (FootnoteRef params) sr attr) -> Just (AstNode params sr attr)
   _ -> Nothing
