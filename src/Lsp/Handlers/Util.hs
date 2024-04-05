@@ -16,11 +16,9 @@ import Control.Monad.IO.Class
 import Control.Monad.Trans.Except
 import Control.Monad.Trans.Maybe
 import Data.Text qualified as T
--- import Language.LSP.Protocol.Lens
 import Language.LSP.Protocol.Message qualified as LSP
 import Language.LSP.Protocol.Types qualified as LSP
 import Language.LSP.Server qualified as LSP
-import Language.LSP.VFS qualified as VFS
 import Lsp.State
 import Lsp.Util
 import Model.Document

@@ -40,7 +40,12 @@ textDocumentReferencesHandler =
         dataPointPos <- MaybeT $ return $ VFS.positionToCodePointPosition origFile pos
         let l = dataPointPos ^. VFS.line + 1
             c = dataPointPos ^. VFS.character + 1
-        origAst <- MaybeT $ return $ snd $ markdownWithFrontmatter spec (toFilePath origPath) $ VFS.virtualFileText origFile
+        origAst <-
+          MaybeT $
+            return $
+              snd $
+                markdownWithFrontmatter spec (toFilePath origPath) $
+                  VFS.virtualFileText origFile
         header <- MaybeT $ return $ headerAt l c origAst
         id <- MaybeT $ return $ lookup "id" (header ^. attributes)
         docs <- liftIO $ loadAllFromDirectory spec root
@@ -49,7 +54,9 @@ textDocumentReferencesHandler =
               let uri = LSP.filePathToUri $ toFilePath path
               mvfile <- liftLSP $ LSP.getVirtualFile $ LSP.toNormalizedUri uri
               let mAst = case mvfile of
-                    Just vfile -> snd $ markdownWithFrontmatter spec (toFilePath path) (VFS.virtualFileText vfile)
+                    Just vfile ->
+                      snd $
+                        markdownWithFrontmatter spec (toFilePath path) (VFS.virtualFileText vfile)
                     Nothing -> ast doc
               let toRange sr = head case mvfile of
                     Just vfile -> sourceRangeToRange vfile sr

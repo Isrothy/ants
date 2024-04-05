@@ -54,7 +54,12 @@ definitionAnalysis spec origUri pos = do
     dataPointPos <- MaybeT $ return $ VFS.positionToCodePointPosition origFile pos
     let l = dataPointPos ^. VFS.line + 1
         c = dataPointPos ^. VFS.character + 1
-    origAst <- MaybeT $ return $ snd $ markdownWithFrontmatter spec (toFilePath origPath) $ VFS.virtualFileText origFile
+    origAst <-
+      MaybeT $
+        return $
+          snd $
+            markdownWithFrontmatter spec (toFilePath origPath) $
+              VFS.virtualFileText origFile
     (sr, targetFilePath, mbookmark) <- MaybeT $ return $ linkFromAst origAst (l, c)
     rg <- MaybeT $ return $ listToMaybe $ sourceRangeToRange origFile sr
     ret <- lift $ runExceptT $ do

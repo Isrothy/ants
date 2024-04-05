@@ -17,6 +17,7 @@ module Lsp.Handlers.Hover
 where
 
 import Control.Lens (use, (.=), (^.))
+import Control.Monad.RWS (lift)
 import Control.Monad.Trans.Except
 import Control.Monad.Trans.Maybe
 import Data.Maybe
@@ -40,7 +41,6 @@ import Parser.Markdown
 import Parser.MarkdownWithFrontmatter
 import Path
 import Project.Link
-import Control.Monad.RWS (lift)
 
 formatLinkException :: LinkException -> T.Text
 formatLinkException TargetNotFound = "**ERROR**: Target Not Found"
@@ -56,11 +56,11 @@ data LinkResult where
     } ->
     LinkResult
 
-data DefinitionAnalysisResult where
+data HoverAnalysisResult where
   IsLink ::
     LSP.Range ->
     (Either LinkException LinkResult) ->
-    DefinitionAnalysisResult
+    HoverAnalysisResult
 
 formatLinkResult :: LinkResult -> T.Text
 formatLinkResult (LinkResult path frontMatter targetText bookmarkResult) =
@@ -83,19 +83,24 @@ formatLinkResult (LinkResult path frontMatter targetText bookmarkResult) =
           <> ":\n\n"
           <> B.fromText (T.joinLines $ take lineCount $ drop (ln - 1) $ T.splitLines targetText)
 
-definitionAnalysis ::
+hoverAnalysis ::
   MarkdownSyntax ->
   LSP.Uri ->
   LSP.Position ->
-  LSP.LspT ServerConfig IO (Maybe DefinitionAnalysisResult)
-definitionAnalysis spec origUri pos = do
+  LSP.LspT ServerConfig IO (Maybe HoverAnalysisResult)
+hoverAnalysis spec origUri pos = do
   runMaybeT $ do
     origFile <- MaybeT $ LSP.getVirtualFile (LSP.toNormalizedUri origUri)
     origPath <- MaybeT $ return $ uriToFile origUri
     dataPointPos <- MaybeT $ return $ VFS.positionToCodePointPosition origFile pos
     let l = dataPointPos ^. VFS.line + 1
         c = dataPointPos ^. VFS.character + 1
-    origAst <- MaybeT $ return $ snd $ markdownWithFrontmatter spec (toFilePath origPath) $ VFS.virtualFileText origFile
+    origAst <-
+      MaybeT $
+        return $
+          snd $
+            markdownWithFrontmatter spec (toFilePath origPath) $
+              VFS.virtualFileText origFile
     (sr, targetFilePath, mbookmark) <- MaybeT $ return $ linkFromAst origAst (l, c)
     rg <- MaybeT $ return $ listToMaybe $ sourceRangeToRange origFile sr
     ret <- lift $ runExceptT $ do
@@ -118,7 +123,7 @@ textDocumentHoverHandler =
       let LSP.TRequestMessage _ _ _ (LSP.HoverParams doc pos _) = request
           LSP.TextDocumentIdentifier origUri = doc
       spec <- use markdownSyntaxSpec
-      ret <- liftLSP $ definitionAnalysis spec origUri pos
+      ret <- liftLSP $ hoverAnalysis spec origUri pos
       case ret of
         Nothing -> respond $ Right $ LSP.InR LSP.Null
         Just (IsLink rg linkResult) ->

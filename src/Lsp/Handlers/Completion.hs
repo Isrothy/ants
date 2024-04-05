@@ -29,7 +29,6 @@ import Data.Text.Encoding.Error qualified as TEE
 import Data.Text.LineBreaker qualified as T
 import Data.Yaml.Pretty (defConfig, encodePretty)
 import Fmt
-import Language.LSP.Protocol.Lens qualified as LSP
 import Language.LSP.Protocol.Message qualified as LSP
 import Language.LSP.Protocol.Types qualified as LSP
 import Language.LSP.Server qualified as LSP
@@ -57,7 +56,12 @@ completionHandler =
         dataPointPos <- MaybeT $ return $ VFS.positionToCodePointPosition origFile pos
         let l = dataPointPos ^. VFS.line + 1
             c = dataPointPos ^. VFS.character + 1
-        origAst <- MaybeT $ return $ snd $ markdownWithFrontmatter spec (toFilePath origPath) $ VFS.virtualFileText origFile
+        origAst <-
+          MaybeT $
+            return $
+              snd $
+                markdownWithFrontmatter spec (toFilePath origPath) $
+                  VFS.virtualFileText origFile
         (_, filepath, bookmark) <- MaybeT $ return $ linkFromAst origAst (l, c)
         guard $ bookmark == Just ""
         let path = fromJust (uriToFile origUri)
