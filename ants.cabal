@@ -33,6 +33,12 @@ library
       Data.Text.LineBreaker
       Lib
       Lsp.Handlers
+      Lsp.Handlers.Completion
+      Lsp.Handlers.Definition
+      Lsp.Handlers.Hover
+      Lsp.Handlers.Initialized
+      Lsp.Handlers.Reference
+      Lsp.Handlers.Util
       Lsp.Server
       Lsp.State
       Lsp.Util
