@@ -23,7 +23,7 @@ import Lsp.State
 import Lsp.Util
 import Model.Document (Document (..))
 import Model.MarkdownAst
-import Model.MarkdownAst.Lenses (block)
+import Model.MarkdownAst.Lenses (block, label, listItems)
 import Model.Metadata
 import Parser.Markdown
 import Parser.MarkdownWithFrontmatter
@@ -99,8 +99,9 @@ footnoteAnalysis spec origUri pos = do
             markdownWithFrontmatter spec (toFilePath origPath) $
               VFS.virtualFileText origFile
     footnoteRef <- MaybeT $ return $ footnoteRefAt l c origAst
-    bl <- MaybeT $ return $ listToMaybe $ footnoteRef ^. (parameters . block)
-    sr <- MaybeT $ return $ bl ^. sourceRange
+    let bl = footnoteRef ^. (parameters . block)
+    let findSr = firstNode' (^. sourceRange)
+    sr <- MaybeT $ return $ findSr bl
     rg <- MaybeT $ return $ listToMaybe $ sourceRangeToRange origFile sr
     return $ IsFootnote rg
 

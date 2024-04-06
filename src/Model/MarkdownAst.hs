@@ -29,6 +29,7 @@ module Model.MarkdownAst
     findTasks,
     findAlerts,
     findHaders,
+    findFootnoteList,
     headerAt,
     footnoteRefAt,
     allNodes,
@@ -406,6 +407,11 @@ findAlerts = allNodes' \case
 findHaders :: MarkdownAst -> [AstNode (HeaderParams MarkdownAst)]
 findHaders = allNodes' \case
   (AstNode (Header params) sr attr) -> Just (AstNode params sr attr)
+  _ -> Nothing
+
+findFootnoteList :: MarkdownAst -> [AstNode (FootnoteListParams MarkdownAst MarkdownAst)]
+findFootnoteList = allNodes' \case
+  (AstNode (FootnoteList params) sr attr) -> Just (AstNode params sr attr)
   _ -> Nothing
 
 headerAt :: (Integral i) => i -> i -> MarkdownAst -> Maybe (AstNode (HeaderParams MarkdownAst))

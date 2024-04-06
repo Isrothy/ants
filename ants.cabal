@@ -59,7 +59,6 @@ library
       Model.MarkdownAst.Lenses.HasEmoji
       Model.MarkdownAst.Lenses.HasFormat
       Model.MarkdownAst.Lenses.HasHeaders
-      Model.MarkdownAst.Lenses.HasHref
       Model.MarkdownAst.Lenses.HasInline
       Model.MarkdownAst.Lenses.HasLabel
       Model.MarkdownAst.Lenses.HasLanguage

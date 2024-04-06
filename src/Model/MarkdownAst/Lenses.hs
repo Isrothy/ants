@@ -9,7 +9,6 @@ module Model.MarkdownAst.Lenses
     HasFormat (..),
     HasHeaders (..),
     HasInline (..),
-    HasHref (..),
     HasLabel (..),
     HasLanguage (..),
     HasLevel (..),
@@ -34,7 +33,6 @@ import Model.MarkdownAst.Lenses.HasDefListItems
 import Model.MarkdownAst.Lenses.HasEmoji
 import Model.MarkdownAst.Lenses.HasFormat
 import Model.MarkdownAst.Lenses.HasHeaders
-import Model.MarkdownAst.Lenses.HasHref
 import Model.MarkdownAst.Lenses.HasInline
 import Model.MarkdownAst.Lenses.HasLabel
 import Model.MarkdownAst.Lenses.HasLanguage
