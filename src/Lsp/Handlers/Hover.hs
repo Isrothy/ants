@@ -10,12 +10,14 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# OPTIONS_GHC -Wno-type-defaults #-}
 
 module Lsp.Handlers.Hover
   ( textDocumentHoverHandler,
   )
 where
 
+import Control.Applicative ((<|>))
 import Control.Lens (use, (.=), (^.))
 import Control.Monad.RWS (lift)
 import Control.Monad.Trans.Except
@@ -28,6 +30,7 @@ import Data.Text.Lazy qualified as TL
 import Data.Text.Lazy.Builder qualified as B
 import Data.Text.LineBreaker qualified as T
 import Data.Yaml.Pretty (defConfig, encodePretty)
+import Language.LSP.Protocol.Lens (HasLine (line), HasStart (start))
 import Language.LSP.Protocol.Message qualified as LSP
 import Language.LSP.Protocol.Types qualified as LSP
 import Language.LSP.Server qualified as LSP
@@ -36,6 +39,8 @@ import Lsp.Handlers.Util
 import Lsp.State
 import Lsp.Util
 import Model.Document (Document (..))
+import Model.MarkdownAst
+import Model.MarkdownAst.Lenses (HasBlock (..))
 import Model.Metadata
 import Parser.Markdown
 import Parser.MarkdownWithFrontmatter
@@ -56,11 +61,20 @@ data LinkResult where
     } ->
     LinkResult
 
+data FootnoteResult where
+  FootnoteResult ::
+    { _range :: LSP.Range,
+      _footnoteText :: T.Text
+    } ->
+    FootnoteResult
+
 data HoverAnalysisResult where
   IsLink ::
     LSP.Range ->
     (Either LinkException LinkResult) ->
     HoverAnalysisResult
+  IsFootnote ::
+    LSP.Range -> FootnoteResult -> HoverAnalysisResult
 
 formatLinkResult :: LinkResult -> T.Text
 formatLinkResult (LinkResult path frontMatter targetText bookmarkResult) =
@@ -83,12 +97,15 @@ formatLinkResult (LinkResult path frontMatter targetText bookmarkResult) =
           <> ":\n\n"
           <> B.fromText (T.joinLines $ take lineCount $ drop (ln - 1) $ T.splitLines targetText)
 
-hoverAnalysis ::
+formatFootnoteResult :: FootnoteResult -> T.Text
+formatFootnoteResult (FootnoteResult rg t) = "From line " <> T.pack (show (fromIntegral $ rg ^. (start . line))) <> ":\n" <> t
+
+linkAnalysis ::
   MarkdownSyntax ->
   LSP.Uri ->
   LSP.Position ->
   LSP.LspT ServerConfig IO (Maybe HoverAnalysisResult)
-hoverAnalysis spec origUri pos = do
+linkAnalysis spec origUri pos = do
   runMaybeT $ do
     origFile <- MaybeT $ LSP.getVirtualFile (LSP.toNormalizedUri origUri)
     origPath <- MaybeT $ return $ uriToFile origUri
@@ -116,6 +133,45 @@ hoverAnalysis spec origUri pos = do
                 (ast doc >>= findBookmarkLine bookmark)
     return $ IsLink rg ret
 
+footnoteAnalysis ::
+  MarkdownSyntax ->
+  LSP.Uri ->
+  LSP.Position ->
+  LSP.LspT ServerConfig IO (Maybe HoverAnalysisResult)
+footnoteAnalysis spec origUri pos = do
+  runMaybeT $ do
+    origFile <- MaybeT $ LSP.getVirtualFile (LSP.toNormalizedUri origUri)
+    origPath <- MaybeT $ return $ uriToFile origUri
+    dataPointPos <- MaybeT $ return $ VFS.positionToCodePointPosition origFile pos
+    let l = dataPointPos ^. VFS.line + 1
+        c = dataPointPos ^. VFS.character + 1
+    origAst <-
+      MaybeT $
+        return $
+          snd $
+            markdownWithFrontmatter spec (toFilePath origPath) $
+              VFS.virtualFileText origFile
+    footnoteRef <- MaybeT $ return $ footnoteRefAt l c origAst
+    let bl = footnoteRef ^. (parameters . block)
+    let findSr = firstNode' (^. sourceRange)
+    targetSr <- MaybeT $ return $ findSr bl
+    sr <- MaybeT $ return $ footnoteRef ^. sourceRange
+    rg <- MaybeT $ return $ listToMaybe $ sourceRangeToRange origFile sr
+    targetRg <- MaybeT $ return $ listToMaybe $ sourceRangeToRange origFile targetSr
+    let ln = fromIntegral $ targetRg ^. (start . line)
+    let origText = VFS.virtualFileText origFile
+    return $ IsFootnote rg $ FootnoteResult targetRg $ T.joinLines $ take 5 $ drop ln $ T.splitLines origText
+
+hoverAnalysis ::
+  MarkdownSyntax ->
+  LSP.Uri ->
+  LSP.Position ->
+  LSP.LspT ServerConfig IO (Maybe HoverAnalysisResult)
+hoverAnalysis spec origUri pos = do
+  link <- linkAnalysis spec origUri pos
+  footnote <- footnoteAnalysis spec origUri pos
+  return $ link <|> footnote
+
 textDocumentHoverHandler :: LSP.Handlers HandlerM
 textDocumentHoverHandler =
   LSP.requestHandler LSP.SMethod_TextDocumentHover \request respond ->
@@ -133,3 +189,5 @@ textDocumentHoverHandler =
                 LSP.Hover
                   (LSP.InL $ LSP.mkMarkdown $ either formatLinkException formatLinkResult linkResult)
                   (Just rg)
+        Just (IsFootnote rg footnoteResult) ->
+          respond $ Right $ LSP.InL $ LSP.Hover (LSP.InL $ LSP.mkPlainText $ formatFootnoteResult footnoteResult) (Just rg)

@@ -8,14 +8,12 @@ module Lsp.Handlers.Definition
 where
 
 import Control.Applicative
-import Control.Lens (use, (^.))
+import Control.Lens (use, (.=), (^.))
 import Control.Monad.RWS (lift)
 import Control.Monad.Trans.Except
 import Control.Monad.Trans.Maybe
 import Data.Maybe
 import Data.Text qualified as T
-import Data.Text.LineBreaker qualified as T
-import Language.LSP.Protocol.Lens (HasLine (line), HasStart (..))
 import Language.LSP.Protocol.Message qualified as LSP
 import Language.LSP.Protocol.Types qualified as LSP
 import Language.LSP.Server qualified as LSP
@@ -41,20 +39,13 @@ data LinkResult where
     } ->
     LinkResult
 
-data FootnoteResult where
-  FootnoteResult ::
-    { _range :: LSP.Range,
-      _footnoteText :: T.Text
-    } ->
-    FootnoteResult
-
 data DefinitionAnalysisResult where
   IsLink ::
     LSP.Range ->
     (Either LinkException LinkResult) ->
     DefinitionAnalysisResult
   IsFootnote ::
-    LSP.Range -> FootnoteResult -> DefinitionAnalysisResult
+    LSP.Range -> LSP.Range -> DefinitionAnalysisResult
 
 linkAnalysis ::
   MarkdownSyntax ->
@@ -114,9 +105,7 @@ footnoteAnalysis spec origUri pos = do
     sr <- MaybeT $ return $ footnoteRef ^. sourceRange
     rg <- MaybeT $ return $ listToMaybe $ sourceRangeToRange origFile sr
     targetRg <- MaybeT $ return $ listToMaybe $ sourceRangeToRange origFile targetSr
-    let ln = fromIntegral $ targetRg ^. (start . line)
-    let origText = VFS.virtualFileText origFile
-    return $ IsFootnote rg $ FootnoteResult targetRg $ T.joinLines $ take 5 $ drop ln $ T.splitLines origText
+    return $ IsFootnote rg targetRg
 
 definitionAnalysis ::
   MarkdownSyntax ->
@@ -147,4 +136,4 @@ textDocumentDefinitionHandler =
                   BookmarkNotFound -> LSP.mkRange 0 0 1 0
              in respond $ Right $ LSP.InL $ LSP.Definition $ LSP.InL $ LSP.Location uri rg
           _ -> respond $ Right $ LSP.InR $ LSP.InR LSP.Null
-        Just (IsFootnote _ (FootnoteResult rg _)) -> respond $ Right $ LSP.InL $ LSP.Definition $ LSP.InL $ LSP.Location origUri rg
+        Just (IsFootnote _ targetRg) -> respond $ Right $ LSP.InL $ LSP.Definition $ LSP.InL $ LSP.Location origUri targetRg
