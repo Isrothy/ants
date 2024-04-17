@@ -141,6 +141,7 @@ library
     , directory
     , either
     , extra
+    , fgl
     , filepath
     , fmt
     , graphviz
@@ -191,6 +192,7 @@ executable ants
     , directory
     , either
     , extra
+    , fgl
     , filepath
     , fmt
     , graphviz
@@ -241,6 +243,7 @@ executable ants-ls
     , directory
     , either
     , extra
+    , fgl
     , filepath
     , fmt
     , graphviz
@@ -310,6 +313,7 @@ test-suite ants-test
     , directory
     , either
     , extra
+    , fgl
     , filepath
     , fmt
     , graphviz
@@ -364,6 +368,7 @@ benchmark ants-bench
     , directory
     , either
     , extra
+    , fgl
     , filepath
     , fmt
     , graphviz
