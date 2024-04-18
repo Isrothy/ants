@@ -10,6 +10,7 @@ module Parser.Opts
     InitOptions (..),
     NewOptions (..),
     ListOptions (..),
+    GraphOptions (..),
     LookupTable,
   )
 where
@@ -36,7 +37,10 @@ data ListOptions = ListOptions
   { filterString :: Maybe T.Text,
     sortString :: Maybe T.Text
   }
-
+data GraphOptions = GraphOptions
+  {
+    isSVG :: Bool
+  }
 newtype Options = Options
   { optCommand :: Command
   }
@@ -45,7 +49,7 @@ data Command
   = New NewOptions
   | Init InitOptions
   | Lst ListOptions
-
+  | Grph GraphOptions
 parsePair :: ReadM (T.Text, T.Text)
 parsePair = eitherReader $ \s ->
   case elemIndex '=' s of
@@ -107,6 +111,10 @@ listCommand = do
         long "filter" <> short 'f' <> metavar "FILTER" <> help "Expression used for filtering"
   pure $ Lst $ ListOptions {..}
 
+graphCommand :: Parser Command
+graphCommand = do
+  isSVG <- switch ( long "svg" <> short 's' <> help "Whether to output in SVG" )
+  pure $ Grph $ GraphOptions {..}
 opts :: Parser Options
 opts = do
   optCommand <-
@@ -114,5 +122,6 @@ opts = do
       ( command "init" (info initCommand $ progDesc "Init the notebook")
           <> command "new" (info newCommand $ progDesc "Create a new note")
           <> command "list" (info listCommand $ progDesc "Filter notes")
+          <> command "graph" (info graphCommand $ progDesc "Create a mind map")
       )
   pure $ Options {..}

@@ -28,7 +28,7 @@ module Model.MarkdownAst
     findWikiLinks,
     findTasks,
     findAlerts,
-    findHaders,
+    findHeaders,
     headerAt,
     allNodes,
     firstNode,
@@ -224,6 +224,7 @@ instance HasQuoted MarkdownAst where
   doubleQuoted = rawNode . DoubleQuoted . DoubleQuotedParams
 
 instance HasSpan MarkdownAst where
+  spanWith :: Attributes -> MarkdownAst -> MarkdownAst
   spanWith _ [] = []
   spanWith attrs1 [AstNode item sr attrs2] = [AstNode item sr (attrs1 ++ attrs2)]
   spanWith attrs1 xs = [AstNode (Span (SpanParams xs)) Nothing attrs1]
@@ -359,6 +360,7 @@ allNodes f = concatMap (helper f)
   where
     helper f node = if f node then [node] else concatMap (allNodes f) (children $ node ^. parameters)
 
+
 firstNode :: (MdNode -> Bool) -> MarkdownAst -> Maybe MdNode
 firstNode f ast = listToMaybe (allNodes f ast)
 
@@ -402,8 +404,8 @@ findAlerts = allNodes' \case
   (AstNode (Alert params) sr attr) -> Just (AstNode params sr attr)
   _ -> Nothing
 
-findHaders :: MarkdownAst -> [AstNode (HeaderParams MarkdownAst)]
-findHaders = allNodes' \case
+findHeaders :: MarkdownAst -> [AstNode (HeaderParams MarkdownAst)]
+findHeaders = allNodes' \case
   (AstNode (Header params) sr attr) -> Just (AstNode params sr attr)
   _ -> Nothing
 

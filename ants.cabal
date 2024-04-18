@@ -25,6 +25,7 @@ source-repository head
 
 library
   exposed-modules:
+      Cli.Graph
       Cli.InitNoteBook
       Cli.ListNotes
       Cli.NewNoteGen
@@ -140,8 +141,10 @@ library
     , directory
     , either
     , extra
+    , fgl
     , filepath
     , fmt
+    , graphviz
     , lens
     , loop
     , lsp
@@ -189,8 +192,10 @@ executable ants
     , directory
     , either
     , extra
+    , fgl
     , filepath
     , fmt
+    , graphviz
     , lens
     , loop
     , lsp
@@ -238,8 +243,10 @@ executable ants-ls
     , directory
     , either
     , extra
+    , fgl
     , filepath
     , fmt
+    , graphviz
     , lens
     , loop
     , lsp
@@ -306,8 +313,10 @@ test-suite ants-test
     , directory
     , either
     , extra
+    , fgl
     , filepath
     , fmt
+    , graphviz
     , hspec
     , lens
     , loop
@@ -359,8 +368,10 @@ benchmark ants-bench
     , directory
     , either
     , extra
+    , fgl
     , filepath
     , fmt
+    , graphviz
     , lens
     , loop
     , lsp
