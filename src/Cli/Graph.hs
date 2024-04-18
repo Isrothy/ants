@@ -12,15 +12,14 @@ module Cli.Graph
   )
 where
 
-import Commonmark (SourceRange)
+import Commonmark (ToPlainText (toPlainText))
 import Control.Conditional (if')
 import Control.Lens (view)
 import Control.Monad.Extra (concatMapM, fromMaybeM)
 import Control.Monad.Trans.Maybe
-import Data.Graph (Graph)
 import Data.Graph.Inductive (Edge, Graph (mkGraph), Node, toLEdge)
 import Data.Graph.Inductive.PatriciaTree (Gr)
-import Data.GraphViz (GraphvizParams (..), graphToDot, toDot, GraphID(Str), GlobalAttributes (..), toLabel, NodeCluster (..), blankParams, setDirectedness)
+import Data.GraphViz (GraphvizParams (..), graphToDot, toDot, GraphID(Str), GlobalAttributes (..), toLabel, NodeCluster (..), blankParams, setDirectedness, textLabel)
 import Data.GraphViz.Printing (renderDot)
 import Data.List (elemIndex, sortOn)
 import Data.Maybe (catMaybes, fromMaybe)
@@ -28,17 +27,18 @@ import Data.Text.Lazy (unpack, pack)
 import Model.Config (getSyntaxSpec)
 import Model.Document (Document (..))
 import Model.MarkdownAst (AstNode, MarkdownAst, findHeaders, findLinks, findWikiLinks, parameters, sourceRange)
-import Model.MarkdownAst.Lenses (HasTarget (target))
+import Model.MarkdownAst.Lenses (HasTarget (target), inline)
 import Model.MarkdownAst.Params.HeaderParams
 import Model.MarkdownAst.Params.LinkParams
 import Model.MarkdownAst.Params.WikiLinkParams
 import Parser.Markdown (MarkdownSyntax)
 import Parser.Opts
-import Path (Abs, Dir, Path, toFilePath, filename)
+import Path (Abs, Dir, Path, toFilePath)
 import Path.IO (getCurrentDir)
 import Project.DocLoader (loadAllFromDirectory)
 import Project.Link (gotoLinkedElement)
 import Project.ProjectRoot (findRoot, readConfig)
+import Data.GraphViz.Attributes.Complete (Attribute(..))
 
 type GraphNode = (Document, Maybe (AstNode (HeaderParams MarkdownAst)))
 
@@ -114,10 +114,13 @@ printGraph _ = do
                 clusterID = Str,
                 isDotCluster = const True,
                 fmtCluster = clFmt,
-                fmtNode = const [],
+                fmtNode = ndFmt,
                 fmtEdge = const []
               }
           clustBy (n, l) = C (pack $ toFilePath $ relPath $ fst l) $ N (n, l)
           clFmt m = [GraphAttrs [toLabel m]]
+          ndFmt (_, l) = case snd l of
+            Just x -> [toLabel $ toPlainText $ view (parameters . inline) x]
+            Nothing -> [textLabel ""]
   let outputText = renderDot $ toDot graphInDotFormat
   putStrLn $ unpack outputText
