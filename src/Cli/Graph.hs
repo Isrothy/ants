@@ -20,8 +20,11 @@ import Control.Monad.Trans.Maybe
 import Data.Graph (Graph)
 import Data.Graph.Inductive (Edge, Graph (mkGraph), Node, toLEdge)
 import Data.Graph.Inductive.PatriciaTree (Gr)
+import Data.GraphViz (GraphvizParams (..), graphToDot, toDot, GraphID(Str), GlobalAttributes (..), toLabel, NodeCluster (..), blankParams, setDirectedness)
+import Data.GraphViz.Printing (renderDot)
 import Data.List (elemIndex, sortOn)
 import Data.Maybe (catMaybes, fromMaybe)
+import Data.Text.Lazy (unpack, pack)
 import Model.Config (getSyntaxSpec)
 import Model.Document (Document (..))
 import Model.MarkdownAst (AstNode, MarkdownAst, findHeaders, findLinks, findWikiLinks, parameters, sourceRange)
@@ -31,14 +34,11 @@ import Model.MarkdownAst.Params.LinkParams
 import Model.MarkdownAst.Params.WikiLinkParams
 import Parser.Markdown (MarkdownSyntax)
 import Parser.Opts
-import Path (Abs, Dir, Path)
+import Path (Abs, Dir, Path, toFilePath, filename)
 import Path.IO (getCurrentDir)
 import Project.DocLoader (loadAllFromDirectory)
 import Project.Link (gotoLinkedElement)
 import Project.ProjectRoot (findRoot, readConfig)
-import Data.GraphViz (graphToDot, nonClusteredParams, toDot)
-import Data.GraphViz.Printing (renderDot)
-import Data.Text.Lazy (unpack)
 
 type GraphNode = (Document, Maybe (AstNode (HeaderParams MarkdownAst)))
 
@@ -104,6 +104,20 @@ printGraph _ = do
   cwd <- getCurrentDir
   docs <- loadAllFromDirectory (getSyntaxSpec config) cwd
   graph <- getGraph (getSyntaxSpec config) pathToRoot docs
-  let graphInDotFormat = graphToDot nonClusteredParams graph
+  let graphInDotFormat =
+        setDirectedness graphToDot params graph
+        where
+          params =
+            blankParams
+              { globalAttributes = [],
+                clusterBy = clustBy,
+                clusterID = Str,
+                isDotCluster = const True,
+                fmtCluster = clFmt,
+                fmtNode = const [],
+                fmtEdge = const []
+              }
+          clustBy (n, l) = C (pack $ toFilePath $ relPath $ fst l) $ N (n, l)
+          clFmt m = [GraphAttrs [toLabel m]]
   let outputText = renderDot $ toDot graphInDotFormat
   putStrLn $ unpack outputText
