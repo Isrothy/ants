@@ -19,7 +19,7 @@ import Control.Monad.Extra (concatMapM, fromMaybeM)
 import Control.Monad.Trans.Maybe
 import Data.Graph.Inductive (Edge, Graph (mkGraph), Node, toLEdge)
 import Data.Graph.Inductive.PatriciaTree (Gr)
-import Data.GraphViz (GraphvizParams (..), graphToDot, toDot, GraphID(Str), GlobalAttributes (..), toLabel, NodeCluster (..), blankParams, setDirectedness, textLabel)
+import Data.GraphViz (GraphvizParams (..), graphToDot, toDot, GraphID(Str), GlobalAttributes (..), toLabel, NodeCluster (..), blankParams, setDirectedness, textLabel, DotGraph, quitWithoutGraphviz, runGraphviz, GraphvizOutput (..), graphvizWithHandle, GraphvizCommand (Dot))
 import Data.GraphViz.Printing (renderDot)
 import Data.List (elemIndex, sortOn)
 import Data.Maybe (catMaybes, fromMaybe)
@@ -34,11 +34,13 @@ import Model.MarkdownAst.Params.WikiLinkParams
 import Parser.Markdown (MarkdownSyntax)
 import Parser.Opts
 import Path (Abs, Dir, Path, toFilePath)
-import Path.IO (getCurrentDir)
+import Path.IO (getCurrentDir, openTempFile, withTempFile)
 import Project.DocLoader (loadAllFromDirectory)
 import Project.Link (gotoLinkedElement)
 import Project.ProjectRoot (findRoot, readConfig)
 import Data.GraphViz.Attributes.Complete (Attribute(..))
+import Data.ByteString (hGetContents)
+import GHC.IO.Handle (hGetContents')
 
 type GraphNode = (Document, Maybe (AstNode (HeaderParams MarkdownAst)))
 
@@ -96,9 +98,16 @@ getGraph spec root docs = do
           helper (a, xs) = map (a,) xs
   edges <- concatMapM (getAllEdges spec root graphNodes) (concatMap convert docNodes)
   return $ mkGraph (zip [0 ..] graphNodes) (map (`toLEdge` ()) edges)
-
+renderGr :: Bool -> DotGraph Node -> IO ()
+renderGr False g = do
+  let outputText = renderDot $ toDot g
+  putStrLn $ unpack outputText
+renderGr True g = do
+  _ <- quitWithoutGraphviz "Graphviz should be installed"
+  text <- graphvizWithHandle Dot g Svg hGetContents'
+  putStrLn text
 printGraph :: GraphOptions -> IO ()
-printGraph _ = do
+printGraph opt = do
   pathToRoot <- fromMaybeM (error "Cannot find config") findRoot
   config <- fromMaybeM (error "config: Decode failed") $ readConfig pathToRoot
   cwd <- getCurrentDir
@@ -122,5 +131,4 @@ printGraph _ = do
           ndFmt (_, l) = case snd l of
             Just x -> [toLabel $ toPlainText $ view (parameters . inline) x]
             Nothing -> [textLabel ""]
-  let outputText = renderDot $ toDot graphInDotFormat
-  putStrLn $ unpack outputText
+  renderGr (isSVG opt) graphInDotFormat

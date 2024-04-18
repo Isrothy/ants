@@ -39,6 +39,7 @@ data ListOptions = ListOptions
   }
 data GraphOptions = GraphOptions
   {
+    isSVG :: Bool
   }
 newtype Options = Options
   { optCommand :: Command
@@ -112,8 +113,8 @@ listCommand = do
 
 graphCommand :: Parser Command
 graphCommand = do
-  pure $ Grph $ GraphOptions {}
-
+  isSVG <- switch ( long "svg" <> short 's' <> help "Whether to output in SVG" )
+  pure $ Grph $ GraphOptions {..}
 opts :: Parser Options
 opts = do
   optCommand <-
