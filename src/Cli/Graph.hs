@@ -19,7 +19,7 @@ import Control.Monad.Extra (concatMapM, fromMaybeM)
 import Control.Monad.Trans.Maybe
 import Data.Graph.Inductive (Edge, Graph (mkGraph), Node, toLEdge)
 import Data.Graph.Inductive.PatriciaTree (Gr)
-import Data.GraphViz (GraphvizParams (..), graphToDot, toDot, GraphID(Str), GlobalAttributes (..), toLabel, NodeCluster (..), blankParams, setDirectedness, textLabel, DotGraph, quitWithoutGraphviz, runGraphviz, GraphvizOutput (..), graphvizWithHandle, GraphvizCommand (Dot))
+import Data.GraphViz (GraphvizParams (..), graphToDot, toDot, GraphID(Str), GlobalAttributes (..), toLabel, NodeCluster (..), blankParams, setDirectedness, textLabel, DotGraph, quitWithoutGraphviz, runGraphviz, GraphvizOutput (..), graphvizWithHandle, GraphvizCommand (Dot), shape, Shape (..))
 import Data.GraphViz.Printing (renderDot)
 import Data.List (elemIndex, sortOn)
 import Data.Maybe (catMaybes, fromMaybe)
@@ -130,5 +130,5 @@ printGraph opt = do
           clFmt m = [GraphAttrs [toLabel m]]
           ndFmt (_, l) = case snd l of
             Just x -> [toLabel $ toPlainText $ view (parameters . inline) x]
-            Nothing -> [textLabel ""]
+            Nothing -> [shape PointShape]
   renderGr (isSVG opt) graphInDotFormat
