@@ -49,12 +49,12 @@ This command creates a new note titled "My Note" in the directory specified by
 #### Available options:
 
 ```
-  -t, --title TITLE           Title of the note
-  -n, --name NAME             Name of the author
-  -e, --email admin@example.com Email of the author
-  DIR                         Directory to create the note
-  VARNAME=VALUE               Variables to override default config settings
-  -h, --help                  Show help information
+-t, --title TITLE               Title of the note
+-n, --name NAME                 Name of the author
+-e, --email admin@example.com   Email of the author
+DIR                             Directory to create the note
+VARNAME=VALUE                   Variables to override default config settings
+-h, --help                      Show help information
 ```
 
 ### Filter
