@@ -1,64 +1,90 @@
 # ants
 
-## Filter
+**ants - A Note Taking System**
 
-The query language is inspired by [Obsidian](https://help.obsidian.md/Plugins/Search) and supports several types of query terms and operators to provide users with more precise control over their searches.
+ants is a lightweight, command-line note-taking system written in Haskell.
 
-### Query Terms
+## Highlights
+- **Implemented in Haskell**
+- **Lightweight and efficient**
+- **Text editor integration**
+  - [vscode extension](https://github.com/dsgsjk/ants-vscode)
+- **Language server features**:
+  - Auto-completion
+  - Hover information
+  - Go to Definition
+  - Find References
+- **Creating notes from templates**
+- **Advanced filters**
+- **Mind mapping**
+- **Extensive Markdown grammar support** - See [config.md](docs/config.md)
 
-The query language includes four kinds of terms:
+## Installation
 
-- **Case Insensitive Term**
-  - **Syntax**: A string surrounded by `"`, or a string consisting of only digits and English letters.
-  - **Examples**: `apple`, `"Apple"`
-  - **Matching**: `'apple'` matches `"Apple"`, `apple`, and `APPLE`.
-- **Case Sensitive Term**
-  - **Syntax**: A string surrounded by `'`.
-  - **Examples**: `'apple'`
-  - **Matching**: `"Apple"` matches exactly `"Apple"` but not `apple` or `APPLE`.
-- **Fuzzy Term**
-  - **Syntax**: A string surrounded by `~`.
-  - **Examples**: `~apple~`
-  - **Matching**: Editing distance is applied in fuzzy matching.
-- **Regular Expression Term**
-  - **Syntax**: A string surrounded by `/`.
-  - **Examples**: `/[a-z]+/`
+Ensure you have [stack](https://docs.haskellstack.org/en/stable/) installed.
 
-### Query Operators
-
-Query operators refine searches by applying filters based on specific document characteristics:
-
-- **`content`**: Filters documents containing specified terms.
-  - **Example**: `content:algorithm`
-- **`tasks`**: Filters documents containing tasks with specified terms.
-  - **Examples**: `tasks:"meeting preparation"`, `task-todo:"write reports"`, `task-done:"read books"`
-- **`alert`**: Filters documents containing alerts with specified terms.
-  - **Example**: `alert-important:"safety instructions"`
-- **`has-link`**: Filters documents containing links to other documents or bookmarks.
-  - **Examples**: `hasLink:some/directory/some/document.md`, `haslink:some/directory/some/document.md#tag`
-- **`author`**: Filters documents by author.
-  - **Example**: `author:Jone`
-- **`title`**: Filters documents by title.
-  - **Example**: `title:"Annual Report"`
-- **`tag`**: Filters documents by tags.
-  - **Example**: `tag:"finance"`
-- **`description`**: Filters documents by descriptions.
-  - **Example**: `description:~project overview~`
-- **`date`**: Filters documents by creation date or date range.
-  - **Examples**: `date:[2024-01-01,2024-12-31]`, `date:[2024-02-29]`, `date:[,2024-12-31]`, `date:[2024-01-01]`
-- **`in-directory`**: Filters documents located within a specific directory.
-  - **Example**: `in-directory:some/directory`
-
-### Boolean Operations
-
-Boolean operations follow syntax similar to the C programming language:
-- `&&` for `AND`
-- `||` for `OR`
-- `!` for `NOT`
-
-#### Example Usage
+```bash
+stack install
 ```
-!author:/^Joshua$/ && (content:~guide~ || (date:[2021-01-01,2021-12-31] && tag:"Haskell"))
+
+## Usage
+
+### Initializing
+
+```bash
+ants init
 ```
-This query filters out documents whose author is not `Joshua`, containing content similar to "guide" or documents created in 2021 with the tag "Haskell".
+
+Initializes an empty Note Taking System in the current directory.
+
+### Creating Notes from Templates
+
+```bash
+ants new -t "My Note" DIR
+```
+
+This command creates a new note titled "My Note" in the directory specified by
+`DIR`, using predefined templates.
+
+#### Available options:
+
+```
+  -t, --title TITLE           Title of the note
+  -n, --name NAME             Name of the author
+  -e, --email admin@example.com Email of the author
+  DIR                         Directory to create the note
+  VARNAME=VALUE               Variables to override default config settings
+  -h, --help                  Show help information
+```
+
+### Filter
+
+To filter and sort notes:
+
+```bash
+ants list [-s|--sort FIELD] [-f|--filter FILTER]
+```
+
+For detailed query language options, see [query.md](docs/query.md).
+
+### Mind Map
+
+To generate a mind map of all notes in the current directory in Graphviz dot
+language:
+
+```bash
+ants graph
+```
+
+To export the mind map as an SVG file:
+
+```bash
+ants graph --svg
+```
+
+## Configuration
+
+Configuration files are located at `.ants/config.json`.
+
+For more information, see [config.md](docs/config.md).
 
