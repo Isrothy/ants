@@ -28,6 +28,7 @@ import Project.ProjectRoot (findRoot, readConfig)
 import Text.Parsec (parse)
 import Text.Parsec.Error (errorMessages, messageString)
 
+-- Compare two documents by the specified field
 comparebyField :: Maybe T.Text -> Document -> Document -> Ordering
 comparebyField x a b = case x of
   Just "title" -> compare (title $ metadata a) (title $ metadata b)

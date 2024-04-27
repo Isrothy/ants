@@ -17,13 +17,16 @@ import Control.Conditional (if')
 import Control.Lens (view)
 import Control.Monad.Extra (concatMapM, fromMaybeM)
 import Control.Monad.Trans.Maybe
+import Data.ByteString (hGetContents)
 import Data.Graph.Inductive (Edge, Graph (mkGraph), Node, toLEdge)
 import Data.Graph.Inductive.PatriciaTree (Gr)
-import Data.GraphViz (GraphvizParams (..), graphToDot, toDot, GraphID(Str), GlobalAttributes (..), toLabel, NodeCluster (..), blankParams, setDirectedness, textLabel, DotGraph, quitWithoutGraphviz, runGraphviz, GraphvizOutput (..), graphvizWithHandle, GraphvizCommand (Dot), shape, Shape (..))
+import Data.GraphViz (DotGraph, GlobalAttributes (..), GraphID (Str), GraphvizCommand (Dot), GraphvizOutput (..), GraphvizParams (..), NodeCluster (..), Shape (..), blankParams, graphToDot, graphvizWithHandle, quitWithoutGraphviz, runGraphviz, setDirectedness, shape, textLabel, toDot, toLabel)
+import Data.GraphViz.Attributes.Complete (Attribute (..))
 import Data.GraphViz.Printing (renderDot)
 import Data.List (elemIndex, sortOn)
 import Data.Maybe (catMaybes, fromMaybe)
-import Data.Text.Lazy (unpack, pack)
+import Data.Text.Lazy (pack, unpack)
+import GHC.IO.Handle (hGetContents')
 import Model.Config (getSyntaxSpec)
 import Model.Document (Document (..))
 import Model.MarkdownAst (AstNode, MarkdownAst, findHeaders, findLinks, findWikiLinks, parameters, sourceRange)
@@ -38,12 +41,11 @@ import Path.IO (getCurrentDir, openTempFile, withTempFile)
 import Project.DocLoader (loadAllFromDirectory)
 import Project.Link (gotoLinkedElement)
 import Project.ProjectRoot (findRoot, readConfig)
-import Data.GraphViz.Attributes.Complete (Attribute(..))
-import Data.ByteString (hGetContents)
-import GHC.IO.Handle (hGetContents')
 
 type GraphNode = (Document, Maybe (AstNode (HeaderParams MarkdownAst)))
 
+-- Get all the nodes in a document, together with their links and wikilinks
+-- This includes all headings and an extra node for the links that do not belong to any heading
 getNodes :: Document -> ([Maybe (AstNode (HeaderParams MarkdownAst))], ([[AstNode (LinkParams MarkdownAst)]], [[AstNode (WikiLinkParams MarkdownAst)]]))
 getNodes doc =
   fromMaybe
@@ -64,16 +66,19 @@ getNodes doc =
         return (Nothing : map Just sortedHeaders, res)
     )
 
+-- Given the list of all nodes, a document and a link on the document, compute the destination of the corresponding edge on the graph
 getEdge :: (HasTarget (a MarkdownAst)) => MarkdownSyntax -> Path Abs Dir -> [GraphNode] -> Document -> AstNode (a MarkdownAst) -> IO (Maybe Node)
 getEdge spec root nodes doc lk = runMaybeT $ do
   qwq <- MaybeT $ gotoLinkedElement spec root (absPath doc) (view (parameters . target) lk)
   MaybeT $ pure $ elemIndex qwq nodes
 
+-- Given the list of all nodes, a document and links on the document, compute the destinations of the corresponding edges on the graph
 getEdges :: (HasTarget (a MarkdownAst)) => MarkdownSyntax -> Path Abs Dir -> [GraphNode] -> Document -> [AstNode (a MarkdownAst)] -> IO [Node]
 getEdges spec root nodes doc lks = do
   ans <- mapM (getEdge spec root nodes doc) lks
   return $ catMaybes ans
 
+-- Given the list of all nodes, a node and links snd wikilinks on the node, compute the corresponding edges on the graph
 getAllEdges :: MarkdownSyntax -> Path Abs Dir -> [GraphNode] -> (GraphNode, ([AstNode (LinkParams MarkdownAst)], [AstNode (WikiLinkParams MarkdownAst)])) -> IO [Edge]
 getAllEdges spec root nodes docNode = do
   let curDoc = fst $ fst docNode
@@ -84,12 +89,14 @@ getAllEdges spec root nodes docNode = do
         Nothing -> []
   return res
 
+-- A bit of data structure tranformation to make calling getAllEdges easier
 convert :: (a, ([b], ([[c]], [[d]]))) -> [((a, b), ([c], [d]))]
 convert (x, (y, (z, t))) =
   map helper (zip3 y z t)
   where
     helper (u, zs, ts) = ((x, u), (zs, ts))
 
+-- Given a list of documents, return a graph
 getGraph :: MarkdownSyntax -> Path Abs Dir -> [Document] -> IO (Gr GraphNode ())
 getGraph spec root docs = do
   let docNodes = zip docs $ map getNodes docs
@@ -98,6 +105,8 @@ getGraph spec root docs = do
           helper (a, xs) = map (a,) xs
   edges <- concatMapM (getAllEdges spec root graphNodes) (concatMap convert docNodes)
   return $ mkGraph (zip [0 ..] graphNodes) (map (`toLEdge` ()) edges)
+
+-- Render a DotGraph into DOT when the first parameter is false, into svg otherwise
 renderGr :: Bool -> DotGraph Node -> IO ()
 renderGr False g = do
   let outputText = renderDot $ toDot g
@@ -106,6 +115,8 @@ renderGr True g = do
   _ <- quitWithoutGraphviz "Graphviz should be installed"
   text <- graphvizWithHandle Dot g Svg hGetContents'
   putStrLn text
+
+-- Generate a graph, convert it to DOT and then print the graph
 printGraph :: GraphOptions -> IO ()
 printGraph opt = do
   pathToRoot <- fromMaybeM (error "Cannot find config") findRoot
