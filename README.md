@@ -86,6 +86,16 @@ Make sure you have [Graphviz](https://graphviz.org/) installed and in your PATH.
 
 ### Shell completions
 
+#### Bash
+
+Add the following to your `~/.bashrc`:
+
+```bash
+source <(foo --bash-completion-script `which foo`)
+```
+
+And restart the shell.
+
 #### Zsh
 
 ##### Oh-my-zsh
@@ -97,7 +107,7 @@ ants --zsh-completion-script `which ants` > ~/.oh-my-zsh/completions/_ants
 ##### Generic
 
 ```zsh
-mkdir ~/.ants-completions
+mkdir -p ~/.ants-completions
 ants --zsh-completion-script `which ants` > ~/.ants-completions/_ants
 ```
 
@@ -115,6 +125,15 @@ compinit
 ```
 
 And restart the shell again.
+
+#### Fish
+
+```fish
+mkdir -p ~/.config/fish/functions
+ants --fish-completion-script $(which ants) > ~/.config/fish/functions/ants.fish
+```
+
+And restart the shell.
 
 ## Configuration
 
