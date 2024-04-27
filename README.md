@@ -114,6 +114,7 @@ autoload -Uz compinit
 compinit
 ```
 
+And restart the shell again.
 
 ## Configuration
 
