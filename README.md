@@ -107,7 +107,7 @@ Then add the following to the **start** of your `~/.zshrc`:
 fpath=(~/.ants-completions $fpath)
 ```
 
-If this still does not work, you might need add the following to the **end** of your `~/.zshrc`:
+If this still does not work, you might need to add the following to the **end** of your `~/.zshrc`:
 
 ```zsh
 autoload -Uz compinit
