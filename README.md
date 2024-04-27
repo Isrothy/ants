@@ -91,7 +91,7 @@ Make sure you have [Graphviz](https://graphviz.org/) installed and in your PATH.
 Add the following to your `~/.bashrc`:
 
 ```bash
-source <(foo --bash-completion-script `which foo`)
+source <(ants --bash-completion-script `which ants`)
 ```
 
 And restart the shell.
