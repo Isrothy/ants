@@ -69,7 +69,7 @@ For detailed query language options, see [query.md](docs/query.md).
 
 ### Mind Map
 
-To generate a mind map of all notes in the current directory in Graphviz dot
+To generate a mind map of all notes in the current directory in Graphviz's dot
 language:
 
 ```bash
@@ -81,6 +81,32 @@ To export the mind map as an SVG file:
 ```bash
 ants graph --svg
 ```
+
+Make sure you have [Graphviz](https://graphviz.org/) installed and in your PATH.
+
+### Shell completions
+
+#### Zsh
+
+##### Oh-my-zsh
+
+```zsh
+ants --zsh-completion-script `which ants` > ~/.oh-my-zsh/completions/_ants
+```
+
+##### Generic
+
+```zsh
+mkdir ~/.ants-completions
+ants --zsh-completion-script `which ants` > ~/.ants-completions/_ants
+```
+
+Then add the following to your `~/.zshrc`
+
+```zsh
+fpath=(~/.ants-completions $fpath)
+```
+
 
 ## Configuration
 
