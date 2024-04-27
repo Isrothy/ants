@@ -26,6 +26,9 @@ import Path
 import Project.DocLoader (isHiddenFile, loadAllFromDirectory)
 import Project.Link
 
+-- | The LSP handler for 'textDocument/references'.
+-- Currently only supports finding links with bookmarks
+-- TODO: Support footnotes
 textDocumentReferencesHandler :: LSP.Handlers HandlerM
 textDocumentReferencesHandler =
   LSP.requestHandler LSP.SMethod_TextDocumentReferences \request respond -> do

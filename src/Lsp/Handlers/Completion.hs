@@ -43,6 +43,9 @@ import Parser.MarkdownWithFrontmatter
 import Path
 import Safe (atMay)
 
+-- | The LSP handler for 'textDocument/completion'.
+-- Currently only supports bookmarks
+-- TODO: Add support for footnotes and path
 completionHandler :: LSP.Handlers HandlerM
 completionHandler =
   LSP.requestHandler LSP.SMethod_TextDocumentCompletion \request respond -> do

@@ -22,6 +22,9 @@ placeholderSpec =
         [parsePlaceholder]
     }
 
+-- | Parse a placeholder
+-- This is a markdown syntax extension
+-- A placeholder is in the form of {{text}}
 parsePlaceholder :: (Monad m, HasPlaceholder a) => InlineParser m a
 parsePlaceholder = try $ do
   _ <- symbol '{'

@@ -57,6 +57,7 @@ parseLink input = case T.splitOn "#" input of
 parseAbsOrRelFile :: Path Abs Dir -> FilePath -> Maybe (Path Abs File)
 parseAbsOrRelFile root file = parseAbsFile file <|> fmap (root </>) (parseRelFile file)
 
+-- Find the target path of the link from the original file
 resolveLinkInFile :: Path Abs File -> FilePath -> IO (Maybe (Path Abs File))
 resolveLinkInFile orig link
   | null link = return $ Just orig
@@ -64,6 +65,9 @@ resolveLinkInFile orig link
   | isAbsolute link = return $ parseAbsFile link
   | otherwise = Just <$> resolveFile (parent orig) link
 
+-- Find the element that the link points to
+-- If the target is not found, then return Nothing
+-- If the bookmark is not given, then the second result is Nothing
 gotoLinkedElement ::
   MarkdownSyntax ->
   Path Abs Dir ->
@@ -92,7 +96,14 @@ findBookmarkLine bookmark ast = do
 hasLinkTo :: Path Abs Dir -> Path Abs File -> MarkdownAst -> (FilePath, Maybe Bookmark) -> IO Bool
 hasLinkTo root orig ast target = linksTo root orig ast target <&> (not . null)
 
-linksTo :: Path Abs Dir -> Path Abs File -> MarkdownAst -> (FilePath, Maybe Bookmark) -> IO [SourceRange]
+-- Find all links to the given target
+-- If the target is not found, then return a empty list
+linksTo ::
+  Path Abs Dir ->
+  Path Abs File ->
+  MarkdownAst ->
+  (FilePath, Maybe Bookmark) ->
+  IO [SourceRange]
 linksTo root orig ast (targetFilePath, targetTag) = do
   result <- runMaybeT $ do
     targetAbsPath <- MaybeT $ return $ parseAbsOrRelFile root targetFilePath

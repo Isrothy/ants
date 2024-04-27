@@ -17,6 +17,8 @@ import Model.Config
 import Path
 import Project.ProjectRoot (readConfig)
 
+-- | The LSP handler for 'initialized'.
+-- Reads the config file and sets the 'markdownSyntaxSpec' accordingly.
 initializedHandler :: LSP.Handlers HandlerM
 initializedHandler =
   LSP.notificationHandler LSP.SMethod_Initialized \_ -> do

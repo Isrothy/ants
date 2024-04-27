@@ -49,6 +49,7 @@ uriToFile uriStr = LSP.uriToFilePath uriStr >>= parseAbsFile
 liftLSP :: LSP.LspT ServerConfig IO a -> HandlerM a
 liftLSP m = lift (lift m)
 
+-- | Read from VFS if possible, otherwise from local file
 readLocalOrVFS :: Path Abs File -> LSP.LspT ServerConfig IO (Maybe T.Text)
 readLocalOrVFS path = do
   mfile <- LSP.getVirtualFile (LSP.toNormalizedUri (LSP.filePathToUri (toFilePath path)))
@@ -94,6 +95,7 @@ sourceRangeToRangeT text sr = mapMaybe (helper text) (unSourceRange sr)
       endPos <- sourcePosToPositionT text end
       return $ LSP.Range beginPos endPos
 
+-- | Read from VFS if possible, otherwise from local file
 loadLocalOrVirtualDocument ::
   MarkdownSyntax ->
   Path Abs Dir ->

@@ -73,27 +73,33 @@ minEditDistanceSubstring xs ys = minEditDistanceSubstringV (V.fromList xs) (V.fr
 threshold :: Int -> Int
 threshold x = (x + 2) `div` 5 -- a magic number. May exist better threshold
 
+-- | Checks if two vectors are similar enough to be considered equal
 matchesV :: (GV.Vector v a, Eq a) => v a -> v a -> Bool
 matchesV xs ys = editDistanceV xs ys <= threshold (min (GV.length xs) (GV.length ys))
 
+-- | Check if a vector is a similar enough substring of another
 isInfixOfV :: (GV.Vector v a, Eq a) => v a -> v a -> Bool
 isInfixOfV xs ys = minEditDistanceSubstringV xs ys <= threshold (GV.length xs)
 
+-- | Checks if two vectors are similar enough to be considered equal
 matches :: (Eq a) => [a] -> [a] -> Bool
 matches xs ys = matchesV (V.fromList xs) (V.fromList ys)
 
+-- | Check if a vector is a similar enough substring of another
 isInfixOf :: (Eq a) => [a] -> [a] -> Bool
 isInfixOf xs ys = isInfixOfV (V.fromList xs) (V.fromList ys)
 
 preProcess :: T.Text -> UV.Vector Char
 preProcess = textToVector . T.toCaseFold . T.strip
 
+-- | Checks if two vectors are similar enough to be considered equal
 matchesT :: T.Text -> T.Text -> Bool
 matchesT xs ys = editDistanceV xs' ys' <= threshold (max (UV.length xs') (UV.length ys'))
   where
     xs' = preProcess xs
     ys' = preProcess ys
 
+-- | Check if a vector is a similar enough substring of another
 isInfixOfT :: T.Text -> T.Text -> Bool
 isInfixOfT xs ys = minEditDistanceSubstringV xs' ys' <= threshold (UV.length xs')
   where

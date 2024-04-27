@@ -50,6 +50,8 @@ safeIO io = do
     Left _ -> Nothing
     Right content -> Just content
 
+-- | Safe version of `IO.readFile`
+-- When `IO.readFile` throws an exception, return `Nothing`
 readFileSafe :: forall a. (HasReadFile a) => Prelude.FilePath -> IO (Maybe a)
 readFileSafe = safeIO . readFile
 
