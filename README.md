@@ -101,13 +101,13 @@ mkdir ~/.ants-completions
 ants --zsh-completion-script `which ants` > ~/.ants-completions/_ants
 ```
 
-Then add the following to your `~/.zshrc`, at the **start** of said file:
+Then add the following to the **start** of your `~/.zshrc`:
 
 ```zsh
 fpath=(~/.ants-completions $fpath)
 ```
 
-If this still does not work, you might need add the following to the **end** of said file:
+If this still does not work, you might need add the following to the **end** of your `~/.zshrc`:
 
 ```zsh
 autoload -Uz compinit
